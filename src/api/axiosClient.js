@@ -1,7 +1,9 @@
 import axios from "axios";
 
+export const AUTH_UNAUTHORIZED_EVENT = "rpjepq:unauthorized";
+
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/api"
+  baseURL: import.meta.env.VITE_API_URL || "/api"
 });
 
 axiosClient.interceptors.request.use((config) => {
@@ -22,9 +24,7 @@ axiosClient.interceptors.response.use(
       localStorage.removeItem("rpjepq_user");
       localStorage.removeItem("rpjepq_usuario");
 
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
-      }
+      window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
     }
 
     return Promise.reject(error);

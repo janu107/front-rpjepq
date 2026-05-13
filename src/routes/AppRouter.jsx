@@ -21,7 +21,7 @@ import ProtectedRoute from "./ProtectedRoute";
 
 const AppRouter = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/rpj_administrativo">
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/login" element={<Login />} />

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-import axiosClient from "../api/axiosClient";
+import axiosClient, { AUTH_UNAUTHORIZED_EVENT } from "../api/axiosClient";
 
 const AuthContext = createContext(null);
 
@@ -40,6 +40,14 @@ export const AuthProvider = ({ children }) => {
 
     validateSession();
   }, [token]);
+
+  useEffect(() => {
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, logout);
+
+    return () => {
+      window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, logout);
+    };
+  }, []);
 
   const login = (sessionData) => {
     localStorage.setItem("rpjepq_token", sessionData.token);
