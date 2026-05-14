@@ -181,7 +181,7 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
       <PageHeader
         title={title}
         subtitle={subtitle}
-        actions={canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>Nuevo</Button>}
+        actions={canCreate(user) && <Button type="button" variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>Nuevo</Button>}
       />
 
       <DataTable

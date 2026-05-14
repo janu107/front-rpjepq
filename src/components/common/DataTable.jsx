@@ -1,6 +1,6 @@
 import SearchIcon from "@mui/icons-material/Search";
 import {
-  Box, CircularProgress, Divider, IconButton, InputAdornment, Paper, Stack, Table, TableBody, TableCell,
+  Box, Button, CircularProgress, Divider, IconButton, InputAdornment, Paper, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
 import { useMemo } from "react";
@@ -57,6 +57,7 @@ const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMes
                 {columns.map((column) => <TableCell key={column.key} align={column.align}>{column.render ? column.render(row) : row[column.key]}</TableCell>)}
                 {actions?.length > 0 && (
                   <TableCell align="right">
+                    <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="wrap">
                     {actions.map((action) => action.visible?.(row) === false ? null : (
                       <Tooltip title={action.label} key={action.label}>
                         <IconButton
@@ -69,6 +70,7 @@ const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMes
                         </IconButton>
                       </Tooltip>
                     ))}
+                    </Stack>
                   </TableCell>
                 )}
               </TableRow>
@@ -118,17 +120,20 @@ const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMes
                 </Box>
               ))}
               {actions?.length > 0 && (
-                <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 0.5 }}>
+                <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="wrap" useFlexGap sx={{ pt: 0.5 }}>
                   {actions.map((action) => action.visible?.(row) === false ? null : (
                     <Tooltip title={action.label} key={action.label}>
-                      <IconButton
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={action.icon}
                         color="primary"
                         aria-label={action.label}
                         onClick={() => action.onClick(row)}
-                        sx={{ minWidth: 46, minHeight: 46 }}
+                        sx={{ minHeight: 42 }}
                       >
-                        {action.icon}
-                      </IconButton>
+                        {action.label}
+                      </Button>
                     </Tooltip>
                   ))}
                 </Stack>

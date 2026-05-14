@@ -352,7 +352,7 @@ const CatalogosPage = () => {
             )
           }}
         />
-        {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+        {canCreate(user) && <Button type="button" variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
           Nuevo
         </Button>}
       </Stack>
@@ -377,12 +377,12 @@ const CatalogosPage = () => {
                 <TableCell>{record.usuarioCreacion || ""}</TableCell>
                 <TableCell align="right">
                   {canEdit(user) && <Tooltip title="Editar">
-                    <IconButton color="primary" onClick={() => openEditDialog(record)}>
+                    <IconButton color="primary" aria-label="Editar catalogo" onClick={() => openEditDialog(record)} sx={{ minWidth: 44, minHeight: 44 }}>
                       <EditIcon />
                     </IconButton>
                   </Tooltip>}
                   {canDelete(user) && <Tooltip title="Eliminar">
-                    <IconButton color="primary" onClick={() => handleDelete(record)}>
+                    <IconButton color="primary" aria-label="Eliminar catalogo" onClick={() => handleDelete(record)} sx={{ minWidth: 44, minHeight: 44 }}>
                       <DeleteIcon />
                     </IconButton>
                   </Tooltip>}

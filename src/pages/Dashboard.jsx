@@ -3,7 +3,7 @@ import AssessmentIcon from "@mui/icons-material/Assessment";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import ShieldIcon from "@mui/icons-material/Shield";
 import { Box, Grid, Paper, Stack, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 
 const resumen = [
   { label: "Operacion", value: "Mantenimientos y catalogos", icon: <PeopleAltIcon />, path: "/empleados" },
@@ -12,8 +12,6 @@ const resumen = [
 ];
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-
   return (
     <Stack spacing={3}>
       <Paper elevation={0} sx={{ p: { xs: 2.5, md: 3 }, border: "1px solid #dde3ea", bgcolor: "primary.main", color: "primary.contrastText" }}>
@@ -32,21 +30,17 @@ const Dashboard = () => {
         {resumen.map((item) => (
           <Grid item xs={12} md={4} key={item.label}>
             <Paper
+              component={RouterLink}
+              to={item.path}
               elevation={0}
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate(item.path)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  navigate(item.path);
-                }
-              }}
               sx={{
+                display: "block",
                 p: 3,
                 border: "1px solid #dde3ea",
                 height: "100%",
                 cursor: "pointer",
+                color: "inherit",
+                textDecoration: "none",
                 transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease",
                 "&:hover": {
                   transform: "translateY(-3px)",

@@ -3,10 +3,7 @@ import {
   Box,
   Button,
   Chip,
-  FormControl,
-  MenuItem,
   Paper,
-  Select,
   Stack,
   Table,
   TableBody,
@@ -108,21 +105,34 @@ const RolesPage = () => {
                   <Chip label={row.rol} color="secondary" size="small" />
                 </TableCell>
                 <TableCell>
-                  <FormControl fullWidth size="small">
-                    <Select
-                      displayEmpty
-                      inputProps={{ "aria-label": `Nuevo rol para ${row.usuario}` }}
+                  <Box
+                    component="select"
+                    aria-label={`Nuevo rol para ${row.usuario}`}
+                    title={`Nuevo rol para ${row.usuario}`}
                       value={selectedRoles[row.usuarioId] || row.rol}
                       onChange={(event) => setSelectedRoles({ ...selectedRoles, [row.usuarioId]: event.target.value })}
-                      MenuProps={{ disablePortal: false }}
+                    sx={{
+                      width: "100%",
+                      minHeight: 42,
+                      px: 1.5,
+                      borderRadius: 1.5,
+                      border: "1px solid #c8d4da",
+                      bgcolor: "background.paper",
+                      color: "text.primary",
+                      font: "inherit",
+                      cursor: "pointer",
+                      "&:focus": {
+                        outline: "3px solid rgba(31, 93, 107, 0.22)",
+                        borderColor: "primary.main"
+                      }
+                    }}
                     >
                       {roleTypes.map((tipo) => (
-                        <MenuItem key={tipo} value={tipo}>
+                        <option key={tipo} value={tipo}>
                           {tipo}
-                        </MenuItem>
+                        </option>
                       ))}
-                    </Select>
-                  </FormControl>
+                  </Box>
                 </TableCell>
                 <TableCell align="right">
                   <Button

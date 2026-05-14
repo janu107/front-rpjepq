@@ -1,4 +1,4 @@
-const roleOf = (user) => String(user?.rol || "").toUpperCase();
+const roleOf = (user) => String(user?.rol || user?.role || user?.tipoRol || user?.rolNombre || "").toUpperCase();
 
 export const hasRole = (user, rolesPermitidos = []) => rolesPermitidos.map((role) => String(role).toUpperCase()).includes(roleOf(user));
 export const isAdmin = (user) => hasRole(user, ["ADMIN"]);
