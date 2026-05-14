@@ -13,6 +13,8 @@ import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import { useAuth } from "../../context/AuthContext";
+import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const initialForm = {
   tipoManejo: "",
@@ -34,6 +36,7 @@ const estados = ["ACTIVO", "INACTIVO", "RETIRADO"];
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
 
 const AportacionesPage = () => {
+  const { user } = useAuth();
   const [aportaciones, setAportaciones] = useState([]);
   const [manejos, setManejos] = useState([]);
   const [search, setSearch] = useState("");
@@ -192,7 +195,7 @@ const AportacionesPage = () => {
           <Typography variant="h5">Aportaciones EPQ</Typography>
           <Typography color="text.secondary">Control de aportaciones y pagos realizados</Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nueva aportacion</Button>
+        {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nueva aportacion</Button>}
       </Stack>
 
       <TextField
@@ -221,10 +224,10 @@ const AportacionesPage = () => {
                 <TableCell><Chip label={item.tienePrestamo ? "SI" : "NO"} color={item.tienePrestamo ? "warning" : "default"} size="small" /></TableCell>
                 <TableCell>{item.manejoDescripcion}</TableCell>
                 <TableCell align="right">
-                  <Tooltip title="Editar"><IconButton color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>
+                  {canEdit(user) && <Tooltip title="Editar"><IconButton color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>}
                   <Tooltip title="Detalle"><IconButton color="primary" onClick={() => openDetalle(item)}><ListAltIcon /></IconButton></Tooltip>
-                  <Tooltip title="Cambiar estado"><IconButton color="primary" onClick={() => changeStatus(item)}><PowerSettingsNewIcon /></IconButton></Tooltip>
-                  <Tooltip title="Eliminar"><IconButton color="primary" onClick={() => deleteAportacion(item)}><DeleteIcon /></IconButton></Tooltip>
+                  {canEdit(user) && <Tooltip title="Cambiar estado"><IconButton color="primary" onClick={() => changeStatus(item)}><PowerSettingsNewIcon /></IconButton></Tooltip>}
+                  {canDelete(user) && <Tooltip title="Eliminar"><IconButton color="primary" onClick={() => deleteAportacion(item)}><DeleteIcon /></IconButton></Tooltip>}
                 </TableCell>
               </TableRow>
             ))}
@@ -263,11 +266,11 @@ const AportacionesPage = () => {
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <TextField label="Fecha pago" type="date" value={detalleForm.fechaPago} onChange={(e) => setDetalleForm({ ...detalleForm, fechaPago: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
               <TextField label="Valor" type="number" value={detalleForm.valor} onChange={(e) => setDetalleForm({ ...detalleForm, valor: e.target.value })} fullWidth />
-              <Button variant="contained" onClick={saveDetalle}>Agregar pago</Button>
+              {canCreate(user) && <Button variant="contained" onClick={saveDetalle}>Agregar pago</Button>}
             </Stack>
             <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
               <Table><TableHead><TableRow><TableCell>Fecha pago</TableCell><TableCell>Valor</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
-                <TableBody>{detalle.map((row) => <TableRow key={row.id}><TableCell>{formatDate(row.fechaPago)}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell align="right"><IconButton color="primary" onClick={() => deleteDetalle(row)}><DeleteIcon /></IconButton></TableCell></TableRow>)}</TableBody>
+                <TableBody>{detalle.map((row) => <TableRow key={row.id}><TableCell>{formatDate(row.fechaPago)}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell align="right">{canDelete(user) && <IconButton color="primary" onClick={() => deleteDetalle(row)}><DeleteIcon /></IconButton>}</TableCell></TableRow>)}</TableBody>
               </Table>
             </TableContainer>
           </Stack>

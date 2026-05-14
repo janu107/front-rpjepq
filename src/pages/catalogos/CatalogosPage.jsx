@@ -17,22 +17,23 @@ import {
   Paper,
   Select,
   Stack,
-  Tab,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Tabs,
   TextField,
   Tooltip,
   Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import { useAuth } from "../../context/AuthContext";
+import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const catalogConfigs = [
   {
@@ -166,7 +167,9 @@ const buildInitialForm = (config) =>
   }, {});
 
 const CatalogosPage = () => {
-  const [activeTab, setActiveTab] = useState(0);
+  const { user } = useAuth();
+  const { catalogo } = useParams();
+  const navigate = useNavigate();
   const [records, setRecords] = useState([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -176,7 +179,8 @@ const CatalogosPage = () => {
   const [manejos, setManejos] = useState([]);
   const [tiposPlanilla, setTiposPlanilla] = useState([]);
 
-  const config = catalogConfigs[activeTab];
+  const catalogIndex = catalogConfigs.findIndex((item) => item.key === (catalogo || catalogConfigs[0].key));
+  const config = catalogConfigs[catalogIndex >= 0 ? catalogIndex : 0];
 
   const loadRecords = async (catalogKey = config.key) => {
     try {
@@ -203,12 +207,18 @@ const CatalogosPage = () => {
   };
 
   useEffect(() => {
+    if (catalogo && catalogIndex === -1) {
+      navigate("/catalogos/areas", { replace: true });
+    }
+  }, [catalogo, catalogIndex, navigate]);
+
+  useEffect(() => {
     setSearch("");
     loadRecords();
     if (config.key === "puestos" || config.key === "parametro-planilla") {
       loadDependencies();
     }
-  }, [activeTab]);
+  }, [config.key]);
 
   const filteredRecords = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -324,16 +334,8 @@ const CatalogosPage = () => {
     <Stack spacing={2.5}>
       <Box>
         <Typography variant="h5">Catalogos</Typography>
-        <Typography color="text.secondary">Administracion de catalogos base del sistema</Typography>
+        <Typography color="text.secondary">{config.label}</Typography>
       </Box>
-
-      <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}>
-        <Tabs value={activeTab} onChange={(event, value) => setActiveTab(value)} variant="scrollable" scrollButtons="auto">
-          {catalogConfigs.map((item) => (
-            <Tab key={item.key} label={item.label} />
-          ))}
-        </Tabs>
-      </Paper>
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between">
         <TextField
@@ -350,9 +352,9 @@ const CatalogosPage = () => {
             )
           }}
         />
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+        {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
           Nuevo
-        </Button>
+        </Button>}
       </Stack>
 
       <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
@@ -374,16 +376,16 @@ const CatalogosPage = () => {
                 ))}
                 <TableCell>{record.usuarioCreacion || ""}</TableCell>
                 <TableCell align="right">
-                  <Tooltip title="Editar">
+                  {canEdit(user) && <Tooltip title="Editar">
                     <IconButton color="primary" onClick={() => openEditDialog(record)}>
                       <EditIcon />
                     </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Eliminar">
+                  </Tooltip>}
+                  {canDelete(user) && <Tooltip title="Eliminar">
                     <IconButton color="primary" onClick={() => handleDelete(record)}>
                       <DeleteIcon />
                     </IconButton>
-                  </Tooltip>
+                  </Tooltip>}
                 </TableCell>
               </TableRow>
             ))}

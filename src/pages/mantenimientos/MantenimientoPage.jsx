@@ -1,37 +1,29 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import SearchIcon from "@mui/icons-material/Search";
 import {
-  Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControl,
-  IconButton,
-  InputAdornment,
   InputLabel,
   MenuItem,
-  Paper,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
-  Tooltip,
   Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import DataTable from "../../components/common/DataTable";
+import PageHeader from "../../components/common/PageHeader";
+import StatusChip from "../../components/common/StatusChip";
+import { useAuth } from "../../context/AuthContext";
+import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
 
@@ -42,6 +34,7 @@ const buildInitialForm = (fields) =>
   }, {});
 
 const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchFields, dependencies = [] }) => {
+  const { user } = useAuth();
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -80,6 +73,11 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
     if (!term) return rows;
     return rows.filter((row) => searchFields.some((field) => String(row[field] || "").toLowerCase().includes(term)));
   }, [rows, search, searchFields]);
+
+  const tableColumns = columns.map((column) => ({
+    ...column,
+    render: column.chip ? (row) => <StatusChip value={row[column.key]} /> : column.render
+  }));
 
   const openCreateDialog = () => {
     setEditingRow(null);
@@ -180,52 +178,23 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
 
   return (
     <Stack spacing={2.5}>
-      <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems={{ md: "center" }}>
-        <Box>
-          <Typography variant="h5">{title}</Typography>
-          <Typography color="text.secondary">{subtitle}</Typography>
-        </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
-          Nuevo
-        </Button>
-      </Stack>
-
-      <TextField
-        placeholder="Buscar"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        sx={{ maxWidth: { md: 460 } }}
-        InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
+      <PageHeader
+        title={title}
+        subtitle={subtitle}
+        actions={canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>Nuevo</Button>}
       />
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              {columns.map((column) => <TableCell key={column.key}>{column.label}</TableCell>)}
-              <TableCell align="right">Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredRows.map((row) => (
-              <TableRow key={row.id} hover>
-                {columns.map((column) => (
-                  <TableCell key={column.key}>
-                    {column.chip ? <Chip label={row[column.key]} color={row[column.key] === "ACTIVO" ? "success" : "default"} size="small" /> : row[column.key]}
-                  </TableCell>
-                ))}
-                <TableCell align="right">
-                  <Tooltip title="Editar"><IconButton color="primary" onClick={() => openEditDialog(row)}><EditIcon /></IconButton></Tooltip>
-                  <Tooltip title="Eliminar"><IconButton color="primary" onClick={() => handleDelete(row)}><DeleteIcon /></IconButton></Tooltip>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredRows.length === 0 && (
-              <TableRow><TableCell colSpan={columns.length + 1} align="center">No hay registros para mostrar.</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <DataTable
+        columns={tableColumns}
+        rows={filteredRows}
+        search={search}
+        onSearch={setSearch}
+        filterKeys={searchFields}
+        actions={[
+          { label: "Editar", icon: <EditIcon />, onClick: openEditDialog, visible: () => canEdit(user) },
+          { label: "Eliminar", icon: <DeleteIcon />, onClick: handleDelete, visible: () => canDelete(user) }
+        ]}
+      />
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>{editingRow ? "Editar registro" : "Nuevo registro"}</DialogTitle>

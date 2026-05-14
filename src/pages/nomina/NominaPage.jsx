@@ -11,11 +11,13 @@ import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import { useAuth } from "../../context/AuthContext";
+import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const initialIngreso = { tipoManejo: "", idTipoPlanilla: "", idPlanilla: "", idEmpleado: "", idJubilado: "", tipoIngreso: "", valor: "", diasTrabajados: 30, puesto: "", area: "" };
 const initialDescuento = { tipoManejo: "", idTipoPlanilla: "", idPlanilla: "", idEmpleado: "", idJubilado: "", tipoDescuento: "", valor: "", diasTrabajados: 30, puesto: "", area: "" };
 
-const NominaTable = ({ type, rows, config, onNew, onEdit, onDelete, search, setSearch }) => {
+const NominaTable = ({ type, rows, config, onNew, onEdit, onDelete, search, setSearch, user }) => {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return rows;
@@ -26,11 +28,11 @@ const NominaTable = ({ type, rows, config, onNew, onEdit, onDelete, search, setS
     <Stack spacing={2}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between">
         <TextField placeholder="Buscar" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ maxWidth: 420 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} />
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onNew}>Nuevo {type}</Button>
+        {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={onNew}>Nuevo {type}</Button>}
       </Stack>
       <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
         <Table><TableHead><TableRow><TableCell>Planilla</TableCell><TableCell>Persona</TableCell><TableCell>Tipo</TableCell><TableCell>Valor</TableCell><TableCell>Dias</TableCell><TableCell>Puesto</TableCell><TableCell>Area</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
-          <TableBody>{filtered.map((row) => <TableRow key={row.id} hover><TableCell>{row.numeroPlanilla}</TableCell><TableCell>{row.empleadoNombre || row.jubiladoNombre}</TableCell><TableCell>{row[config.typeLabel]}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell>{row.diasTrabajados}</TableCell><TableCell>{row.puesto}</TableCell><TableCell>{row.area}</TableCell><TableCell align="right"><Tooltip title="Editar"><IconButton color="primary" onClick={() => onEdit(row)}><EditIcon /></IconButton></Tooltip><Tooltip title="Eliminar"><IconButton color="primary" onClick={() => onDelete(row)}><DeleteIcon /></IconButton></Tooltip></TableCell></TableRow>)}</TableBody>
+          <TableBody>{filtered.map((row) => <TableRow key={row.id} hover><TableCell>{row.numeroPlanilla}</TableCell><TableCell>{row.empleadoNombre || row.jubiladoNombre}</TableCell><TableCell>{row[config.typeLabel]}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell>{row.diasTrabajados}</TableCell><TableCell>{row.puesto}</TableCell><TableCell>{row.area}</TableCell><TableCell align="right">{canEdit(user) && <Tooltip title="Editar"><IconButton color="primary" onClick={() => onEdit(row)}><EditIcon /></IconButton></Tooltip>}{canDelete(user) && <Tooltip title="Eliminar"><IconButton color="primary" onClick={() => onDelete(row)}><DeleteIcon /></IconButton></Tooltip>}</TableCell></TableRow>)}</TableBody>
         </Table>
       </TableContainer>
     </Stack>
@@ -38,6 +40,7 @@ const NominaTable = ({ type, rows, config, onNew, onEdit, onDelete, search, setS
 };
 
 const NominaPage = () => {
+  const { user } = useAuth();
   const [tab, setTab] = useState(0);
   const [ingresos, setIngresos] = useState([]);
   const [descuentos, setDescuentos] = useState([]);
@@ -122,8 +125,8 @@ const NominaPage = () => {
     <Stack spacing={2.5}>
       <Box><Typography variant="h5">Nomina</Typography><Typography color="text.secondary">Ingresos, descuentos y resumen por planilla</Typography></Box>
       <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}><Tabs value={tab} onChange={(e, v) => setTab(v)}><Tab label="Ingresos" /><Tab label="Descuentos" /><Tab label="Resumen" /></Tabs></Paper>
-      {tab === 0 && <NominaTable type="ingreso" rows={ingresos} config={{ typeLabel: "tipoIngresoNombre" }} onNew={() => openNew("ingresos")} onEdit={(r) => openEdit("ingresos", r)} onDelete={(r) => remove("ingresos", r)} search={searchIngresos} setSearch={setSearchIngresos} />}
-      {tab === 1 && <NominaTable type="descuento" rows={descuentos} config={{ typeLabel: "tipoDescuentoNombre" }} onNew={() => openNew("descuentos")} onEdit={(r) => openEdit("descuentos", r)} onDelete={(r) => remove("descuentos", r)} search={searchDescuentos} setSearch={setSearchDescuentos} />}
+      {tab === 0 && <NominaTable user={user} type="ingreso" rows={ingresos} config={{ typeLabel: "tipoIngresoNombre" }} onNew={() => openNew("ingresos")} onEdit={(r) => openEdit("ingresos", r)} onDelete={(r) => remove("ingresos", r)} search={searchIngresos} setSearch={setSearchIngresos} />}
+      {tab === 1 && <NominaTable user={user} type="descuento" rows={descuentos} config={{ typeLabel: "tipoDescuentoNombre" }} onNew={() => openNew("descuentos")} onEdit={(r) => openEdit("descuentos", r)} onDelete={(r) => remove("descuentos", r)} search={searchDescuentos} setSearch={setSearchDescuentos} />}
       {tab === 2 && <Stack spacing={2}><FormControl sx={{ maxWidth: 420 }}><InputLabel>Planilla</InputLabel><Select label="Planilla" value={resumenPlanilla} onChange={(e) => setResumenPlanilla(e.target.value)}>{(options.planillas || []).map((p) => <MenuItem key={p.id} value={p.id}>Planilla {p.numero} - {p.tipoPlanillaNombre}</MenuItem>)}</Select></FormControl><Button variant="contained" onClick={consultarResumen} sx={{ maxWidth: 220 }}>Consultar resumen</Button>{resumen && <Grid container spacing={2}>{[["Total ingresos", resumen.totalIngresos], ["Total descuentos", resumen.totalDescuentos], ["Liquido", resumen.liquido], ["Cantidad ingresos", resumen.cantidadIngresos], ["Cantidad descuentos", resumen.cantidadDescuentos]].map(([label, value]) => <Grid item xs={12} md={4} key={label}><Paper elevation={0} sx={{ p: 3, border: "1px solid #dde3ea" }}><Typography color="text.secondary">{label}</Typography><Typography variant="h6">{typeof value === "number" ? value.toFixed ? value.toFixed(2) : value : value}</Typography></Paper></Grid>)}</Grid>}</Stack>}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md"><DialogTitle>{editing ? "Editar" : "Nuevo"} {isIngreso ? "ingreso" : "descuento"}</DialogTitle><DialogContent><Stack spacing={2} sx={{ mt: 1 }}>

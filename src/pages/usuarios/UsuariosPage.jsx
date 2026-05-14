@@ -2,37 +2,28 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import LockResetIcon from "@mui/icons-material/LockReset";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
-import SearchIcon from "@mui/icons-material/Search";
 import {
-  Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControl,
-  IconButton,
-  InputAdornment,
   InputLabel,
   MenuItem,
-  Paper,
   Select,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
-  Tooltip,
   Typography
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import DataTable from "../../components/common/DataTable";
+import PageHeader from "../../components/common/PageHeader";
+import RoleChip from "../../components/common/RoleChip";
+import StatusChip from "../../components/common/StatusChip";
 
 const initialForm = {
   usuario: "",
@@ -79,14 +70,14 @@ const UsuariosPage = () => {
     loadUsers();
   }, []);
 
-  const filteredUsers = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return usuarios;
-
-    return usuarios.filter((user) =>
-      [user.usuario, user.nombre, user.correo].some((value) => String(value || "").toLowerCase().includes(term))
-    );
-  }, [usuarios, search]);
+  const columns = [
+    { key: "usuario", label: "Usuario" },
+    { key: "nombre", label: "Nombre" },
+    { key: "correo", label: "Correo" },
+    { key: "estado", label: "Estado", render: (user) => <StatusChip value={user.estado} /> },
+    { key: "rol", label: "Rol", render: (user) => <RoleChip value={user.rol} /> },
+    { key: "fechaInicio", label: "Fecha inicio", render: (user) => formatDate(user.fechaInicio) }
+  ];
 
   const openCreateDialog = () => {
     setEditingUser(null);
@@ -196,87 +187,25 @@ const UsuariosPage = () => {
 
   return (
     <Stack spacing={2.5}>
-      <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems={{ md: "center" }}>
-        <Box>
-          <Typography variant="h5">Usuarios</Typography>
-          <Typography color="text.secondary">Administracion de accesos del sistema</Typography>
-        </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
-          Nuevo usuario
-        </Button>
-      </Stack>
+      <PageHeader
+        title="Usuarios"
+        subtitle="Administracion de accesos del sistema"
+        actions={<Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>Nuevo usuario</Button>}
+      />
 
-      <Paper elevation={0} sx={{ p: 2, border: "1px solid #dde3ea" }}>
-        <TextField
-          placeholder="Buscar por usuario, nombre o correo"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          fullWidth
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            )
-          }}
-        />
-      </Paper>
-
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Usuario</TableCell>
-              <TableCell>Nombre</TableCell>
-              <TableCell>Correo</TableCell>
-              <TableCell>Estado</TableCell>
-              <TableCell>Rol</TableCell>
-              <TableCell>Fecha inicio</TableCell>
-              <TableCell align="right">Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredUsers.map((user) => (
-              <TableRow key={user.id} hover>
-                <TableCell>{user.usuario}</TableCell>
-                <TableCell>{user.nombre}</TableCell>
-                <TableCell>{user.correo}</TableCell>
-                <TableCell>
-                  <Chip label={user.estado} color={user.estado === "ACTIVO" ? "success" : "default"} size="small" />
-                </TableCell>
-                <TableCell>
-                  <Chip label={user.rol || "SIN ROL"} color="secondary" size="small" />
-                </TableCell>
-                <TableCell>{formatDate(user.fechaInicio)}</TableCell>
-                <TableCell align="right">
-                  <Tooltip title="Editar">
-                    <IconButton color="primary" onClick={() => openEditDialog(user)}>
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Activar o inactivar">
-                    <IconButton color="primary" onClick={() => handleToggleStatus(user)}>
-                      <PowerSettingsNewIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Cambiar contrasena">
-                    <IconButton color="primary" onClick={() => openPasswordDialog(user)}>
-                      <LockResetIcon />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
-            ))}
-            {!loading && filteredUsers.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  No hay usuarios para mostrar.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <DataTable
+        loading={loading}
+        columns={columns}
+        rows={usuarios}
+        search={search}
+        onSearch={setSearch}
+        emptyMessage="No hay usuarios para mostrar."
+        actions={[
+          { label: "Editar", icon: <EditIcon />, onClick: openEditDialog },
+          { label: "Activar o inactivar", icon: <PowerSettingsNewIcon />, onClick: handleToggleStatus },
+          { label: "Cambiar contrasena", icon: <LockResetIcon />, onClick: openPasswordDialog }
+        ]}
+      />
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{editingUser ? "Editar usuario" : "Nuevo usuario"}</DialogTitle>

@@ -1,24 +1,27 @@
-import { Box, CircularProgress } from "@mui/material";
 import { Navigate, Outlet } from "react-router-dom";
 
+import LoadingScreen from "../components/common/LoadingScreen";
 import { useAuth } from "../context/AuthContext";
+import Unauthorized from "../pages/Unauthorized";
+import { hasRole } from "../utils/permissions";
 
-const ProtectedRoute = () => {
+const ProtectedRoute = ({ allowedRoles, children }) => {
   const { isAuthenticated, loading } = useAuth();
+  const { user } = useAuth();
 
   if (loading) {
-    return (
-      <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center">
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingScreen message="Validando sesion..." />;
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  return <Outlet />;
+  if (allowedRoles?.length && !hasRole(user, allowedRoles)) {
+    return <Unauthorized />;
+  }
+
+  return children || <Outlet />;
 };
 
 export default ProtectedRoute;

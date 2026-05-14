@@ -1,10 +1,11 @@
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
-import { AppBar, Box, Chip, IconButton, Stack, Toolbar, Tooltip, Typography } from "@mui/material";
+import { AppBar, Avatar, Box, IconButton, Stack, Toolbar, Tooltip, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import { useAuth } from "../context/AuthContext";
+import RoleChip from "./common/RoleChip";
 
 const Navbar = ({ onMenuClick, drawerWidth }) => {
   const { user, logout } = useAuth();
@@ -35,25 +36,29 @@ const Navbar = ({ onMenuClick, drawerWidth }) => {
         width: { md: `calc(100% - ${drawerWidth}px)` },
         ml: { md: `${drawerWidth}px` },
         borderBottom: "1px solid #dde3ea",
-        bgcolor: "background.paper",
+        bgcolor: "rgba(255,255,255,0.92)",
+        backdropFilter: "blur(12px)",
         color: "text.primary"
       }}
     >
-      <Toolbar>
+      <Toolbar sx={{ minHeight: { xs: 64, md: 72 } }}>
         <IconButton color="inherit" edge="start" onClick={onMenuClick} sx={{ mr: 2, display: { md: "none" } }}>
           <MenuIcon />
         </IconButton>
 
-        <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="h6">Sistema Administrativo RPJEPQ</Typography>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography variant="h6" sx={{ lineHeight: 1.15 }}>Sistema Administrativo RPJEPQ</Typography>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5, flexWrap: "wrap" }}>
             <Typography variant="body2" color="text.secondary">
               {user?.nombre || user?.usuario || "Usuario administrador"}
             </Typography>
-            {user?.rol && <Chip label={user.rol} color="secondary" size="small" />}
+            {user?.rol && <RoleChip value={user.rol} />}
           </Stack>
         </Box>
 
+        <Avatar sx={{ display: { xs: "none", sm: "flex" }, mr: 1.25, bgcolor: "primary.main", width: 36, height: 36, fontSize: 14, fontWeight: 800 }}>
+          {(user?.nombre || user?.usuario || "U").slice(0, 1).toUpperCase()}
+        </Avatar>
         <Tooltip title="Cerrar sesion">
           <IconButton color="primary" onClick={handleLogout}>
             <LogoutIcon />
