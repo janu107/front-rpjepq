@@ -51,6 +51,7 @@ const AppRouter = () => {
             <Route path="/reportes/nomina" element={<ReportesNominaPage />} />
             <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AuditoriaPage /></ProtectedRoute>} />
             <Route path="/mantenimiento" element={<ProtectedRoute allowedRoles={["ADMIN"]}><MantenimientoPage /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Route>
 

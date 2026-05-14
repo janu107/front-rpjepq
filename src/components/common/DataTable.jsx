@@ -59,7 +59,14 @@ const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMes
                   <TableCell align="right">
                     {actions.map((action) => action.visible?.(row) === false ? null : (
                       <Tooltip title={action.label} key={action.label}>
-                        <IconButton color="primary" onClick={() => action.onClick(row)}>{action.icon}</IconButton>
+                        <IconButton
+                          color="primary"
+                          aria-label={action.label}
+                          onClick={() => action.onClick(row)}
+                          sx={{ minWidth: 44, minHeight: 44, mx: 0.25 }}
+                        >
+                          {action.icon}
+                        </IconButton>
                       </Tooltip>
                     ))}
                   </TableCell>
@@ -114,7 +121,14 @@ const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMes
                 <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 0.5 }}>
                   {actions.map((action) => action.visible?.(row) === false ? null : (
                     <Tooltip title={action.label} key={action.label}>
-                      <IconButton color="primary" onClick={() => action.onClick(row)}>{action.icon}</IconButton>
+                      <IconButton
+                        color="primary"
+                        aria-label={action.label}
+                        onClick={() => action.onClick(row)}
+                        sx={{ minWidth: 46, minHeight: 46 }}
+                      >
+                        {action.icon}
+                      </IconButton>
                     </Tooltip>
                   ))}
                 </Stack>

@@ -16,7 +16,7 @@ import ShieldIcon from "@mui/icons-material/Shield";
 import WorkIcon from "@mui/icons-material/Work";
 import { Box, Collapse, Divider, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from "@mui/material";
 import { NavLink, useLocation } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
 import { hasRole } from "../utils/permissions";
@@ -104,11 +104,15 @@ const hasActiveChild = (item, pathname) => {
   return item.children?.some((child) => hasActiveChild(child, pathname));
 };
 
-const MenuItem = ({ item, level = 0, pathname }) => {
+const MenuItem = ({ item, level = 0, pathname, onNavigate }) => {
   const hasChildren = Boolean(item.children?.length);
   const active = hasActiveChild(item, pathname);
   const [open, setOpen] = useState(active);
   const pl = 1.5 + level * 2.2;
+
+  useEffect(() => {
+    if (active) setOpen(true);
+  }, [active]);
 
   if (hasChildren) {
     return (
@@ -138,7 +142,7 @@ const MenuItem = ({ item, level = 0, pathname }) => {
         <Collapse in={open} timeout={180} unmountOnExit>
           <List disablePadding sx={{ ml: level === 0 ? 0.75 : 0 }}>
             {item.children.map((child) => (
-              <MenuItem key={`${item.text}-${child.text}`} item={child} level={level + 1} pathname={pathname} />
+              <MenuItem key={`${item.text}-${child.text}`} item={child} level={level + 1} pathname={pathname} onNavigate={onNavigate} />
             ))}
           </List>
         </Collapse>
@@ -150,6 +154,7 @@ const MenuItem = ({ item, level = 0, pathname }) => {
     <ListItemButton
       component={item.enabled ? NavLink : "button"}
       to={item.enabled ? item.path : undefined}
+      onClick={onNavigate}
       disabled={!item.enabled}
       sx={{
         borderRadius: 2,
@@ -177,7 +182,7 @@ const MenuItem = ({ item, level = 0, pathname }) => {
   );
 };
 
-const SidebarContent = () => {
+const SidebarContent = ({ onNavigate }) => {
   const { user } = useAuth();
   const { pathname } = useLocation();
   const visibleItems = useMemo(() => filterByRole(items, user), [user]);
@@ -202,7 +207,7 @@ const SidebarContent = () => {
     <Divider sx={{ borderColor: "rgba(255,255,255,0.16)" }} />
     <List sx={{ px: 1.5 }}>
       {visibleItems.map((item) => (
-        <MenuItem key={item.text} item={item} pathname={pathname} />
+        <MenuItem key={item.text} item={item} pathname={pathname} onNavigate={onNavigate} />
       ))}
     </List>
   </Box>
@@ -222,7 +227,7 @@ const Sidebar = ({ drawerWidth, mobileOpen, onClose }) => {
           "& .MuiDrawer-paper": { width: drawerWidth, boxSizing: "border-box" }
         }}
       >
-        <SidebarContent />
+        <SidebarContent onNavigate={onClose} />
       </Drawer>
 
       <Drawer

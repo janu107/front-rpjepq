@@ -25,6 +25,7 @@ const RolesPage = () => {
   const [roles, setRoles] = useState([]);
   const [tipos, setTipos] = useState([]);
   const [selectedRoles, setSelectedRoles] = useState({});
+  const roleTypes = tipos.length ? tipos : ["ADMIN", "OPERADOR", "CONSULTA"];
 
   const loadData = async () => {
     try {
@@ -96,7 +97,7 @@ const RolesPage = () => {
           </TableHead>
           <TableBody>
             {roles.map((row) => (
-              <TableRow key={row.id} hover>
+              <TableRow key={row.usuarioId || row.id} hover>
                 <TableCell>{row.usuario}</TableCell>
                 <TableCell>{row.nombre}</TableCell>
                 <TableCell>{row.correo}</TableCell>
@@ -109,10 +110,13 @@ const RolesPage = () => {
                 <TableCell>
                   <FormControl fullWidth size="small">
                     <Select
+                      displayEmpty
+                      inputProps={{ "aria-label": `Nuevo rol para ${row.usuario}` }}
                       value={selectedRoles[row.usuarioId] || row.rol}
                       onChange={(event) => setSelectedRoles({ ...selectedRoles, [row.usuarioId]: event.target.value })}
+                      MenuProps={{ disablePortal: false }}
                     >
-                      {tipos.map((tipo) => (
+                      {roleTypes.map((tipo) => (
                         <MenuItem key={tipo} value={tipo}>
                           {tipo}
                         </MenuItem>
@@ -126,6 +130,7 @@ const RolesPage = () => {
                     startIcon={<SaveIcon />}
                     onClick={() => handleSaveRole(row)}
                     disabled={(selectedRoles[row.usuarioId] || row.rol) === row.rol}
+                    title={(selectedRoles[row.usuarioId] || row.rol) === row.rol ? "Seleccione un rol diferente para guardar" : "Guardar nuevo rol"}
                   >
                     Guardar
                   </Button>

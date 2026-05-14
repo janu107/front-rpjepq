@@ -20,15 +20,21 @@ const AuditoriaPage = () => {
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(25);
   const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const loadData = async (nextPage = page, nextLimit = limit) => {
-    const params = { ...filters, page: nextPage + 1, limit: nextLimit };
+  const loadData = async (nextPage = page, nextLimit = limit, nextFilters = filters) => {
+    setLoading(true);
+    const params = { ...nextFilters, page: nextPage + 1, limit: nextLimit };
     Object.keys(params).forEach((key) => {
       if (!params[key]) delete params[key];
     });
-    const { data } = await axiosClient.get("/auditoria", { params });
-    setRows(data.data.rows || []);
-    setTotal(data.data.total || 0);
+    try {
+      const { data } = await axiosClient.get("/auditoria", { params });
+      setRows(data.data.rows || []);
+      setTotal(data.data.total || 0);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -43,7 +49,7 @@ const AuditoriaPage = () => {
   const clear = () => {
     setFilters(initialFilters);
     setPage(0);
-    setTimeout(() => loadData(0).catch(() => {}), 0);
+    loadData(0, limit, initialFilters).catch((error) => Swal.fire("Error", error.response?.data?.message || "No fue posible cargar auditoria.", "error"));
   };
 
   const changePage = (event, nextPage) => {
@@ -93,7 +99,12 @@ const AuditoriaPage = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((row) => (
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={7} align="center">Cargando auditoria...</TableCell>
+              </TableRow>
+            )}
+            {!loading && rows.map((row) => (
               <TableRow key={row.id} hover>
                 <TableCell>{row.fecha ? new Date(row.fecha).toLocaleString("es-GT") : ""}</TableCell>
                 <TableCell>{row.usuario || "N/A"}</TableCell>
@@ -104,6 +115,11 @@ const AuditoriaPage = () => {
                 <TableCell align="right"><Tooltip title="Ver detalle"><IconButton onClick={() => setDetail(row)}><VisibilityIcon /></IconButton></Tooltip></TableCell>
               </TableRow>
             ))}
+            {!loading && rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} align="center">No hay registros de auditoria para mostrar.</TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
         <TablePagination component="div" count={total} page={page} rowsPerPage={limit} onPageChange={changePage} onRowsPerPageChange={changeRows} />

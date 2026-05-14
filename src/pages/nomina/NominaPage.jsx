@@ -124,7 +124,25 @@ const NominaPage = () => {
   return (
     <Stack spacing={2.5}>
       <Box><Typography variant="h5">Nomina</Typography><Typography color="text.secondary">Ingresos, descuentos y resumen por planilla</Typography></Box>
-      <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}><Tabs value={tab} onChange={(e, v) => setTab(v)}><Tab label="Ingresos" /><Tab label="Descuentos" /><Tab label="Resumen" /></Tabs></Paper>
+      <Paper elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
+        <Tabs
+          value={tab}
+          onChange={(event, value) => setTab(value)}
+          variant="fullWidth"
+          aria-label="Secciones de nomina"
+          sx={{
+            "& .MuiTab-root": {
+              minHeight: { xs: 56, md: 48 },
+              px: { xs: 1.5, md: 2 },
+              fontWeight: 800
+            }
+          }}
+        >
+          <Tab label="Ingresos" id="nomina-tab-0" aria-controls="nomina-panel-0" />
+          <Tab label="Descuentos" id="nomina-tab-1" aria-controls="nomina-panel-1" />
+          <Tab label="Resumen" id="nomina-tab-2" aria-controls="nomina-panel-2" />
+        </Tabs>
+      </Paper>
       {tab === 0 && <NominaTable user={user} type="ingreso" rows={ingresos} config={{ typeLabel: "tipoIngresoNombre" }} onNew={() => openNew("ingresos")} onEdit={(r) => openEdit("ingresos", r)} onDelete={(r) => remove("ingresos", r)} search={searchIngresos} setSearch={setSearchIngresos} />}
       {tab === 1 && <NominaTable user={user} type="descuento" rows={descuentos} config={{ typeLabel: "tipoDescuentoNombre" }} onNew={() => openNew("descuentos")} onEdit={(r) => openEdit("descuentos", r)} onDelete={(r) => remove("descuentos", r)} search={searchDescuentos} setSearch={setSearchDescuentos} />}
       {tab === 2 && <Stack spacing={2}><FormControl sx={{ maxWidth: 420 }}><InputLabel>Planilla</InputLabel><Select label="Planilla" value={resumenPlanilla} onChange={(e) => setResumenPlanilla(e.target.value)}>{(options.planillas || []).map((p) => <MenuItem key={p.id} value={p.id}>Planilla {p.numero} - {p.tipoPlanillaNombre}</MenuItem>)}</Select></FormControl><Button variant="contained" onClick={consultarResumen} sx={{ maxWidth: 220 }}>Consultar resumen</Button>{resumen && <Grid container spacing={2}>{[["Total ingresos", resumen.totalIngresos], ["Total descuentos", resumen.totalDescuentos], ["Liquido", resumen.liquido], ["Cantidad ingresos", resumen.cantidadIngresos], ["Cantidad descuentos", resumen.cantidadDescuentos]].map(([label, value]) => <Grid item xs={12} md={4} key={label}><Paper elevation={0} sx={{ p: 3, border: "1px solid #dde3ea" }}><Typography color="text.secondary">{label}</Typography><Typography variant="h6">{typeof value === "number" ? value.toFixed ? value.toFixed(2) : value : value}</Typography></Paper></Grid>)}</Grid>}</Stack>}
