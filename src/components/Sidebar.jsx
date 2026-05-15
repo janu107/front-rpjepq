@@ -76,7 +76,9 @@ const items = [
     roles: ["ADMIN", "OPERADOR", "CONSULTA"],
     children: [
       { text: "Empleados", path: "/empleados", icon: <BadgeIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Salarios", path: "/salarios", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
+      // Salarios queda oculto porque ahora se captura desde el modal de Empleados.
+      // Para volver a mostrarlo, descomentar la siguiente linea.
+      // { text: "Salarios", path: "/salarios", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
       { text: "Jubilados", path: "/jubilados", icon: <PeopleAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
       { text: "Juntas Directivas", path: "/junta-directiva", icon: <WorkIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
       { text: "Dietas", path: "/dietas", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
