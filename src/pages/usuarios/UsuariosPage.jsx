@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  Grid,
   InputLabel,
   MenuItem,
   Select,
@@ -207,57 +208,50 @@ const UsuariosPage = () => {
         ]}
       />
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{ sx: { width: "min(860px, calc(100% - 24px))" } }}
+      >
         <DialogTitle>{editingUser ? "Editar usuario" : "Nuevo usuario"}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Usuario"
-              value={form.usuario}
-              disabled={Boolean(editingUser)}
-              onChange={(event) => setForm({ ...form, usuario: event.target.value })}
-              fullWidth
-            />
-            <TextField label="Nombre" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} fullWidth />
-            <TextField label="Correo" value={form.correo} onChange={(event) => setForm({ ...form, correo: event.target.value })} fullWidth />
-            <TextField
-              label="Fecha de inicio"
-              type="date"
-              value={form.fechaInicio}
-              onChange={(event) => setForm({ ...form, fechaInicio: event.target.value })}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-            />
+        <DialogContent dividers>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} md={6}>
+              <TextField label="Usuario" value={form.usuario} disabled={Boolean(editingUser)} onChange={(event) => setForm({ ...form, usuario: event.target.value })} fullWidth />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="Nombre" value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} fullWidth />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="Correo" value={form.correo} onChange={(event) => setForm({ ...form, correo: event.target.value })} fullWidth />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField label="Fecha de inicio" type="date" value={form.fechaInicio} onChange={(event) => setForm({ ...form, fechaInicio: event.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
+            </Grid>
             {!editingUser && (
-              <TextField
-                label="Contrasena"
-                type="password"
-                value={form.contrasena}
-                onChange={(event) => setForm({ ...form, contrasena: event.target.value })}
-                fullWidth
-              />
+              <Grid item xs={12} md={6}>
+                <TextField label="Contrasena" type="password" value={form.contrasena} onChange={(event) => setForm({ ...form, contrasena: event.target.value })} fullWidth />
+              </Grid>
             )}
-            <FormControl fullWidth>
-              <InputLabel>Estado</InputLabel>
-              <Select label="Estado" value={form.estado} onChange={(event) => setForm({ ...form, estado: event.target.value })}>
-                {estados.map((estado) => (
-                  <MenuItem key={estado} value={estado}>
-                    {estado}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>Rol</InputLabel>
-              <Select label="Rol" value={form.rol} onChange={(event) => setForm({ ...form, rol: event.target.value })}>
-                {roles.map((rol) => (
-                  <MenuItem key={rol} value={rol}>
-                    {rol}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Stack>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Estado</InputLabel>
+                <Select label="Estado" value={form.estado} onChange={(event) => setForm({ ...form, estado: event.target.value })}>
+                  {estados.map((estado) => <MenuItem key={estado} value={estado}>{estado}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Rol</InputLabel>
+                <Select label="Rol" value={form.rol} onChange={(event) => setForm({ ...form, rol: event.target.value })}>
+                  {roles.map((rol) => <MenuItem key={rol} value={rol}>{rol}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>

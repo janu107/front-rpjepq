@@ -224,8 +224,13 @@ const Sidebar = ({ drawerWidth, mobileOpen, onClose }) => {
         ModalProps={{ keepMounted: true, disablePortal: true }}
         sx={{
           display: { xs: "block", md: "none" },
-          zIndex: (theme) => theme.zIndex.drawer + 3,
-          "& .MuiDrawer-paper": { width: drawerWidth, boxSizing: "border-box" }
+          zIndex: (theme) => theme.zIndex.appBar + 10,
+          "& .MuiDrawer-paper": {
+            width: drawerWidth,
+            boxSizing: "border-box",
+            border: 0,
+            boxShadow: "18px 0 48px rgba(18, 63, 75, 0.28)"
+          }
         }}
       >
         <SidebarContent onNavigate={onClose} />

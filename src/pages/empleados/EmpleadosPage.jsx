@@ -10,8 +10,16 @@ const EmpleadosPage = () => (
     endpoint="/empleados"
     dependencies={[
       { key: "manejos", endpoint: "/catalogos/manejo-administracion" },
-      { key: "puestos", endpoint: "/catalogos/puestos" }
+      { key: "puestos", endpoint: "/catalogos/puestos" },
+      { key: "tiposIngreso", endpoint: "/catalogos/tipo-ingreso" }
     ]}
+    salaryConfig={{
+      requiredOnCreate: true,
+      fields: [
+        { key: "tipoIngreso", label: "Tipo ingreso", required: true, type: "select", source: "tiposIngreso", getValue: (item) => item.id, getLabel: (item) => `${item.tipoIngreso} - ${item.descripcion}` },
+        { key: "salario", label: "Salario", required: true, type: "number" }
+      ]
+    }}
     searchFields={["nombres", "apellidos", "dpi", "puestoNombre", "manejoDescripcion"]}
     columns={[
       { key: "idEmpleado", label: "ID" },

@@ -1,15 +1,7 @@
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import FactCheckIcon from "@mui/icons-material/FactCheck";
-import GroupIcon from "@mui/icons-material/Group";
-import ManageSearchIcon from "@mui/icons-material/ManageSearch";
-import PaymentsIcon from "@mui/icons-material/Payments";
-import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
-import ShieldIcon from "@mui/icons-material/Shield";
-import { AppBar, Avatar, Box, IconButton, ListItemIcon, Menu, MenuItem, Stack, Toolbar, Tooltip, Typography } from "@mui/material";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { AppBar, Avatar, Box, IconButton, Stack, Toolbar, Tooltip, Typography } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import { useAuth } from "../context/AuthContext";
@@ -18,17 +10,6 @@ import RoleChip from "./common/RoleChip";
 const Navbar = ({ onMenuClick, drawerWidth }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [menuAnchor, setMenuAnchor] = useState(null);
-
-  const menuLinks = [
-    { label: "Dashboard", to: "/dashboard", icon: <DashboardIcon fontSize="small" /> },
-    { label: "Empleados", to: "/empleados", icon: <PeopleAltIcon fontSize="small" /> },
-    { label: "Catalogos", to: "/catalogos", icon: <FactCheckIcon fontSize="small" /> },
-    { label: "Nomina", to: "/nomina", icon: <PaymentsIcon fontSize="small" /> },
-    { label: "Usuarios", to: "/usuarios", icon: <GroupIcon fontSize="small" /> },
-    { label: "Roles", to: "/roles", icon: <ShieldIcon fontSize="small" /> },
-    { label: "Auditoria", to: "/auditoria", icon: <ManageSearchIcon fontSize="small" /> }
-  ];
 
   const handleLogout = async () => {
     const result = await Swal.fire({
@@ -65,25 +46,11 @@ const Navbar = ({ onMenuClick, drawerWidth }) => {
           color="inherit"
           edge="start"
           aria-label="Abrir menu principal"
-          onClick={(event) => setMenuAnchor(event.currentTarget)}
+          onClick={onMenuClick}
           sx={{ mr: 2, display: { md: "none" } }}
         >
           <MenuIcon />
         </IconButton>
-        <Menu
-          anchorEl={menuAnchor}
-          open={Boolean(menuAnchor)}
-          onClose={() => setMenuAnchor(null)}
-          keepMounted
-          PaperProps={{ sx: { minWidth: 230, mt: 1 } }}
-        >
-          {menuLinks.map((item) => (
-            <MenuItem key={item.to} component={RouterLink} to={item.to} onClick={() => setMenuAnchor(null)}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              {item.label}
-            </MenuItem>
-          ))}
-        </Menu>
 
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography variant="h6" sx={{ lineHeight: 1.15 }}>Sistema Administrativo RPJEPQ</Typography>

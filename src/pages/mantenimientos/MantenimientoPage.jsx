@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  Grid,
   InputLabel,
   MenuItem,
   Select,
@@ -33,13 +34,16 @@ const buildInitialForm = (fields) =>
     return acc;
   }, {});
 
-const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchFields, dependencies = [] }) => {
+const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchFields, dependencies = [], salaryConfig }) => {
   const { user } = useAuth();
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
   const [form, setForm] = useState(buildInitialForm(fields));
+  const [salaryForm, setSalaryForm] = useState({ tipoIngreso: "", salario: "" });
+  const [salaryReady, setSalaryReady] = useState(false);
   const [options, setOptions] = useState({});
 
   const loadRows = async () => {
@@ -82,6 +86,8 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
   const openCreateDialog = () => {
     setEditingRow(null);
     setForm(buildInitialForm(fields));
+    setSalaryForm({ tipoIngreso: "", salario: "" });
+    setSalaryReady(false);
     setDialogOpen(true);
   };
 
@@ -93,13 +99,36 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
         return acc;
       }, {})
     );
+    setSalaryForm({ tipoIngreso: "", salario: "" });
+    setSalaryReady(false);
     setDialogOpen(true);
   };
 
   const validateForm = () => {
     const missing = fields.find((field) => field.required && String(form[field.key] ?? "").trim() === "");
     if (missing) return `El campo ${missing.label} es obligatorio.`;
+    if (salaryConfig?.requiredOnCreate && !editingRow && !salaryReady) return "Debe agregar la informacion de salario antes de guardar el empleado.";
     return null;
+  };
+
+  const validateSalaryForm = () => {
+    if (!form.tipoManejo) return "Seleccione el manejo de administracion del empleado antes de agregar salario.";
+    const missing = (salaryConfig?.fields || []).find((field) => field.required && String(salaryForm[field.key] ?? "").trim() === "");
+    if (missing) return `El campo ${missing.label} es obligatorio.`;
+    if (Number(salaryForm.salario) < 0) return "El salario debe ser mayor o igual a 0.";
+    return null;
+  };
+
+  const confirmSalary = () => {
+    const validation = validateSalaryForm();
+    if (validation) {
+      Swal.fire("Validacion", validation, "warning");
+      return;
+    }
+
+    setSalaryReady(true);
+    setSalaryDialogOpen(false);
+    Swal.fire("Listo", "Salario agregado al registro.", "success");
   };
 
   const handleSave = async () => {
@@ -115,6 +144,13 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
         Swal.fire("Listo", "Registro actualizado correctamente.", "success");
       } else {
         await axiosClient.post(endpoint, form);
+        if (salaryConfig && salaryReady) {
+          await axiosClient.post("/salarios", {
+            tipoManejo: form.tipoManejo,
+            tipoIngreso: salaryForm.tipoIngreso,
+            salario: salaryForm.salario
+          });
+        }
         Swal.fire("Listo", "Registro creado correctamente.", "success");
       }
       setDialogOpen(false);
@@ -196,14 +232,85 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
         ]}
       />
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        fullWidth
+        maxWidth="lg"
+        PaperProps={{ sx: { width: "min(1120px, calc(100% - 24px))" } }}
+      >
         <DialogTitle>{editingRow ? "Editar registro" : "Nuevo registro"}</DialogTitle>
-        <DialogContent><Stack spacing={2} sx={{ mt: 1 }}>{fields.map(renderField)}</Stack></DialogContent>
+        <DialogContent dividers>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            {fields.map((field) => (
+              <Grid item xs={12} md={field.fullWidth ? 12 : 6} key={field.key}>
+                {renderField(field)}
+              </Grid>
+            ))}
+          </Grid>
+        </DialogContent>
         <DialogActions>
+          {salaryConfig && (
+            <Button
+              type="button"
+              variant={salaryReady ? "contained" : "outlined"}
+              color={salaryReady ? "success" : "primary"}
+              onClick={() => setSalaryDialogOpen(true)}
+            >
+              {salaryReady ? "Salario agregado" : "Salario"}
+            </Button>
+          )}
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
           <Button variant="contained" onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>
+
+      {salaryConfig && (
+        <Dialog
+          open={salaryDialogOpen}
+          onClose={() => setSalaryDialogOpen(false)}
+          fullWidth
+          maxWidth="md"
+          PaperProps={{ sx: { width: "min(820px, calc(100% - 24px))" } }}
+        >
+          <DialogTitle>Salario del empleado</DialogTitle>
+          <DialogContent dividers>
+            <Grid container spacing={2} sx={{ mt: 0.5 }}>
+              <Grid item xs={12} md={6}>
+                <TextField label="Manejo administracion" value={options.manejos?.find((item) => item.id === form.tipoManejo)?.descripcion || form.tipoManejo || ""} fullWidth disabled />
+              </Grid>
+              {(salaryConfig.fields || []).map((field) => (
+                <Grid item xs={12} md={6} key={field.key}>
+                  {field.type === "select" ? (
+                    <FormControl fullWidth>
+                      <InputLabel>{field.label}</InputLabel>
+                      <Select label={field.label} value={salaryForm[field.key] ?? ""} onChange={(event) => setSalaryForm({ ...salaryForm, [field.key]: event.target.value })}>
+                        {(options[field.source] || []).map((item) => (
+                          <MenuItem key={field.getValue ? field.getValue(item) : item.value} value={field.getValue ? field.getValue(item) : item.value}>
+                            {field.getLabel ? field.getLabel(item) : item.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <TextField
+                      label={field.label}
+                      type={field.type || "text"}
+                      value={salaryForm[field.key] ?? ""}
+                      onChange={(event) => setSalaryForm({ ...salaryForm, [field.key]: event.target.value })}
+                      fullWidth
+                    />
+                  )}
+                </Grid>
+              ))}
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSalaryDialogOpen(false)}>Cancelar</Button>
+            <Button variant="contained" onClick={confirmSalary}>Agregar salario</Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Stack>
   );
 };

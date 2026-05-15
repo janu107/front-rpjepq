@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  Grid,
   IconButton,
   InputAdornment,
   InputLabel,
@@ -400,12 +401,22 @@ const CatalogosPage = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        fullWidth
+        maxWidth="lg"
+        PaperProps={{ sx: { width: "min(1080px, calc(100% - 24px))" } }}
+      >
         <DialogTitle>{editingRecord ? "Editar registro" : "Nuevo registro"}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {config.fields.map(renderField)}
-          </Stack>
+        <DialogContent dividers>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            {config.fields.map((field) => (
+              <Grid item xs={12} md={field.fullWidth ? 12 : 6} key={field.key}>
+                {renderField(field)}
+              </Grid>
+            ))}
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
