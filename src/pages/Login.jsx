@@ -12,6 +12,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({ usuario: "", contrasena: "" });
   const [loading, setLoading] = useState(false);
+  const loginBackground = `${import.meta.env.BASE_URL}login-bg.png`;
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -61,9 +62,46 @@ const Login = () => {
       display="flex"
       alignItems="center"
       justifyContent="center"
-      sx={{ bgcolor: "background.default", px: 2 }}
+      sx={{
+        position: "relative",
+        overflow: "hidden",
+        bgcolor: "background.default",
+        px: 2,
+        py: 4,
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          inset: 0,
+          backgroundImage: `url(${loginBackground})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          opacity: 0.42,
+          filter: "saturate(1.08) contrast(1.03)",
+          transform: "scale(1.01)"
+        },
+        "&::after": {
+          content: '""',
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(120deg, rgba(247,250,251,0.92) 0%, rgba(247,250,251,0.72) 42%, rgba(18,63,75,0.48) 100%)"
+        }
+      }}
     >
-      <Paper elevation={0} sx={{ width: "100%", maxWidth: 430, p: 4, border: "1px solid #dde3ea" }}>
+      <Paper
+        elevation={0}
+        sx={{
+          position: "relative",
+          zIndex: 1,
+          width: "100%",
+          maxWidth: 430,
+          p: { xs: 3, sm: 4 },
+          border: "1px solid rgba(221, 227, 234, 0.82)",
+          bgcolor: "rgba(255, 255, 255, 0.86)",
+          backdropFilter: "blur(14px)",
+          boxShadow: "0 24px 70px rgba(18, 63, 75, 0.20)"
+        }}
+      >
         <Stack spacing={3} alignItems="center">
           <Avatar sx={{ bgcolor: "primary.main", width: 56, height: 56 }}>
             <LockOutlinedIcon />
