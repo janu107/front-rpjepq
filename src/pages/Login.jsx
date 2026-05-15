@@ -1,5 +1,6 @@
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import { Avatar, Box, Button, Paper, Stack, TextField, Typography } from "@mui/material";
+import WavesIcon from "@mui/icons-material/Waves";
+import { Avatar, Box, Button, Chip, Divider, Paper, Stack, TextField, Typography } from "@mui/material";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -75,8 +76,8 @@ const Login = () => {
           backgroundImage: `url(${loginBackground})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: 0.42,
-          filter: "saturate(1.08) contrast(1.03)",
+          opacity: 0.5,
+          filter: "saturate(1.08) contrast(1.04)",
           transform: "scale(1.01)"
         },
         "&::after": {
@@ -84,33 +85,79 @@ const Login = () => {
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(120deg, rgba(247,250,251,0.92) 0%, rgba(247,250,251,0.72) 42%, rgba(18,63,75,0.48) 100%)"
+            "linear-gradient(120deg, rgba(247,250,251,0.94) 0%, rgba(247,250,251,0.76) 42%, rgba(18,63,75,0.56) 100%)"
+        },
+        "& .login-accent": {
+          position: "absolute",
+          zIndex: 1,
+          width: 280,
+          height: 280,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(186,122,47,0.20), transparent 66%)",
+          right: { xs: -120, md: 52 },
+          top: { xs: -90, md: 76 },
+          pointerEvents: "none"
         }
       }}
     >
+      <Box className="login-accent" />
       <Paper
         elevation={0}
         sx={{
           position: "relative",
           zIndex: 1,
           width: "100%",
-          maxWidth: 430,
-          p: { xs: 3, sm: 4 },
-          border: "1px solid rgba(221, 227, 234, 0.82)",
-          bgcolor: "rgba(255, 255, 255, 0.86)",
-          backdropFilter: "blur(14px)",
-          boxShadow: "0 24px 70px rgba(18, 63, 75, 0.20)"
+          maxWidth: 460,
+          p: { xs: 3, sm: 4.5 },
+          border: "1px solid rgba(255, 255, 255, 0.72)",
+          bgcolor: "rgba(255, 255, 255, 0.88)",
+          backdropFilter: "blur(18px)",
+          boxShadow: "0 28px 80px rgba(18, 63, 75, 0.24)",
+          overflow: "hidden",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            inset: "0 0 auto 0",
+            height: 5,
+            background: "linear-gradient(90deg, #1f5d6b, #ba7a2f)"
+          }
         }}
       >
-        <Stack spacing={3} alignItems="center">
-          <Avatar sx={{ bgcolor: "primary.main", width: 56, height: 56 }}>
-            <LockOutlinedIcon />
-          </Avatar>
+        <Stack spacing={3.25}>
+          <Stack spacing={2} alignItems="center">
+            <Avatar
+              sx={{
+                width: 68,
+                height: 68,
+                bgcolor: "primary.main",
+                boxShadow: "0 16px 34px rgba(31, 93, 107, 0.24)"
+              }}
+            >
+              <WavesIcon sx={{ fontSize: 34 }} />
+            </Avatar>
 
-          <Box textAlign="center">
-            <Typography variant="h5">RPJEPQ</Typography>
-            <Typography color="text.secondary">Acceso administrativo</Typography>
-          </Box>
+            <Box textAlign="center">
+              <Typography variant="h4" sx={{ fontWeight: 900, color: "primary.main", letterSpacing: 0.2 }}>
+                RPJEPQ
+              </Typography>
+              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                Sistema Administrativo
+              </Typography>
+            </Box>
+
+            <Chip
+              icon={<LockOutlinedIcon />}
+              label="Acceso seguro"
+              size="small"
+              sx={{
+                bgcolor: "rgba(31, 93, 107, 0.10)",
+                color: "primary.main",
+                fontWeight: 800
+              }}
+            />
+          </Stack>
+
+          <Divider sx={{ borderColor: "rgba(31, 93, 107, 0.12)" }} />
 
           <Box component="form" onSubmit={handleSubmit} width="100%">
             <Stack spacing={2.5}>
@@ -122,6 +169,8 @@ const Login = () => {
                 autoComplete="username"
                 fullWidth
                 required
+                autoFocus
+                variant="outlined"
               />
               <TextField
                 label="Contrasena"
@@ -132,11 +181,39 @@ const Login = () => {
                 autoComplete="current-password"
                 fullWidth
                 required
+                variant="outlined"
               />
-              <Button type="submit" variant="contained" size="large" disabled={loading} fullWidth>
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                disabled={loading}
+                fullWidth
+                sx={{
+                  minHeight: 50,
+                  mt: 0.5,
+                  fontWeight: 900,
+                  boxShadow: "0 14px 30px rgba(31, 93, 107, 0.22)"
+                }}
+              >
                 {loading ? "Ingresando..." : "Ingresar"}
               </Button>
             </Stack>
+          </Box>
+
+          <Box
+            sx={{
+              mx: { xs: -3, sm: -4.5 },
+              mb: { xs: -3, sm: -4.5 },
+              px: { xs: 3, sm: 4.5 },
+              py: 2,
+              bgcolor: "rgba(31, 93, 107, 0.07)",
+              borderTop: "1px solid rgba(31, 93, 107, 0.10)"
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              Gestion administrativa, nomina y reportes institucionales.
+            </Typography>
           </Box>
         </Stack>
       </Paper>
