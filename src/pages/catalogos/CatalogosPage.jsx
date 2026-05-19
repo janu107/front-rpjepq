@@ -40,6 +40,7 @@ const catalogConfigs = [
   {
     key: "areas",
     label: "Areas",
+    codeKey: "id",
     searchFields: ["descripcion"],
     columns: [{ key: "descripcion", label: "Descripcion" }],
     fields: [{ key: "descripcion", label: "Descripcion", required: true }]
@@ -47,6 +48,7 @@ const catalogConfigs = [
   {
     key: "manejo-administracion",
     label: "Manejo administracion",
+    codeKey: "id",
     searchFields: ["descripcion"],
     columns: [{ key: "descripcion", label: "Descripcion" }],
     fields: [{ key: "descripcion", label: "Descripcion", required: true }]
@@ -54,6 +56,7 @@ const catalogConfigs = [
   {
     key: "puestos",
     label: "Puestos",
+    codeKey: "id",
     searchFields: ["nombre", "funcion", "areaDescripcion", "manejoDescripcion"],
     columns: [
       { key: "nombre", label: "Puesto" },
@@ -71,6 +74,7 @@ const catalogConfigs = [
   {
     key: "tipo-ingreso",
     label: "Tipo ingreso",
+    codeKey: "id",
     searchFields: ["tipoIngreso", "descripcion"],
     columns: [
       { key: "tipoIngreso", label: "Tipo" },
@@ -84,6 +88,7 @@ const catalogConfigs = [
   {
     key: "tipo-descuento",
     label: "Tipo descuento",
+    codeKey: "id",
     searchFields: ["tipoDescuento", "descripcion"],
     columns: [
       { key: "tipoDescuento", label: "Tipo" },
@@ -97,6 +102,7 @@ const catalogConfigs = [
   {
     key: "tipo-jubilacion",
     label: "Tipo jubilacion",
+    codeKey: "id",
     searchFields: ["descripcion"],
     columns: [{ key: "descripcion", label: "Descripcion" }],
     fields: [{ key: "descripcion", label: "Descripcion", required: true }]
@@ -104,6 +110,7 @@ const catalogConfigs = [
   {
     key: "tipo-planilla",
     label: "Tipo planilla",
+    codeKey: "id",
     searchFields: ["tipoPlanilla", "descripcion", "idTipoUso"],
     columns: [
       { key: "tipoPlanilla", label: "Tipo" },
@@ -119,6 +126,7 @@ const catalogConfigs = [
   {
     key: "parametro-general",
     label: "Parametro general",
+    codeKey: "id",
     searchFields: ["nombreEmpresa", "nit", "correo"],
     columns: [
       { key: "nombreEmpresa", label: "Empresa" },
@@ -142,6 +150,7 @@ const catalogConfigs = [
   {
     key: "parametro-planilla",
     label: "Parametro planilla",
+    codeKey: "id",
     searchFields: ["numero", "frecuencia", "estado", "tipoPlanillaNombre"],
     columns: [
       { key: "numero", label: "Numero" },
@@ -358,41 +367,45 @@ const CatalogosPage = () => {
         </Button>}
       </Stack>
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
-        <Table>
-          <TableHead>
+      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
+        <Table size="small">
+          <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
             <TableRow>
+              <TableCell sx={{ fontWeight: 800, color: "text.secondary" }}>Codigo</TableCell>
               {config.columns.map((column) => (
-                <TableCell key={column.key}>{column.label}</TableCell>
+                <TableCell key={column.key} sx={{ fontWeight: 800, color: "text.secondary" }}>{column.label}</TableCell>
               ))}
-              <TableCell>Creacion</TableCell>
-              <TableCell align="right">Acciones</TableCell>
+              <TableCell sx={{ fontWeight: 800, color: "text.secondary" }}>Creacion</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 800, color: "text.secondary" }}>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredRecords.map((record) => (
               <TableRow key={record.id} hover>
+                <TableCell>{record[config.codeKey] ?? record.id}</TableCell>
                 {config.columns.map((column) => (
                   <TableCell key={column.key}>{record[column.key]}</TableCell>
                 ))}
                 <TableCell>{record.usuarioCreacion || ""}</TableCell>
                 <TableCell align="right">
+                  <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                   {canEdit(user) && <Tooltip title="Editar">
-                    <IconButton color="primary" aria-label="Editar catalogo" onClick={() => openEditDialog(record)} sx={{ minWidth: 44, minHeight: 44 }}>
+                    <IconButton color="primary" size="small" aria-label="Editar catalogo" onClick={() => openEditDialog(record)}>
                       <EditIcon />
                     </IconButton>
                   </Tooltip>}
                   {canDelete(user) && <Tooltip title="Eliminar">
-                    <IconButton color="primary" aria-label="Eliminar catalogo" onClick={() => handleDelete(record)} sx={{ minWidth: 44, minHeight: 44 }}>
+                    <IconButton color="primary" size="small" aria-label="Eliminar catalogo" onClick={() => handleDelete(record)}>
                       <DeleteIcon />
                     </IconButton>
                   </Tooltip>}
+                  </Stack>
                 </TableCell>
               </TableRow>
             ))}
             {filteredRecords.length === 0 && (
               <TableRow>
-                <TableCell colSpan={config.columns.length + 2} align="center">
+                <TableCell colSpan={config.columns.length + 3} align="center">
                   No hay registros para mostrar.
                 </TableCell>
               </TableRow>

@@ -7,16 +7,17 @@ import Swal from "sweetalert2";
 
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../context/AuthContext";
+import { isConsulta } from "../utils/permissions";
 
 const Login = () => {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ usuario: "", contrasena: "" });
   const [loading, setLoading] = useState(false);
   const loginBackground = `${import.meta.env.BASE_URL}login-bg.png`;
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={isConsulta(user) ? "/reportes/nomina" : "/dashboard"} replace />;
   }
 
   const handleChange = (event) => {
@@ -44,7 +45,7 @@ const Login = () => {
     try {
       const { data } = await axiosClient.post("/auth/login", form);
       login(data.data);
-      navigate("/dashboard", { replace: true });
+      navigate(isConsulta(data.data?.user) ? "/reportes/nomina" : "/dashboard", { replace: true });
     } catch (error) {
       Swal.fire({
         title: "No fue posible iniciar sesion",

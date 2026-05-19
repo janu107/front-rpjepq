@@ -27,6 +27,8 @@ import { useAuth } from "../../context/AuthContext";
 import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
+const normalizeText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+const findEmpleadoRegimen = (items = []) => items.find((item) => normalizeText(item.descripcion) === "EMPLEADO REGIMEN");
 
 const buildInitialForm = (fields) =>
   fields.reduce((acc, field) => {
@@ -34,7 +36,7 @@ const buildInitialForm = (fields) =>
     return acc;
   }, {});
 
-const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchFields, dependencies = [], salaryConfig }) => {
+const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchFields, dependencies = [], salaryConfig, formSections = [] }) => {
   const { user } = useAuth();
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
@@ -62,7 +64,11 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
         return [dependency.key, data.data || []];
       })
     );
-    setOptions(Object.fromEntries(entries));
+    const loaded = Object.fromEntries(entries);
+    setOptions(loaded);
+    if (loaded.manejos && !findEmpleadoRegimen(loaded.manejos)) {
+      console.warn("No existe manejo EMPLEADO REGIMEN");
+    }
   };
 
   useEffect(() => {
@@ -85,7 +91,9 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
 
   const openCreateDialog = () => {
     setEditingRow(null);
-    setForm(buildInitialForm(fields));
+    const initial = buildInitialForm(fields);
+    const fixedManejo = findEmpleadoRegimen(options.manejos);
+    setForm({ ...initial, tipoManejo: fixedManejo?.id || initial.tipoManejo || "" });
     setSalaryForm({ tipoIngreso: "", salario: "" });
     setSalaryReady(false);
     setDialogOpen(true);
@@ -188,7 +196,7 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
       return (
         <FormControl key={field.key} fullWidth>
           <InputLabel>{field.label}</InputLabel>
-          <Select label={field.label} value={form[field.key] ?? ""} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}>
+          <Select label={field.label} value={form[field.key] ?? ""} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} disabled={field.disabled}>
             {items.map((item) => (
               <MenuItem key={field.getValue ? field.getValue(item) : item.value} value={field.getValue ? field.getValue(item) : item.value}>
                 {field.getLabel ? field.getLabel(item) : item.label}
@@ -207,6 +215,7 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
         value={form[field.key] ?? ""}
         onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}
         InputLabelProps={field.type === "date" ? { shrink: true } : undefined}
+        disabled={field.disabled}
         fullWidth
       />
     );
@@ -241,13 +250,30 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
       >
         <DialogTitle>{editingRow ? "Editar registro" : "Nuevo registro"}</DialogTitle>
         <DialogContent dividers>
-          <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            {fields.map((field) => (
-              <Grid item xs={12} md={field.fullWidth ? 12 : 6} key={field.key}>
-                {renderField(field)}
-              </Grid>
-            ))}
-          </Grid>
+          {formSections.length > 0 ? (
+            <Stack spacing={2.5} sx={{ mt: 0.5 }}>
+              {formSections.map((section) => (
+                <Stack key={section.title} spacing={1.5}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{section.title}</Typography>
+                  <Grid container spacing={2}>
+                    {fields.filter((field) => section.fields.includes(field.key)).map((field) => (
+                      <Grid item xs={12} md={field.fullWidth ? 12 : 6} key={field.key}>
+                        {renderField(field)}
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Stack>
+              ))}
+            </Stack>
+          ) : (
+            <Grid container spacing={2} sx={{ mt: 0.5 }}>
+              {fields.map((field) => (
+                <Grid item xs={12} md={field.fullWidth ? 12 : 6} key={field.key}>
+                  {renderField(field)}
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </DialogContent>
         <DialogActions>
           {salaryConfig && (

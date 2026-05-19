@@ -20,6 +20,10 @@ a {
   box-sizing: border-box;
 }
 
+.swal2-container {
+  z-index: 20000 !important;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .page-enter {
     animation: pageIn 220ms ease both;

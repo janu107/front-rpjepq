@@ -5,7 +5,7 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import SearchIcon from "@mui/icons-material/Search";
 import {
-  Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton,
+  Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
   InputAdornment, InputLabel, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
@@ -34,6 +34,8 @@ const initialForm = {
 
 const estados = ["ACTIVO", "INACTIVO", "RETIRADO"];
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
+const normalizeText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+const findEmpleadoRegimen = (items = []) => items.find((item) => normalizeText(item.descripcion) === "EMPLEADO REGIMEN");
 
 const AportacionesPage = () => {
   const { user } = useAuth();
@@ -56,7 +58,11 @@ const AportacionesPage = () => {
 
   const loadManejos = async () => {
     const { data } = await axiosClient.get("/catalogos/manejo-administracion");
-    setManejos(data.data || []);
+    const items = data.data || [];
+    setManejos(items);
+    if (!findEmpleadoRegimen(items)) {
+      console.warn("No existe manejo EMPLEADO REGIMEN");
+    }
   };
 
   useEffect(() => {
@@ -74,7 +80,8 @@ const AportacionesPage = () => {
 
   const openCreate = () => {
     setEditing(null);
-    setForm(initialForm);
+    const empleadoRegimen = findEmpleadoRegimen(manejos);
+    setForm({ ...initialForm, tipoManejo: empleadoRegimen?.id || "" });
     setDialogOpen(true);
   };
 
@@ -206,9 +213,9 @@ const AportacionesPage = () => {
         InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
       />
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
-        <Table>
-          <TableHead>
+      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
+        <Table size="small">
+          <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
             <TableRow>
               <TableCell>ID</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell><TableCell>Gerencia</TableCell><TableCell>Estado</TableCell><TableCell>Prestamo</TableCell><TableCell>Manejo</TableCell><TableCell align="right">Acciones</TableCell>
             </TableRow>
@@ -224,10 +231,12 @@ const AportacionesPage = () => {
                 <TableCell><Chip label={item.tienePrestamo ? "SI" : "NO"} color={item.tienePrestamo ? "warning" : "default"} size="small" /></TableCell>
                 <TableCell>{item.manejoDescripcion}</TableCell>
                 <TableCell align="right">
-                  {canEdit(user) && <Tooltip title="Editar"><IconButton color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>}
-                  <Tooltip title="Detalle"><IconButton color="primary" onClick={() => openDetalle(item)}><ListAltIcon /></IconButton></Tooltip>
-                  {canEdit(user) && <Tooltip title="Cambiar estado"><IconButton color="primary" onClick={() => changeStatus(item)}><PowerSettingsNewIcon /></IconButton></Tooltip>}
-                  {canDelete(user) && <Tooltip title="Eliminar"><IconButton color="primary" onClick={() => deleteAportacion(item)}><DeleteIcon /></IconButton></Tooltip>}
+                  <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                  {canEdit(user) && <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>}
+                  <Tooltip title="Ver detalle"><IconButton size="small" color="primary" onClick={() => openDetalle(item)}><ListAltIcon /></IconButton></Tooltip>
+                  {canEdit(user) && <Tooltip title="Cambiar estado"><IconButton size="small" color="primary" onClick={() => changeStatus(item)}><PowerSettingsNewIcon /></IconButton></Tooltip>}
+                  {canDelete(user) && <Tooltip title="Eliminar"><IconButton size="small" color="primary" onClick={() => deleteAportacion(item)}><DeleteIcon /></IconButton></Tooltip>}
+                  </Stack>
                 </TableCell>
               </TableRow>
             ))}
@@ -239,21 +248,21 @@ const AportacionesPage = () => {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>{editing ? "Editar aportacion" : "Nueva aportacion"}</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <FormControl fullWidth><InputLabel>Tipo manejo</InputLabel><Select label="Tipo manejo" value={form.tipoManejo} onChange={(e) => setForm({ ...form, tipoManejo: e.target.value })}>{manejos.map((m) => <MenuItem key={m.id} value={m.id}>{m.descripcion}</MenuItem>)}</Select></FormControl>
-            <TextField label="ID aportacion" type="number" value={form.idAportacion} onChange={(e) => setForm({ ...form, idAportacion: e.target.value })} fullWidth />
-            <TextField label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} fullWidth />
-            <TextField label="Apellido" value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} fullWidth />
-            <TextField label="DPI" value={form.dpi} onChange={(e) => setForm({ ...form, dpi: e.target.value })} fullWidth />
-            <TextField label="Gerencia" value={form.gerencia} onChange={(e) => setForm({ ...form, gerencia: e.target.value })} fullWidth />
-            <TextField label="Fecha inicio aportacion" type="date" value={form.fechaInicioAportacion} onChange={(e) => setForm({ ...form, fechaInicioAportacion: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
-            <TextField label="Fecha fin aportacion" type="date" value={form.fechaFinAportacion || ""} onChange={(e) => setForm({ ...form, fechaFinAportacion: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
-            <FormControl fullWidth><InputLabel>Estado</InputLabel><Select label="Estado" value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}>{estados.map((estado) => <MenuItem key={estado} value={estado}>{estado}</MenuItem>)}</Select></FormControl>
-            <FormControl fullWidth><InputLabel>Tiene prestamo</InputLabel><Select label="Tiene prestamo" value={form.tienePrestamo ? "1" : "0"} onChange={(e) => setForm({ ...form, tienePrestamo: e.target.value === "1" })}><MenuItem value="0">NO</MenuItem><MenuItem value="1">SI</MenuItem></Select></FormControl>
-            <TextField label="Motivo retiro" value={form.motivoRetiro || ""} onChange={(e) => setForm({ ...form, motivoRetiro: e.target.value })} fullWidth />
-            <TextField label="Fecha nacimiento" type="date" value={form.fechaNacimiento} onChange={(e) => setForm({ ...form, fechaNacimiento: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
-            <TextField label="Ubicacion" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} fullWidth />
-          </Stack>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} md={6}><FormControl fullWidth><InputLabel>Tipo manejo</InputLabel><Select label="Tipo manejo" value={form.tipoManejo} onChange={(e) => setForm({ ...form, tipoManejo: e.target.value })} disabled>{manejos.map((m) => <MenuItem key={m.id} value={m.id}>{m.descripcion}</MenuItem>)}</Select></FormControl></Grid>
+            <Grid item xs={12} md={6}><TextField label="ID aportacion" type="number" value={form.idAportacion} onChange={(e) => setForm({ ...form, idAportacion: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Apellido" value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="DPI" value={form.dpi} onChange={(e) => setForm({ ...form, dpi: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Gerencia" value={form.gerencia} onChange={(e) => setForm({ ...form, gerencia: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Fecha inicio aportacion" type="date" value={form.fechaInicioAportacion} onChange={(e) => setForm({ ...form, fechaInicioAportacion: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Fecha fin aportacion" type="date" value={form.fechaFinAportacion || ""} onChange={(e) => setForm({ ...form, fechaFinAportacion: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><FormControl fullWidth><InputLabel>Estado</InputLabel><Select label="Estado" value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}>{estados.map((estado) => <MenuItem key={estado} value={estado}>{estado}</MenuItem>)}</Select></FormControl></Grid>
+            <Grid item xs={12} md={6}><FormControl fullWidth><InputLabel>Tiene prestamo</InputLabel><Select label="Tiene prestamo" value={form.tienePrestamo ? "1" : "0"} onChange={(e) => setForm({ ...form, tienePrestamo: e.target.value === "1" })}><MenuItem value="0">NO</MenuItem><MenuItem value="1">SI</MenuItem></Select></FormControl></Grid>
+            <Grid item xs={12} md={6}><TextField label="Fecha nacimiento" type="date" value={form.fechaNacimiento} onChange={(e) => setForm({ ...form, fechaNacimiento: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Ubicacion" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12}><TextField label="Motivo retiro" value={form.motivoRetiro || ""} onChange={(e) => setForm({ ...form, motivoRetiro: e.target.value })} fullWidth /></Grid>
+          </Grid>
         </DialogContent>
         <DialogActions><Button onClick={() => setDialogOpen(false)}>Cancelar</Button><Button variant="contained" onClick={saveAportacion}>Guardar</Button></DialogActions>
       </Dialog>
@@ -269,8 +278,8 @@ const AportacionesPage = () => {
               {canCreate(user) && <Button variant="contained" onClick={saveDetalle}>Agregar pago</Button>}
             </Stack>
             <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
-              <Table><TableHead><TableRow><TableCell>Fecha pago</TableCell><TableCell>Valor</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
-                <TableBody>{detalle.map((row) => <TableRow key={row.id}><TableCell>{formatDate(row.fechaPago)}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell align="right">{canDelete(user) && <IconButton color="primary" onClick={() => deleteDetalle(row)}><DeleteIcon /></IconButton>}</TableCell></TableRow>)}</TableBody>
+              <Table size="small"><TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}><TableRow><TableCell>Codigo empleado</TableCell><TableCell>Nombre</TableCell><TableCell>Valor</TableCell><TableCell>Fecha</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
+                <TableBody>{detalle.map((row) => <TableRow key={row.id}><TableCell>{row.codigoEmpleado || selected?.idAportacion}</TableCell><TableCell>{row.nombre || `${selected?.nombre || ""} ${selected?.apellido || ""}`}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell>{formatDate(row.fechaPago)}</TableCell><TableCell align="right">{canDelete(user) && <IconButton size="small" color="primary" onClick={() => deleteDetalle(row)}><DeleteIcon /></IconButton>}</TableCell></TableRow>)}</TableBody>
               </Table>
             </TableContainer>
           </Stack>
