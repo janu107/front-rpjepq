@@ -34,7 +34,8 @@ const initialForm = {
 
 const estados = ["ACTIVO", "INACTIVO", "RETIRADO"];
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
-const findEmpleadoRegimen = (items) => items.find((item) => String(item.descripcion || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase() === "EMPLEADO REGIMEN");
+const normalizeText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+const findEmpleadoRegimen = (items = []) => items.find((item) => normalizeText(item.descripcion) === "EMPLEADO REGIMEN");
 
 const AportacionesPage = () => {
   const { user } = useAuth();
@@ -212,7 +213,7 @@ const AportacionesPage = () => {
         InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
       />
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
             <TableRow>

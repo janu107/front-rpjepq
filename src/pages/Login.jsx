@@ -45,7 +45,7 @@ const Login = () => {
     try {
       const { data } = await axiosClient.post("/auth/login", form);
       login(data.data);
-      navigate(isConsulta(data.data) ? "/reportes/nomina" : "/dashboard", { replace: true });
+      navigate(isConsulta(data.data?.user) ? "/reportes/nomina" : "/dashboard", { replace: true });
     } catch (error) {
       Swal.fire({
         title: "No fue posible iniciar sesion",

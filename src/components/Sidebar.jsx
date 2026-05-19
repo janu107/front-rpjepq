@@ -1,27 +1,46 @@
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import BadgeIcon from "@mui/icons-material/Badge";
 import CalculateIcon from "@mui/icons-material/Calculate";
+import DashboardIcon from "@mui/icons-material/Dashboard";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
+import GroupIcon from "@mui/icons-material/Group";
 import InsertChartIcon from "@mui/icons-material/InsertChart";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import ManageSearchIcon from "@mui/icons-material/ManageSearch";
-import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
-import GroupIcon from "@mui/icons-material/Group";
 import PaidIcon from "@mui/icons-material/Paid";
 import PaymentsIcon from "@mui/icons-material/Payments";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
 import ShieldIcon from "@mui/icons-material/Shield";
 import WorkIcon from "@mui/icons-material/Work";
 import { Box, Collapse, Divider, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography } from "@mui/material";
-import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { hasRole } from "../utils/permissions";
 
 const items = [
+  { text: "Dashboard", path: "/dashboard", icon: <DashboardIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+  {
+    text: "Cat\u00e1logos",
+    path: "/catalogos",
+    icon: <FactCheckIcon />,
+    roles: ["ADMIN", "OPERADOR"],
+    children: [
+      { text: "\u00c1reas", path: "/catalogos/areas", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Manejo administraci\u00f3n", path: "/catalogos/manejo-administracion", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Puestos", path: "/catalogos/puestos", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Tipo ingreso", path: "/catalogos/tipo-ingreso", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Tipo descuento", path: "/catalogos/tipo-descuento", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Tipo jubilaci\u00f3n", path: "/catalogos/tipo-jubilacion", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Tipo planilla", path: "/catalogos/tipo-planilla", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Par\u00e1metro general", path: "/catalogos/parametro-general", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Par\u00e1metro planilla", path: "/catalogos/parametro-planilla", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+    ]
+  },
   {
     text: "Mantenimiento EPQ",
     icon: <SettingsSuggestIcon />,
@@ -29,12 +48,12 @@ const items = [
     children: [
       { text: "Empleado EPQ", path: "/empleados", icon: <BadgeIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Aportaciones", path: "/aportaciones", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Prestamos", path: "/prestamos", icon: <AccountBalanceWalletIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Detalle Prestamos", path: "/prestamos/detalle", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+      { text: "Pr\u00e9stamos", path: "/prestamos", icon: <AccountBalanceWalletIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Detalle Pr\u00e9stamos", path: "/prestamos/detalle", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]
   },
   {
-    text: "Proceso Regimen",
+    text: "Proceso R\u00e9gimen",
     icon: <BadgeIcon />,
     roles: ["ADMIN", "OPERADOR"],
     children: [
@@ -46,12 +65,14 @@ const items = [
     ]
   },
   {
-    text: "Nominas",
+    text: "N\u00f3minas",
     icon: <CalculateIcon />,
     roles: ["ADMIN", "OPERADOR"],
     children: [
-      { text: "Generacion de Planillas", path: "/generacion-planilla", icon: <CalculateIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Otros Descuentos", path: "/otros-descuentos", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+      { text: "Salarios", path: "/salarios", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Generaci\u00f3n de Planillas", path: "/generacion-planilla", icon: <CalculateIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Otros Descuentos", path: "/otros-descuentos", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "N\u00f3mina", path: "/nomina", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]
   },
   {
@@ -59,20 +80,18 @@ const items = [
     icon: <InsertChartIcon />,
     roles: ["ADMIN", "OPERADOR", "CONSULTA"],
     children: [
-      { text: "Reportes de Nomina", path: "/reportes/nomina", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] }
+      { text: "Reportes de N\u00f3mina", path: "/reportes/nomina", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] }
     ]
   },
   {
-    text: "Administracion",
+    text: "Administraci\u00f3n",
     icon: <GroupIcon />,
     roles: ["ADMIN"],
     children: [
       { text: "Usuarios", path: "/usuarios", icon: <GroupIcon />, enabled: true, roles: ["ADMIN"] },
       { text: "Roles", path: "/roles", icon: <ShieldIcon />, enabled: true, roles: ["ADMIN"] },
-      { text: "Auditoria", path: "/auditoria", icon: <ManageSearchIcon />, enabled: true, roles: ["ADMIN"] },
-      { text: "Mantenimiento", path: "/mantenimiento", icon: <SettingsSuggestIcon />, enabled: true, roles: ["ADMIN"] },
-      { text: "Catalogos", path: "/catalogos/areas", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN"] },
-      { text: "Salarios", path: "/salarios", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN"] }
+      { text: "Auditor\u00eda", path: "/auditoria", icon: <ManageSearchIcon />, enabled: true, roles: ["ADMIN"] },
+      { text: "Mantenimiento", path: "/mantenimiento", icon: <SettingsSuggestIcon />, enabled: true, roles: ["ADMIN"] }
     ]
   }
 ];
@@ -174,29 +193,29 @@ const SidebarContent = ({ onNavigate }) => {
   const visibleItems = useMemo(() => filterByRole(items, user), [user]);
 
   return (
-  <Box
-    sx={{
-      height: "100%",
-      color: "primary.contrastText",
-      background: "linear-gradient(180deg, #123f4b 0%, #164c59 52%, #0f3540 100%)",
-      overflowY: "auto"
-    }}
-  >
-    <Toolbar sx={{ alignItems: "center", minHeight: 76 }}>
-      <Box>
-        <Typography variant="h6" sx={{ letterSpacing: 0.2 }}>RPJEPQ</Typography>
-        <Typography variant="caption" sx={{ opacity: 0.75 }}>
-          Administracion
-        </Typography>
-      </Box>
-    </Toolbar>
-    <Divider sx={{ borderColor: "rgba(255,255,255,0.16)" }} />
-    <List sx={{ px: 1.5 }}>
-      {visibleItems.map((item) => (
-        <MenuItem key={item.text} item={item} pathname={pathname} onNavigate={onNavigate} />
-      ))}
-    </List>
-  </Box>
+    <Box
+      sx={{
+        height: "100%",
+        color: "primary.contrastText",
+        background: "linear-gradient(180deg, #123f4b 0%, #164c59 52%, #0f3540 100%)",
+        overflowY: "auto"
+      }}
+    >
+      <Toolbar sx={{ alignItems: "center", minHeight: 76 }}>
+        <Box>
+          <Typography variant="h6" sx={{ letterSpacing: 0.2 }}>RPJEPQ</Typography>
+          <Typography variant="caption" sx={{ opacity: 0.75 }}>
+            Administraci\u00f3n
+          </Typography>
+        </Box>
+      </Toolbar>
+      <Divider sx={{ borderColor: "rgba(255,255,255,0.16)" }} />
+      <List sx={{ px: 1.5 }}>
+        {visibleItems.map((item) => (
+          <MenuItem key={item.text} item={item} pathname={pathname} onNavigate={onNavigate} />
+        ))}
+      </List>
+    </Box>
   );
 };
 
