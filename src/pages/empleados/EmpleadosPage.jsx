@@ -5,8 +5,8 @@ const tipoPuestoOptions = ["ADMINISTRATIVO", "OPERATIVO", "TECNICO", "OTRO"].map
 
 const EmpleadosPage = () => (
   <MantenimientoPage
-    title="Empleados"
-    subtitle="Mantenimiento de empleados"
+    title="Empleado EPQ"
+    subtitle="Mantenimiento de empleados EPQ"
     endpoint="/empleados"
     dependencies={[
       { key: "manejos", endpoint: "/catalogos/manejo-administracion" },
@@ -22,7 +22,8 @@ const EmpleadosPage = () => (
     }}
     searchFields={["nombres", "apellidos", "dpi", "puestoNombre", "manejoDescripcion"]}
     columns={[
-      { key: "idEmpleado", label: "ID" },
+      { key: "id", label: "Codigo" },
+      { key: "idEmpleado", label: "ID empleado" },
       { key: "nombres", label: "Nombres" },
       { key: "apellidos", label: "Apellidos" },
       { key: "dpi", label: "DPI" },
@@ -31,7 +32,7 @@ const EmpleadosPage = () => (
       { key: "manejoDescripcion", label: "Manejo" }
     ]}
     fields={[
-      { key: "tipoManejo", label: "Manejo administracion", required: true, type: "select", source: "manejos", getValue: (item) => item.id, getLabel: (item) => item.descripcion },
+      { key: "tipoManejo", label: "Manejo administracion", required: true, type: "select", source: "manejos", getValue: (item) => item.id, getLabel: (item) => item.descripcion, disabled: true },
       { key: "idEmpleado", label: "ID empleado", required: true, type: "number" },
       { key: "nombres", label: "Nombres", required: true },
       { key: "apellidos", label: "Apellidos", required: true },
@@ -43,6 +44,12 @@ const EmpleadosPage = () => (
       { key: "fechaNacimiento", label: "Fecha nacimiento", required: true, type: "date" },
       { key: "tipoPuesto", label: "Tipo puesto", required: true, type: "select", options: tipoPuestoOptions },
       { key: "idPuesto", label: "Puesto", required: true, type: "select", source: "puestos", getValue: (item) => item.id, getLabel: (item) => item.nombre }
+    ]}
+    formSections={[
+      { title: "Datos principales", fields: ["tipoManejo", "idEmpleado", "nombres", "apellidos"] },
+      { title: "Identificacion", fields: ["dpi", "nit", "direccion", "estadoCivil"] },
+      { title: "Puesto y manejo", fields: ["tipoPuesto", "idPuesto"] },
+      { title: "Fechas y datos adicionales", fields: ["fechaNacimiento", "profesionOficio"] }
     ]}
   />
 );

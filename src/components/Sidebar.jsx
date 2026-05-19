@@ -1,11 +1,11 @@
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import BadgeIcon from "@mui/icons-material/Badge";
 import CalculateIcon from "@mui/icons-material/Calculate";
-import DashboardIcon from "@mui/icons-material/Dashboard";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import InsertChartIcon from "@mui/icons-material/InsertChart";
+import ListAltIcon from "@mui/icons-material/ListAlt";
 import ManageSearchIcon from "@mui/icons-material/ManageSearch";
 import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
 import GroupIcon from "@mui/icons-material/Group";
@@ -22,75 +22,59 @@ import { useAuth } from "../context/AuthContext";
 import { hasRole } from "../utils/permissions";
 
 const items = [
-  { text: "Dashboard", path: "/dashboard", icon: <DashboardIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
   {
-    text: "Usuarios",
+    text: "Mantenimiento EPQ",
+    icon: <SettingsSuggestIcon />,
+    roles: ["ADMIN", "OPERADOR"],
+    children: [
+      { text: "Empleado EPQ", path: "/empleados", icon: <BadgeIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Aportaciones", path: "/aportaciones", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Prestamos", path: "/prestamos", icon: <AccountBalanceWalletIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Detalle Prestamos", path: "/prestamos/detalle", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+    ]
+  },
+  {
+    text: "Proceso Regimen",
+    icon: <BadgeIcon />,
+    roles: ["ADMIN", "OPERADOR"],
+    children: [
+      { text: "Control de Empleados", path: "/empleados", icon: <BadgeIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Control de Jubilados", path: "/jubilados", icon: <PeopleAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Tiempo Extraordinario", path: "/tiempo-extra", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Juntas Directivas", path: "/junta-directiva", icon: <WorkIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Pago Dietas", path: "/dietas", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+    ]
+  },
+  {
+    text: "Nominas",
+    icon: <CalculateIcon />,
+    roles: ["ADMIN", "OPERADOR"],
+    children: [
+      { text: "Generacion de Planillas", path: "/generacion-planilla", icon: <CalculateIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Otros Descuentos", path: "/otros-descuentos", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+    ]
+  },
+  {
+    text: "Reportes",
+    icon: <InsertChartIcon />,
+    roles: ["ADMIN", "OPERADOR", "CONSULTA"],
+    children: [
+      { text: "Reportes de Nomina", path: "/reportes/nomina", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] }
+    ]
+  },
+  {
+    text: "Administracion",
     icon: <GroupIcon />,
     roles: ["ADMIN"],
     children: [
       { text: "Usuarios", path: "/usuarios", icon: <GroupIcon />, enabled: true, roles: ["ADMIN"] },
-      { text: "Roles", path: "/roles", icon: <ShieldIcon />, enabled: true, roles: ["ADMIN"] }
+      { text: "Roles", path: "/roles", icon: <ShieldIcon />, enabled: true, roles: ["ADMIN"] },
+      { text: "Auditoria", path: "/auditoria", icon: <ManageSearchIcon />, enabled: true, roles: ["ADMIN"] },
+      { text: "Mantenimiento", path: "/mantenimiento", icon: <SettingsSuggestIcon />, enabled: true, roles: ["ADMIN"] },
+      { text: "Catalogos", path: "/catalogos/areas", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN"] },
+      { text: "Salarios", path: "/salarios", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN"] }
     ]
-  },
-  {
-    text: "Catalogos",
-    path: "/catalogos",
-    icon: <FactCheckIcon />,
-    roles: ["ADMIN", "OPERADOR", "CONSULTA"],
-    children: [
-      { text: "Areas", path: "/catalogos/areas", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Manejo administracion", path: "/catalogos/manejo-administracion", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Puestos", path: "/catalogos/puestos", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Tipo ingreso", path: "/catalogos/tipo-ingreso", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Tipo descuento", path: "/catalogos/tipo-descuento", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Tipo jubilacion", path: "/catalogos/tipo-jubilacion", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Tipo planilla", path: "/catalogos/tipo-planilla", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Parametro general", path: "/catalogos/parametro-general", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Parametro planilla", path: "/catalogos/parametro-planilla", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] }
-    ]
-  },
-  {
-    text: "Mantenimiento",
-    icon: <SettingsSuggestIcon />,
-    roles: ["ADMIN", "OPERADOR", "CONSULTA"],
-    children: [
-      {
-        text: "Aportaciones EPQ",
-        path: "/aportaciones",
-        icon: <PaidIcon />,
-        enabled: true,
-        roles: ["ADMIN", "OPERADOR", "CONSULTA"]
-      },
-      {
-        text: "Prestamo",
-        path: "/prestamos",
-        icon: <AccountBalanceWalletIcon />,
-        enabled: true,
-        roles: ["ADMIN", "OPERADOR", "CONSULTA"]
-      }
-    ]
-  },
-  {
-    text: "Empleados Regimen",
-    icon: <BadgeIcon />,
-    roles: ["ADMIN", "OPERADOR", "CONSULTA"],
-    children: [
-      { text: "Empleados", path: "/empleados", icon: <BadgeIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      // Salarios queda oculto porque ahora se captura desde el modal de Empleados.
-      // Para volver a mostrarlo, descomentar la siguiente linea.
-      // { text: "Salarios", path: "/salarios", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Jubilados", path: "/jubilados", icon: <PeopleAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Juntas Directivas", path: "/junta-directiva", icon: <WorkIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Dietas", path: "/dietas", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Tiempo Extraordinario", path: "/tiempo-extra", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Otros Descuentos", path: "/otros-descuentos", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Nomina", path: "/nomina", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Generar planilla", path: "/generacion-planilla", icon: <CalculateIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Reportes de nomina", path: "/reportes/nomina", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] }
-    ]
-  },
-  { text: "Auditoria", path: "/auditoria", icon: <ManageSearchIcon />, enabled: true, roles: ["ADMIN"] },
-  { text: "Sistema", path: "/mantenimiento", icon: <SettingsSuggestIcon />, enabled: true, roles: ["ADMIN"] }
+  }
 ];
 
 const filterByRole = (entries, user) => entries

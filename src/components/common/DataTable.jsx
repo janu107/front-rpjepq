@@ -36,8 +36,8 @@ const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMes
           boxShadow: "0 14px 40px rgba(31, 78, 95, 0.06)"
         }}
       >
-        <Table>
-          <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.04)" }}>
+        <Table size="small">
+          <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
             <TableRow>
               {columns.map((column) => <TableCell key={column.key} align={column.align} sx={{ fontWeight: 800, color: "text.secondary" }}>{column.label}</TableCell>)}
               {actions?.length > 0 && <TableCell align="right" sx={{ fontWeight: 800, color: "text.secondary" }}>Acciones</TableCell>}
@@ -62,9 +62,10 @@ const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMes
                       <Tooltip title={action.label} key={action.label}>
                         <IconButton
                           color="primary"
+                          size="small"
                           aria-label={action.label}
                           onClick={() => action.onClick(row)}
-                          sx={{ minWidth: 44, minHeight: 44, mx: 0.25 }}
+                          sx={{ mx: 0.25 }}
                         >
                           {action.icon}
                         </IconButton>

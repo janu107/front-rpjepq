@@ -4,12 +4,37 @@ import axiosClient, { AUTH_UNAUTHORIZED_EVENT } from "../api/axiosClient";
 
 const AuthContext = createContext(null);
 
+const decodeJwtPayload = (token) => {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
+        .join("")
+    );
+    const decoded = JSON.parse(json);
+
+    if (decoded.exp && decoded.exp * 1000 <= Date.now()) {
+      return null;
+    }
+
+    return {
+      id: decoded.id,
+      usuario: decoded.usuario,
+      rol: decoded.rol
+    };
+  } catch (error) {
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem("rpjepq_token"));
-  const [user, setUser] = useState(() => {
-    const storedUser = localStorage.getItem("rpjepq_user") || localStorage.getItem("rpjepq_usuario");
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
+  const [user, setUser] = useState(() => decodeJwtPayload(localStorage.getItem("rpjepq_token")));
   const [loading, setLoading] = useState(Boolean(token));
 
   const logout = () => {
@@ -30,7 +55,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const { data } = await axiosClient.get("/auth/me");
         setUser(data.data);
-        localStorage.setItem("rpjepq_user", JSON.stringify(data.data));
       } catch (error) {
         logout();
       } finally {
@@ -51,10 +75,10 @@ export const AuthProvider = ({ children }) => {
 
   const login = (sessionData) => {
     localStorage.setItem("rpjepq_token", sessionData.token);
-    localStorage.setItem("rpjepq_user", JSON.stringify(sessionData.user));
+    localStorage.removeItem("rpjepq_user");
     localStorage.removeItem("rpjepq_usuario");
     setToken(sessionData.token);
-    setUser(sessionData.user);
+    setUser(decodeJwtPayload(sessionData.token) || sessionData.user || null);
   };
 
   const value = useMemo(

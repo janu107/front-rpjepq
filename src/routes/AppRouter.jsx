@@ -21,33 +21,41 @@ import RolesPage from "../pages/roles/RolesPage";
 import SalariosPage from "../pages/salarios/SalariosPage";
 import TiempoExtraPage from "../pages/tiempoExtra/TiempoExtraPage";
 import UsuariosPage from "../pages/usuarios/UsuariosPage";
+import { useAuth } from "../context/AuthContext";
+import { isConsulta } from "../utils/permissions";
 import ProtectedRoute from "./ProtectedRoute";
+
+const HomeRedirect = () => {
+  const { user } = useAuth();
+  return <Navigate to={isConsulta(user) ? "/reportes/nomina" : "/dashboard"} replace />;
+};
 
 const AppRouter = () => {
   return (
     <BrowserRouter basename="/rpj_administrativo">
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<ProtectedRoute><HomeRedirect /></ProtectedRoute>} />
         <Route path="/login" element={<Login />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><Dashboard /></ProtectedRoute>} />
             <Route path="/usuarios" element={<ProtectedRoute allowedRoles={["ADMIN"]}><UsuariosPage /></ProtectedRoute>} />
             <Route path="/roles" element={<ProtectedRoute allowedRoles={["ADMIN"]}><RolesPage /></ProtectedRoute>} />
-            <Route path="/catalogos" element={<CatalogosPage />} />
-            <Route path="/catalogos/:catalogo" element={<CatalogosPage />} />
-            <Route path="/aportaciones" element={<AportacionesPage />} />
-            <Route path="/empleados" element={<EmpleadosPage />} />
-            <Route path="/jubilados" element={<JubiladosPage />} />
-            <Route path="/junta-directiva" element={<JuntaDirectivaPage />} />
-            <Route path="/prestamos" element={<PrestamosPage />} />
-            <Route path="/salarios" element={<SalariosPage />} />
-            <Route path="/tiempo-extra" element={<TiempoExtraPage />} />
-            <Route path="/dietas" element={<DietasPage />} />
-            <Route path="/otros-descuentos" element={<OtrosDescuentosPage />} />
-            <Route path="/nomina" element={<NominaPage />} />
-            <Route path="/generacion-planilla" element={<GeneracionPlanillaPage />} />
+            <Route path="/catalogos" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><CatalogosPage /></ProtectedRoute>} />
+            <Route path="/catalogos/:catalogo" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><CatalogosPage /></ProtectedRoute>} />
+            <Route path="/aportaciones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><AportacionesPage /></ProtectedRoute>} />
+            <Route path="/empleados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><EmpleadosPage /></ProtectedRoute>} />
+            <Route path="/jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><JubiladosPage /></ProtectedRoute>} />
+            <Route path="/junta-directiva" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><JuntaDirectivaPage /></ProtectedRoute>} />
+            <Route path="/prestamos" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosPage /></ProtectedRoute>} />
+            <Route path="/prestamos/detalle" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosPage detailOnly /></ProtectedRoute>} />
+            <Route path="/salarios" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><SalariosPage /></ProtectedRoute>} />
+            <Route path="/tiempo-extra" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><TiempoExtraPage /></ProtectedRoute>} />
+            <Route path="/dietas" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DietasPage /></ProtectedRoute>} />
+            <Route path="/otros-descuentos" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><OtrosDescuentosPage /></ProtectedRoute>} />
+            <Route path="/nomina" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><NominaPage /></ProtectedRoute>} />
+            <Route path="/generacion-planilla" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><GeneracionPlanillaPage /></ProtectedRoute>} />
             <Route path="/reportes/nomina" element={<ReportesNominaPage />} />
             <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AuditoriaPage /></ProtectedRoute>} />
             <Route path="/mantenimiento" element={<ProtectedRoute allowedRoles={["ADMIN"]}><MantenimientoPage /></ProtectedRoute>} />
