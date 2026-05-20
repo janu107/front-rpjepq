@@ -34,8 +34,8 @@ const initialForm = {
 
 const estados = ["ACTIVO", "INACTIVO", "RETIRADO"];
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
-const normalizeText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-const findEmpleadoRegimen = (items = []) => items.find((item) => normalizeText(item.descripcion) === "EMPLEADO REGIMEN");
+const MANEJO_EPQ_ID = 4;
+const findManejoById = (items = [], id) => items.find((item) => Number(item.id) === Number(id));
 
 const AportacionesPage = () => {
   const { user } = useAuth();
@@ -60,8 +60,8 @@ const AportacionesPage = () => {
     const { data } = await axiosClient.get("/catalogos/manejo-administracion");
     const items = data.data || [];
     setManejos(items);
-    if (!findEmpleadoRegimen(items)) {
-      console.warn("No existe manejo EMPLEADO REGIMEN");
+    if (!findManejoById(items, MANEJO_EPQ_ID)) {
+      console.warn(`No existe manejo ${MANEJO_EPQ_ID}`);
     }
   };
 
@@ -72,16 +72,17 @@ const AportacionesPage = () => {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return aportaciones;
-    return aportaciones.filter((item) =>
+    const scoped = aportaciones.filter((item) => Number(item.tipoManejo) === MANEJO_EPQ_ID);
+    if (!term) return scoped;
+    return scoped.filter((item) =>
       [item.nombre, item.apellido, item.dpi, item.gerencia].some((value) => String(value || "").toLowerCase().includes(term))
     );
   }, [aportaciones, search]);
 
   const openCreate = () => {
     setEditing(null);
-    const empleadoRegimen = findEmpleadoRegimen(manejos);
-    setForm({ ...initialForm, tipoManejo: empleadoRegimen?.id || "" });
+    const manejoEpq = findManejoById(manejos, MANEJO_EPQ_ID);
+    setForm({ ...initialForm, tipoManejo: manejoEpq?.id || MANEJO_EPQ_ID });
     setDialogOpen(true);
   };
 

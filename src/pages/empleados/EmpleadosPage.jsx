@@ -3,11 +3,16 @@ import MantenimientoPage from "../mantenimientos/MantenimientoPage";
 const estadoCivilOptions = ["SOLTERO", "CASADO", "UNIDO", "DIVORCIADO", "VIUDO"].map((value) => ({ value, label: value }));
 const tipoPuestoOptions = ["ADMINISTRATIVO", "OPERATIVO", "TECNICO", "OTRO"].map((value) => ({ value, label: value }));
 
-const EmpleadosPage = () => (
+const EmpleadosPage = ({
+  title = "Empleado EPQ",
+  subtitle = "Mantenimiento de empleados EPQ",
+  fixedManejoId = 4
+}) => (
   <MantenimientoPage
-    title="Empleado EPQ"
-    subtitle="Mantenimiento de empleados EPQ"
+    title={title}
+    subtitle={subtitle}
     endpoint="/empleados"
+    fixedManejoId={fixedManejoId}
     dependencies={[
       { key: "manejos", endpoint: "/catalogos/manejo-administracion" },
       { key: "puestos", endpoint: "/catalogos/puestos" },

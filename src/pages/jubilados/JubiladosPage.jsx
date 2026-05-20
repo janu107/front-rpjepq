@@ -8,6 +8,7 @@ const JubiladosPage = () => (
     title="Jubilados"
     subtitle="Mantenimiento de jubilados"
     endpoint="/jubilados"
+    fixedManejoId={2}
     dependencies={[
       { key: "manejos", endpoint: "/catalogos/manejo-administracion" },
       { key: "tiposJubilacion", endpoint: "/catalogos/tipo-jubilacion" }
@@ -23,7 +24,7 @@ const JubiladosPage = () => (
       { key: "manejoDescripcion", label: "Manejo" }
     ]}
     fields={[
-      { key: "tipoManejo", label: "Manejo administracion", required: true, type: "select", source: "manejos", getValue: (item) => item.id, getLabel: (item) => item.descripcion },
+      { key: "tipoManejo", label: "Manejo administracion", required: true, type: "select", source: "manejos", getValue: (item) => item.id, getLabel: (item) => item.descripcion, disabled: true },
       { key: "idJubilado", label: "ID jubilado", required: true, type: "number" },
       { key: "nombres", label: "Nombres", required: true },
       { key: "apellidos", label: "Apellidos", required: true },

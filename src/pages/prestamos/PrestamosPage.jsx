@@ -18,6 +18,7 @@ import { useAuth } from "../../context/AuthContext";
 import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const estados = ["ACTIVO", "CANCELADO", "MORA", "ANULADO"];
+const MANEJO_EPQ_ID = 4;
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
 const initialForm = { idAportacion: "", noContrato: "", montoAutorizado: "", cuotaNivelada: "", plazoMeses: "", fechaInicio: "", fechaFin: "", totalPagar: "", tasaInteres: "", estado: "ACTIVO" };
 const initialDetalle = { fechaPago: "", descuentoNominaAportacion: 0, cuotaNivelada: "", amortizacion: "", intereses: "", saldo: "", mora: 0 };
@@ -45,7 +46,7 @@ const PrestamosPage = ({ detailOnly = false }) => {
 
   const loadAportaciones = async () => {
     const { data } = await axiosClient.get("/aportaciones");
-    setAportaciones((data.data || []).filter((item) => item.estado === "ACTIVO"));
+    setAportaciones((data.data || []).filter((item) => item.estado === "ACTIVO" && Number(item.tipoManejo) === MANEJO_EPQ_ID));
   };
 
   useEffect(() => {
@@ -55,8 +56,9 @@ const PrestamosPage = ({ detailOnly = false }) => {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return prestamos;
-    return prestamos.filter((item) => [item.noContrato, item.aportacionNombre, item.aportacionDpi].some((value) => String(value || "").toLowerCase().includes(term)));
+    const scoped = prestamos.filter((item) => Number(item.tipoManejo) === MANEJO_EPQ_ID);
+    if (!term) return scoped;
+    return scoped.filter((item) => [item.noContrato, item.aportacionNombre, item.aportacionDpi].some((value) => String(value || "").toLowerCase().includes(term)));
   }, [prestamos, search]);
 
   const selectedAportacion = useMemo(

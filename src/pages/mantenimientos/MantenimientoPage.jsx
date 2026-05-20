@@ -28,7 +28,18 @@ import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
 const normalizeText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-const findEmpleadoRegimen = (items = []) => items.find((item) => normalizeText(item.descripcion) === "EMPLEADO REGIMEN");
+const findManejoById = (items = [], id) => items.find((item) => Number(item.id) === Number(id));
+const findManejoByDescription = (items = [], description) =>
+  items.find((item) => normalizeText(item.descripcion) === normalizeText(description));
+const findFixedManejo = (items = [], fixedManejoId, fixedManejoDescription) => {
+  if (fixedManejoId !== undefined && fixedManejoId !== null && fixedManejoId !== "") {
+    return findManejoById(items, fixedManejoId);
+  }
+  if (fixedManejoDescription) {
+    return findManejoByDescription(items, fixedManejoDescription);
+  }
+  return null;
+};
 
 const buildInitialForm = (fields) =>
   fields.reduce((acc, field) => {
@@ -36,7 +47,19 @@ const buildInitialForm = (fields) =>
     return acc;
   }, {});
 
-const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchFields, dependencies = [], salaryConfig, formSections = [] }) => {
+const MantenimientoPage = ({
+  title,
+  subtitle,
+  endpoint,
+  columns,
+  fields,
+  searchFields,
+  dependencies = [],
+  salaryConfig,
+  formSections = [],
+  fixedManejoId,
+  fixedManejoDescription
+}) => {
   const { user } = useAuth();
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
@@ -66,8 +89,8 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
     );
     const loaded = Object.fromEntries(entries);
     setOptions(loaded);
-    if (loaded.manejos && !findEmpleadoRegimen(loaded.manejos)) {
-      console.warn("No existe manejo EMPLEADO REGIMEN");
+    if (loaded.manejos && (fixedManejoId || fixedManejoDescription) && !findFixedManejo(loaded.manejos, fixedManejoId, fixedManejoDescription)) {
+      console.warn(`No existe manejo ${fixedManejoDescription || fixedManejoId}`);
     }
   };
 
@@ -80,9 +103,10 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
 
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return rows;
-    return rows.filter((row) => searchFields.some((field) => String(row[field] || "").toLowerCase().includes(term)));
-  }, [rows, search, searchFields]);
+    const scopedRows = fixedManejoId ? rows.filter((row) => Number(row.tipoManejo) === Number(fixedManejoId)) : rows;
+    if (!term) return scopedRows;
+    return scopedRows.filter((row) => searchFields.some((field) => String(row[field] || "").toLowerCase().includes(term)));
+  }, [rows, search, searchFields, fixedManejoId]);
 
   const tableColumns = columns.map((column) => ({
     ...column,
@@ -92,8 +116,8 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
   const openCreateDialog = () => {
     setEditingRow(null);
     const initial = buildInitialForm(fields);
-    const fixedManejo = findEmpleadoRegimen(options.manejos);
-    setForm({ ...initial, tipoManejo: fixedManejo?.id || initial.tipoManejo || "" });
+    const fixedManejo = findFixedManejo(options.manejos, fixedManejoId, fixedManejoDescription);
+    setForm({ ...initial, tipoManejo: fixedManejo?.id || fixedManejoId || initial.tipoManejo || "" });
     setSalaryForm({ tipoIngreso: "", salario: "" });
     setSalaryReady(false);
     setDialogOpen(true);
@@ -303,7 +327,7 @@ const MantenimientoPage = ({ title, subtitle, endpoint, columns, fields, searchF
           <DialogContent dividers>
             <Grid container spacing={2} sx={{ mt: 0.5 }}>
               <Grid item xs={12} md={6}>
-                <TextField label="Manejo administracion" value={options.manejos?.find((item) => item.id === form.tipoManejo)?.descripcion || form.tipoManejo || ""} fullWidth disabled />
+                <TextField label="Manejo administracion" value={options.manejos?.find((item) => Number(item.id) === Number(form.tipoManejo))?.descripcion || form.tipoManejo || ""} fullWidth disabled />
               </Grid>
               {(salaryConfig.fields || []).map((field) => (
                 <Grid item xs={12} md={6} key={field.key}>
