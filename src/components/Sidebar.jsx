@@ -47,6 +47,7 @@ const items = [
     roles: ["ADMIN", "OPERADOR"],
     children: [
       { text: "Empleados EPQ", path: "/aportaciones", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Aportaciones", path: "/aportaciones/detalle", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Prestamos", path: "/prestamos", icon: <AccountBalanceWalletIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Detalle Prestamos", path: "/prestamos/detalle", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]
@@ -158,6 +159,7 @@ const MenuItem = ({ item, level = 0, pathname, onNavigate }) => {
     <ListItemButton
       component={item.enabled ? NavLink : "button"}
       to={item.enabled ? item.path : undefined}
+      end
       onClick={onNavigate}
       disabled={!item.enabled}
       sx={{
