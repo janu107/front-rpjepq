@@ -46,10 +46,9 @@ const items = [
     icon: <SettingsSuggestIcon />,
     roles: ["ADMIN", "OPERADOR"],
     children: [
-      { text: "Empleado EPQ", path: "/empleados", icon: <BadgeIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Aportaciones", path: "/aportaciones", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Pr\u00e9stamos", path: "/prestamos", icon: <AccountBalanceWalletIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Detalle Pr\u00e9stamos", path: "/prestamos/detalle", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+      { text: "Empleados EPQ", path: "/aportaciones", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Prestamos", path: "/prestamos", icon: <AccountBalanceWalletIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Detalle Prestamos", path: "/prestamos/detalle", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]
   },
   {

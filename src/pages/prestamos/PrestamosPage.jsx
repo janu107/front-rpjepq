@@ -201,33 +201,43 @@ const PrestamosPage = ({ detailOnly = false }) => {
         </Table>
       </TableContainer>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        fullWidth
+        maxWidth="lg"
+        PaperProps={{ sx: { width: "min(980px, calc(100% - 24px))" } }}
+      >
         <DialogTitle>{editing ? "Editar prestamo" : "Nuevo prestamo"}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <FormControl fullWidth><InputLabel>Aportante</InputLabel><Select label="Aportante" value={form.idAportacion} onChange={(e) => setForm({ ...form, idAportacion: e.target.value })}>{aportaciones.map((a) => <MenuItem key={a.id} value={a.id}>{a.nombre} {a.apellido} - {a.dpi}</MenuItem>)}</Select></FormControl>
+        <DialogContent dividers>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth><InputLabel>Aportante</InputLabel><Select label="Aportante" value={form.idAportacion} onChange={(e) => setForm({ ...form, idAportacion: e.target.value })}>{aportaciones.map((a) => <MenuItem key={a.id} value={a.id}>{a.nombre} {a.apellido} - {a.dpi}</MenuItem>)}</Select></FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}><TextField label="No. contrato" value={form.noContrato} onChange={(e) => setForm({ ...form, noContrato: e.target.value })} fullWidth /></Grid>
             {selectedAportacion && (
-              <Paper variant="outlined" sx={{ p: 2, bgcolor: "rgba(31, 78, 95, 0.03)" }}>
-                <Grid container spacing={1.5}>
-                  <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Nombre</Typography><Typography>{selectedAportacion.nombre} {selectedAportacion.apellido}</Typography></Grid>
-                  <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">DPI</Typography><Typography>{selectedAportacion.dpi}</Typography></Grid>
-                  <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Gerencia</Typography><Typography>{selectedAportacion.gerencia}</Typography></Grid>
-                  <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Estado</Typography><Typography>{selectedAportacion.estado}</Typography></Grid>
-                  <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Tiene prestamo</Typography><Typography>{selectedAportacion.tienePrestamo ? "SI" : "NO"}</Typography></Grid>
-                </Grid>
-              </Paper>
+              <Grid item xs={12}>
+                <Paper variant="outlined" sx={{ p: 2, bgcolor: "rgba(31, 78, 95, 0.03)" }}>
+                  <Grid container spacing={1.5}>
+                    <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Nombre</Typography><Typography>{selectedAportacion.nombre} {selectedAportacion.apellido}</Typography></Grid>
+                    <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">DPI</Typography><Typography>{selectedAportacion.dpi}</Typography></Grid>
+                    <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Gerencia</Typography><Typography>{selectedAportacion.gerencia}</Typography></Grid>
+                    <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Estado</Typography><Typography>{selectedAportacion.estado}</Typography></Grid>
+                    <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Prestamo activo</Typography><Typography>{selectedAportacion.tienePrestamo ? "SI" : "NO"}</Typography></Grid>
+                  </Grid>
+                </Paper>
+              </Grid>
             )}
-            <TextField label="No. contrato" value={form.noContrato} onChange={(e) => setForm({ ...form, noContrato: e.target.value })} fullWidth />
-            <TextField label="Monto autorizado" type="number" value={form.montoAutorizado} onChange={(e) => setForm({ ...form, montoAutorizado: e.target.value })} fullWidth />
-            <TextField label="Tasa interes" type="number" value={form.tasaInteres} onChange={(e) => setForm({ ...form, tasaInteres: e.target.value })} fullWidth />
-            <TextField label="Plazo meses" type="number" value={form.plazoMeses} onChange={(e) => setForm({ ...form, plazoMeses: e.target.value })} fullWidth />
-            <Button variant="outlined" startIcon={<CalculateIcon />} onClick={calculate}>Calcular cuota</Button>
-            <TextField label="Cuota nivelada" type="number" value={form.cuotaNivelada} onChange={(e) => setForm({ ...form, cuotaNivelada: e.target.value })} fullWidth />
-            <TextField label="Total pagar" type="number" value={form.totalPagar} onChange={(e) => setForm({ ...form, totalPagar: e.target.value })} fullWidth />
-            <TextField label="Fecha inicio" type="date" value={form.fechaInicio} onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
-            <TextField label="Fecha fin" type="date" value={form.fechaFin} onChange={(e) => setForm({ ...form, fechaFin: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
-            <FormControl fullWidth><InputLabel>Estado</InputLabel><Select label="Estado" value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}>{estados.map((e) => <MenuItem key={e} value={e}>{e}</MenuItem>)}</Select></FormControl>
-          </Stack>
+            <Grid item xs={12} md={6}><TextField label="Monto autorizado" type="number" value={form.montoAutorizado} onChange={(e) => setForm({ ...form, montoAutorizado: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Tasa interes" type="number" value={form.tasaInteres} onChange={(e) => setForm({ ...form, tasaInteres: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Plazo meses" type="number" value={form.plazoMeses} onChange={(e) => setForm({ ...form, plazoMeses: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><Button variant="outlined" startIcon={<CalculateIcon />} onClick={calculate} fullWidth sx={{ minHeight: 56 }}>Calcular cuota</Button></Grid>
+            <Grid item xs={12} md={6}><TextField label="Cuota nivelada" type="number" value={form.cuotaNivelada} onChange={(e) => setForm({ ...form, cuotaNivelada: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Total pagar" type="number" value={form.totalPagar} onChange={(e) => setForm({ ...form, totalPagar: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Fecha inicio" type="date" value={form.fechaInicio} onChange={(e) => setForm({ ...form, fechaInicio: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Fecha fin" type="date" value={form.fechaFin} onChange={(e) => setForm({ ...form, fechaFin: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><FormControl fullWidth><InputLabel>Estado</InputLabel><Select label="Estado" value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}>{estados.map((e) => <MenuItem key={e} value={e}>{e}</MenuItem>)}</Select></FormControl></Grid>
+          </Grid>
         </DialogContent>
         <DialogActions><Button onClick={() => setDialogOpen(false)}>Cancelar</Button><Button variant="contained" onClick={savePrestamo}>Guardar</Button></DialogActions>
       </Dialog>

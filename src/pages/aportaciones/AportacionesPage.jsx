@@ -200,7 +200,7 @@ const AportacionesPage = () => {
     <Stack spacing={2.5}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems={{ md: "center" }}>
         <Box>
-          <Typography variant="h5">Aportaciones EPQ</Typography>
+          <Typography variant="h5">Empleados EPQ</Typography>
           <Typography color="text.secondary">Control de aportaciones y pagos realizados</Typography>
         </Box>
         {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nueva aportacion</Button>}

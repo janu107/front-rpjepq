@@ -9,11 +9,20 @@ import {
   DialogTitle,
   FormControl,
   Grid,
+  IconButton,
   InputLabel,
   MenuItem,
+  Paper,
   Select,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
@@ -40,6 +49,7 @@ const findFixedManejo = (items = [], fixedManejoId, fixedManejoDescription) => {
   }
   return null;
 };
+const shrinkLabelTypes = ["date", "datetime-local", "time", "month"];
 
 const buildInitialForm = (fields) =>
   fields.reduce((acc, field) => {
@@ -68,7 +78,8 @@ const MantenimientoPage = ({
   const [editingRow, setEditingRow] = useState(null);
   const [form, setForm] = useState(buildInitialForm(fields));
   const [salaryForm, setSalaryForm] = useState({ tipoIngreso: "", salario: "" });
-  const [salaryReady, setSalaryReady] = useState(false);
+  const [salaryRows, setSalaryRows] = useState([]);
+  const [editingSalaryIndex, setEditingSalaryIndex] = useState(null);
   const [options, setOptions] = useState({});
 
   const loadRows = async () => {
@@ -119,7 +130,8 @@ const MantenimientoPage = ({
     const fixedManejo = findFixedManejo(options.manejos, fixedManejoId, fixedManejoDescription);
     setForm({ ...initial, tipoManejo: fixedManejo?.id || fixedManejoId || initial.tipoManejo || "" });
     setSalaryForm({ tipoIngreso: "", salario: "" });
-    setSalaryReady(false);
+    setSalaryRows([]);
+    setEditingSalaryIndex(null);
     setDialogOpen(true);
   };
 
@@ -132,14 +144,15 @@ const MantenimientoPage = ({
       }, {})
     );
     setSalaryForm({ tipoIngreso: "", salario: "" });
-    setSalaryReady(false);
+    setSalaryRows([]);
+    setEditingSalaryIndex(null);
     setDialogOpen(true);
   };
 
   const validateForm = () => {
     const missing = fields.find((field) => field.required && String(form[field.key] ?? "").trim() === "");
     if (missing) return `El campo ${missing.label} es obligatorio.`;
-    if (salaryConfig?.requiredOnCreate && !editingRow && !salaryReady) return "Debe agregar la informacion de salario antes de guardar el empleado.";
+    if (salaryConfig?.requiredOnCreate && !editingRow && salaryRows.length === 0) return "Debe agregar la informacion de salario antes de guardar el empleado.";
     return null;
   };
 
@@ -148,7 +161,15 @@ const MantenimientoPage = ({
     const missing = (salaryConfig?.fields || []).find((field) => field.required && String(salaryForm[field.key] ?? "").trim() === "");
     if (missing) return `El campo ${missing.label} es obligatorio.`;
     if (Number(salaryForm.salario) < 0) return "El salario debe ser mayor o igual a 0.";
+    if (salaryRows.some((row, index) => index !== editingSalaryIndex && Number(row.tipoIngreso) === Number(salaryForm.tipoIngreso))) {
+      return "El tipo de ingreso no se puede repetir para este empleado.";
+    }
     return null;
+  };
+
+  const getTipoIngresoLabel = (id) => {
+    const item = options.tiposIngreso?.find((tipo) => Number(tipo.id) === Number(id));
+    return item ? `${item.tipoIngreso} - ${item.descripcion}` : id;
   };
 
   const confirmSalary = () => {
@@ -158,9 +179,26 @@ const MantenimientoPage = ({
       return;
     }
 
-    setSalaryReady(true);
-    setSalaryDialogOpen(false);
-    Swal.fire("Listo", "Salario agregado al registro.", "success");
+    if (editingSalaryIndex !== null) {
+      setSalaryRows((current) => current.map((row, index) => (index === editingSalaryIndex ? { ...salaryForm } : row)));
+    } else {
+      setSalaryRows((current) => [...current, { ...salaryForm }]);
+    }
+    setSalaryForm({ tipoIngreso: "", salario: "" });
+    setEditingSalaryIndex(null);
+  };
+
+  const editSalary = (index) => {
+    setSalaryForm({ ...salaryRows[index] });
+    setEditingSalaryIndex(index);
+  };
+
+  const removeSalary = (index) => {
+    setSalaryRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
+    if (editingSalaryIndex === index) {
+      setSalaryForm({ tipoIngreso: "", salario: "" });
+      setEditingSalaryIndex(null);
+    }
   };
 
   const handleSave = async () => {
@@ -173,14 +211,17 @@ const MantenimientoPage = ({
     try {
       if (editingRow) {
         await axiosClient.put(`${endpoint}/${editingRow.id}`, form);
+        if (salaryConfig && salaryRows.length > 0) {
+          await axiosClient.post("/salarios/bulk", {
+            salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...row }))
+          });
+        }
         Swal.fire("Listo", "Registro actualizado correctamente.", "success");
       } else {
         await axiosClient.post(endpoint, form);
-        if (salaryConfig && salaryReady) {
-          await axiosClient.post("/salarios", {
-            tipoManejo: form.tipoManejo,
-            tipoIngreso: salaryForm.tipoIngreso,
-            salario: salaryForm.salario
+        if (salaryConfig && salaryRows.length > 0) {
+          await axiosClient.post("/salarios/bulk", {
+            salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...row }))
           });
         }
         Swal.fire("Listo", "Registro creado correctamente.", "success");
@@ -238,7 +279,7 @@ const MantenimientoPage = ({
         type={field.type || "text"}
         value={form[field.key] ?? ""}
         onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}
-        InputLabelProps={field.type === "date" ? { shrink: true } : undefined}
+        InputLabelProps={shrinkLabelTypes.includes(field.type) ? { shrink: true } : undefined}
         disabled={field.disabled}
         fullWidth
       />
@@ -303,11 +344,11 @@ const MantenimientoPage = ({
           {salaryConfig && (
             <Button
               type="button"
-              variant={salaryReady ? "contained" : "outlined"}
-              color={salaryReady ? "success" : "primary"}
+              variant={salaryRows.length > 0 ? "contained" : "outlined"}
+              color={salaryRows.length > 0 ? "success" : "primary"}
               onClick={() => setSalaryDialogOpen(true)}
             >
-              {salaryReady ? "Salario agregado" : "Salario"}
+              {salaryRows.length > 0 ? `Salarios (${salaryRows.length})` : "Salario"}
             </Button>
           )}
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
@@ -326,13 +367,13 @@ const MantenimientoPage = ({
           <DialogTitle>Salario del empleado</DialogTitle>
           <DialogContent dividers>
             <Grid container spacing={2} sx={{ mt: 0.5 }}>
-              <Grid item xs={12} md={6}>
-                <TextField label="Manejo administracion" value={options.manejos?.find((item) => Number(item.id) === Number(form.tipoManejo))?.descripcion || form.tipoManejo || ""} fullWidth disabled />
+              <Grid item xs={12} md={4}>
+                <TextField label="Manejo administracion" size="small" value={options.manejos?.find((item) => Number(item.id) === Number(form.tipoManejo))?.descripcion || form.tipoManejo || ""} fullWidth disabled />
               </Grid>
               {(salaryConfig.fields || []).map((field) => (
-                <Grid item xs={12} md={6} key={field.key}>
+                <Grid item xs={12} md={4} key={field.key}>
                   {field.type === "select" ? (
-                    <FormControl fullWidth>
+                    <FormControl fullWidth size="small">
                       <InputLabel>{field.label}</InputLabel>
                       <Select label={field.label} value={salaryForm[field.key] ?? ""} onChange={(event) => setSalaryForm({ ...salaryForm, [field.key]: event.target.value })}>
                         {(options[field.source] || []).map((item) => (
@@ -346,6 +387,7 @@ const MantenimientoPage = ({
                     <TextField
                       label={field.label}
                       type={field.type || "text"}
+                      size="small"
                       value={salaryForm[field.key] ?? ""}
                       onChange={(event) => setSalaryForm({ ...salaryForm, [field.key]: event.target.value })}
                       fullWidth
@@ -353,11 +395,41 @@ const MantenimientoPage = ({
                   )}
                 </Grid>
               ))}
+              <Grid item xs={12}>
+                <Button variant="contained" onClick={confirmSalary}>
+                  {editingSalaryIndex !== null ? "Actualizar salario" : "Agregar salario"}
+                </Button>
+                {editingSalaryIndex !== null && <Button sx={{ ml: 1 }} onClick={() => { setEditingSalaryIndex(null); setSalaryForm({ tipoIngreso: "", salario: "" }); }}>Cancelar edicion</Button>}
+              </Grid>
+              <Grid item xs={12}>
+                <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+                  <Table size="small">
+                    <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
+                      <TableRow><TableCell>Codigo</TableCell><TableCell>Tipo ingreso</TableCell><TableCell>Salario</TableCell><TableCell align="right">Acciones</TableCell></TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {salaryRows.map((row, index) => (
+                        <TableRow key={`${row.tipoIngreso}-${index}`}>
+                          <TableCell>Nuevo</TableCell>
+                          <TableCell>{getTipoIngresoLabel(row.tipoIngreso)}</TableCell>
+                          <TableCell>Q {Number(row.salario).toFixed(2)}</TableCell>
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                              <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => editSalary(index)}><EditIcon /></IconButton></Tooltip>
+                              {canDelete(user) && <Tooltip title="Eliminar"><IconButton size="small" color="primary" onClick={() => removeSalary(index)}><DeleteIcon /></IconButton></Tooltip>}
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {salaryRows.length === 0 && <TableRow><TableCell colSpan={4} align="center">No hay salarios agregados.</TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setSalaryDialogOpen(false)}>Cancelar</Button>
-            <Button variant="contained" onClick={confirmSalary}>Agregar salario</Button>
+            <Button onClick={() => setSalaryDialogOpen(false)}>Cerrar</Button>
           </DialogActions>
         </Dialog>
       )}
