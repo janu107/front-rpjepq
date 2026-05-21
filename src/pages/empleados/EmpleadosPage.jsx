@@ -48,7 +48,7 @@ const EmpleadosPage = ({
       { key: "profesionOficio", label: "Profesion u oficio" },
       { key: "fechaNacimiento", label: "Fecha nacimiento", required: true, type: "date" },
       { key: "tipoPuesto", label: "Tipo puesto", required: true, type: "select", options: tipoPuestoOptions },
-      { key: "idPuesto", label: "Puesto", required: true, type: "select", source: "puestos", getValue: (item) => item.id, getLabel: (item) => item.nombre }
+      { key: "idPuesto", label: "Puesto", required: true, type: "select", source: "puestos", getValue: (item) => item.id, getLabel: (item) => item.nombre, filterByFixedManejo: true }
     ]}
     formSections={[
       { title: "Datos principales", fields: ["tipoManejo", "idEmpleado", "nombres", "apellidos"] },

@@ -82,6 +82,16 @@ const MantenimientoPage = ({
   const [editingSalaryIndex, setEditingSalaryIndex] = useState(null);
   const [options, setOptions] = useState({});
 
+  const loadSalariesForManejo = async (tipoManejo) => {
+    if (!salaryConfig || !tipoManejo) return;
+    try {
+      const { data } = await axiosClient.get("/salarios");
+      setSalaryRows((data.data || []).filter((row) => Number(row.tipoManejo) === Number(tipoManejo)));
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible cargar salarios.", "error");
+    }
+  };
+
   const loadRows = async () => {
     try {
       const { data } = await axiosClient.get(endpoint);
@@ -135,7 +145,7 @@ const MantenimientoPage = ({
     setDialogOpen(true);
   };
 
-  const openEditDialog = (row) => {
+  const openEditDialog = async (row) => {
     setEditingRow(row);
     setForm(
       fields.reduce((acc, field) => {
@@ -146,6 +156,9 @@ const MantenimientoPage = ({
     setSalaryForm({ tipoIngreso: "", salario: "" });
     setSalaryRows([]);
     setEditingSalaryIndex(null);
+    if (salaryConfig) {
+      await loadSalariesForManejo(row.tipoManejo);
+    }
     setDialogOpen(true);
   };
 
@@ -172,15 +185,37 @@ const MantenimientoPage = ({
     return item ? `${item.tipoIngreso} - ${item.descripcion}` : id;
   };
 
-  const confirmSalary = () => {
+  const confirmSalary = async () => {
     const validation = validateSalaryForm();
     if (validation) {
       Swal.fire("Validacion", validation, "warning");
       return;
     }
 
+    const payload = { tipoManejo: form.tipoManejo, tipoIngreso: salaryForm.tipoIngreso, salario: salaryForm.salario };
     if (editingSalaryIndex !== null) {
-      setSalaryRows((current) => current.map((row, index) => (index === editingSalaryIndex ? { ...salaryForm } : row)));
+      const currentRow = salaryRows[editingSalaryIndex];
+      if (currentRow?.id) {
+        try {
+          await axiosClient.put(`/salarios/${currentRow.id}`, payload);
+          await loadSalariesForManejo(form.tipoManejo);
+          Swal.fire("Listo", "Salario actualizado correctamente.", "success");
+        } catch (error) {
+          Swal.fire("Error", error.response?.data?.message || "No fue posible actualizar salario.", "error");
+          return;
+        }
+      } else {
+        setSalaryRows((current) => current.map((row, index) => (index === editingSalaryIndex ? { ...salaryForm } : row)));
+      }
+    } else if (editingRow) {
+      try {
+        await axiosClient.post("/salarios", payload);
+        await loadSalariesForManejo(form.tipoManejo);
+        Swal.fire("Listo", "Salario agregado correctamente.", "success");
+      } catch (error) {
+        Swal.fire("Error", error.response?.data?.message || "No fue posible agregar salario.", "error");
+        return;
+      }
     } else {
       setSalaryRows((current) => [...current, { ...salaryForm }]);
     }
@@ -193,7 +228,20 @@ const MantenimientoPage = ({
     setEditingSalaryIndex(index);
   };
 
-  const removeSalary = (index) => {
+  const removeSalary = async (index) => {
+    const currentRow = salaryRows[index];
+    if (currentRow?.id) {
+      const result = await Swal.fire({ title: "Eliminar salario", icon: "warning", showCancelButton: true, confirmButtonText: "Eliminar", confirmButtonColor: "#1f4e5f" });
+      if (!result.isConfirmed) return;
+      try {
+        await axiosClient.delete(`/salarios/${currentRow.id}`);
+        await loadSalariesForManejo(form.tipoManejo);
+        Swal.fire("Listo", "Salario eliminado correctamente.", "success");
+      } catch (error) {
+        Swal.fire("Error", error.response?.data?.message || "No fue posible eliminar salario.", "error");
+      }
+      return;
+    }
     setSalaryRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
     if (editingSalaryIndex === index) {
       setSalaryForm({ tipoIngreso: "", salario: "" });
@@ -211,9 +259,10 @@ const MantenimientoPage = ({
     try {
       if (editingRow) {
         await axiosClient.put(`${endpoint}/${editingRow.id}`, form);
-        if (salaryConfig && salaryRows.length > 0) {
+        const pendingSalaries = salaryRows.filter((row) => !row.id);
+        if (salaryConfig && pendingSalaries.length > 0) {
           await axiosClient.post("/salarios/bulk", {
-            salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...row }))
+            salarios: pendingSalaries.map((row) => ({ tipoManejo: form.tipoManejo, ...row }))
           });
         }
         Swal.fire("Listo", "Registro actualizado correctamente.", "success");
@@ -257,7 +306,11 @@ const MantenimientoPage = ({
 
   const renderField = (field) => {
     if (field.type === "select") {
-      const items = field.options || options[field.source] || [];
+      const sourceItems = field.options || options[field.source] || [];
+      const manejoFilter = form.tipoManejo || fixedManejoId;
+      const items = field.filterByFixedManejo && manejoFilter
+        ? sourceItems.filter((item) => Number(item.tipoManejo) === Number(manejoFilter))
+        : sourceItems;
       return (
         <FormControl key={field.key} fullWidth>
           <InputLabel>{field.label}</InputLabel>
@@ -410,7 +463,7 @@ const MantenimientoPage = ({
                     <TableBody>
                       {salaryRows.map((row, index) => (
                         <TableRow key={`${row.tipoIngreso}-${index}`}>
-                          <TableCell>Nuevo</TableCell>
+                          <TableCell>{row.id || "Nuevo"}</TableCell>
                           <TableCell>{getTipoIngresoLabel(row.tipoIngreso)}</TableCell>
                           <TableCell>Q {Number(row.salario).toFixed(2)}</TableCell>
                           <TableCell align="right">

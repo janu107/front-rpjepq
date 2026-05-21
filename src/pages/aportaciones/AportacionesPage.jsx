@@ -50,6 +50,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
   const [detalle, setDetalle] = useState([]);
   const [detalleForm, setDetalleForm] = useState({ fechaPago: "", valor: "" });
   const [detalleDialogOpen, setDetalleDialogOpen] = useState(false);
+  const [editingDetalle, setEditingDetalle] = useState(null);
   const [total, setTotal] = useState(0);
 
   const loadAportaciones = async () => {
@@ -175,6 +176,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
   const openDetalle = async (item) => {
     setSelected(item);
     setDetalleForm({ fechaPago: "", valor: "" });
+    setEditingDetalle(null);
     setDetailOpen(true);
     await loadDetalle(item);
   };
@@ -188,11 +190,28 @@ const AportacionesPage = ({ detailOnly = false }) => {
       Swal.fire("Validacion", "Ingrese fecha de pago y valor mayor a 0.", "warning");
       return;
     }
-    await axiosClient.post(`/aportaciones/${selected.id}/detalle`, detalleForm);
-    Swal.fire("Listo", "Aportacion agregada correctamente.", "success");
+    if (editingDetalle) {
+      await axiosClient.put(`/aportaciones/detalle/${editingDetalle.id}`, detalleForm);
+      Swal.fire("Listo", "Aportacion actualizada correctamente.", "success");
+    } else {
+      await axiosClient.post(`/aportaciones/${selected.id}/detalle`, detalleForm);
+      Swal.fire("Listo", "Aportacion agregada correctamente.", "success");
+    }
     setDetalleForm({ fechaPago: "", valor: "" });
+    setEditingDetalle(null);
     setDetalleDialogOpen(false);
     loadDetalle(selected);
+  };
+
+  const openEditDetalle = (row) => {
+    setEditingDetalle(row);
+    setDetalleForm({ fechaPago: formatDate(row.fechaPago), valor: row.valor });
+    setDetalleDialogOpen(true);
+  };
+
+  const editDetalleInline = (row) => {
+    setEditingDetalle(row);
+    setDetalleForm({ fechaPago: formatDate(row.fechaPago), valor: row.valor });
   };
 
   const deleteDetalle = async (row) => {
@@ -212,6 +231,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
     }
     setSelected(item);
     setDetalleForm({ fechaPago: "", valor: "" });
+    setEditingDetalle(null);
     await loadDetalle(item);
   };
 
@@ -231,7 +251,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
             <Typography variant="h5">Aportaciones</Typography>
             <Typography color="text.secondary">Detalle de aportaciones de empleados EPQ</Typography>
           </Box>
-          {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} disabled={!selected} onClick={() => setDetalleDialogOpen(true)}>Nueva aportacion</Button>}
+          {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} disabled={!selected} onClick={() => { setEditingDetalle(null); setDetalleForm({ fechaPago: "", valor: "" }); setDetalleDialogOpen(true); }}>Nueva aportacion</Button>}
         </Stack>
 
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
@@ -268,10 +288,10 @@ const AportacionesPage = ({ detailOnly = false }) => {
             <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
               <TableRow>
                 <TableCell>ID</TableCell>
-                <TableCell>Aportación</TableCell>
+                <TableCell>Aportacion</TableCell>
                 <TableCell>Fecha Pago</TableCell>
                 <TableCell>Valor</TableCell>
-                <TableCell>Fecha Creación</TableCell>
+                <TableCell>Fecha Creacion</TableCell>
                 <TableCell>Usuario Creacion</TableCell>
                 <TableCell align="right">Acciones</TableCell>
               </TableRow>
@@ -285,7 +305,12 @@ const AportacionesPage = ({ detailOnly = false }) => {
                   <TableCell>Q {Number(row.valor).toFixed(2)}</TableCell>
                   <TableCell>{formatDate(row.fechaCreacion)}</TableCell>
                   <TableCell>{row.usuarioCreacion}</TableCell>
-                  <TableCell align="right">{canDelete(user) && <IconButton size="small" color="primary" onClick={() => deleteDetalle(row)}><DeleteIcon /></IconButton>}</TableCell>
+                  <TableCell align="right">
+                    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                      {canEdit(user) && <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => openEditDetalle(row)}><EditIcon /></IconButton></Tooltip>}
+                      {canDelete(user) && <Tooltip title="Eliminar"><IconButton size="small" color="primary" onClick={() => deleteDetalle(row)}><DeleteIcon /></IconButton></Tooltip>}
+                    </Stack>
+                  </TableCell>
                 </TableRow>
               ))}
               {detalleFiltered.length === 0 && <TableRow><TableCell colSpan={7} align="center">{selected ? "No hay aportaciones para mostrar." : "Seleccione un empleado EPQ."}</TableCell></TableRow>}
@@ -293,8 +318,8 @@ const AportacionesPage = ({ detailOnly = false }) => {
           </Table>
         </TableContainer>
 
-        <Dialog open={detalleDialogOpen} onClose={() => setDetalleDialogOpen(false)} fullWidth maxWidth="sm">
-          <DialogTitle>Nueva aportacion</DialogTitle>
+        <Dialog open={detalleDialogOpen} onClose={() => { setDetalleDialogOpen(false); setEditingDetalle(null); }} fullWidth maxWidth="sm">
+          <DialogTitle>{editingDetalle ? "Editar aportacion" : "Nueva aportacion"}</DialogTitle>
           <DialogContent dividers>
             <Stack spacing={2} sx={{ mt: 0.5 }}>
               <TextField label="Empleado EPQ" value={selected ? `${selected.idAportacion} - ${selected.nombre} ${selected.apellido}` : ""} disabled fullWidth />
@@ -303,7 +328,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDetalleDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => { setDetalleDialogOpen(false); setEditingDetalle(null); }}>Cancelar</Button>
             <Button variant="contained" onClick={saveDetalle}>Guardar</Button>
           </DialogActions>
         </Dialog>
@@ -401,11 +426,14 @@ const AportacionesPage = ({ detailOnly = false }) => {
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <TextField label="Fecha pago" type="date" value={detalleForm.fechaPago} onChange={(e) => setDetalleForm({ ...detalleForm, fechaPago: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
               <TextField label="Valor" type="number" value={detalleForm.valor} onChange={(e) => setDetalleForm({ ...detalleForm, valor: e.target.value })} fullWidth />
-              {canCreate(user) && <Button variant="contained" onClick={saveDetalle}>Agregar aportacion</Button>}
+              {((editingDetalle && canEdit(user)) || (!editingDetalle && canCreate(user))) && (
+                <Button variant="contained" onClick={saveDetalle}>{editingDetalle ? "Actualizar aportacion" : "Agregar aportacion"}</Button>
+              )}
+              {editingDetalle && <Button onClick={() => { setEditingDetalle(null); setDetalleForm({ fechaPago: "", valor: "" }); }}>Cancelar edicion</Button>}
             </Stack>
             <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
               <Table size="small"><TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}><TableRow><TableCell>Codigo empleado</TableCell><TableCell>Nombre</TableCell><TableCell>Valor</TableCell><TableCell>Fecha</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
-                <TableBody>{detalle.map((row) => <TableRow key={row.id}><TableCell>{row.codigoEmpleado || selected?.idAportacion}</TableCell><TableCell>{row.nombre || `${selected?.nombre || ""} ${selected?.apellido || ""}`}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell>{formatDate(row.fechaPago)}</TableCell><TableCell align="right">{canDelete(user) && <IconButton size="small" color="primary" onClick={() => deleteDetalle(row)}><DeleteIcon /></IconButton>}</TableCell></TableRow>)}</TableBody>
+                <TableBody>{detalle.map((row) => <TableRow key={row.id}><TableCell>{row.codigoEmpleado || selected?.idAportacion}</TableCell><TableCell>{row.nombre || `${selected?.nombre || ""} ${selected?.apellido || ""}`}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell>{formatDate(row.fechaPago)}</TableCell><TableCell align="right"><Stack direction="row" spacing={0.5} justifyContent="flex-end">{canEdit(user) && <IconButton size="small" color="primary" onClick={() => editDetalleInline(row)}><EditIcon /></IconButton>}{canDelete(user) && <IconButton size="small" color="primary" onClick={() => deleteDetalle(row)}><DeleteIcon /></IconButton>}</Stack></TableCell></TableRow>)}</TableBody>
               </Table>
             </TableContainer>
           </Stack>
