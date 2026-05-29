@@ -1,18 +1,22 @@
 import MantenimientoPage from "../mantenimientos/MantenimientoPage";
 
 const estadoCivilOptions = ["SOLTERO", "CASADO", "UNIDO", "DIVORCIADO", "VIUDO"].map((value) => ({ value, label: value }));
-const tipoPuestoOptions = ["ADMINISTRATIVO", "OPERATIVO", "TECNICO", "OTRO"].map((value) => ({ value, label: value }));
+// Version IV: el tipo de puesto debe limitarse a FIJO / CONTRATO / TEMPORAL.
+const tipoPuestoOptions = ["FIJO", "CONTRATO", "TEMPORAL"].map((value) => ({ value, label: value }));
 
 const EmpleadosPage = ({
   title = "Empleado EPQ",
   subtitle = "Mantenimiento de empleados EPQ",
-  fixedManejoId = 4
+  fixedManejoId = 4,
+  onlyOccupiedPuestos = false
 }) => (
   <MantenimientoPage
     title={title}
     subtitle={subtitle}
     endpoint="/empleados"
     fixedManejoId={fixedManejoId}
+    uniqueIdField="idEmpleado"
+    uniqueIdMessage="EL ID DE EMPLEADO YA EXISTE. INGRESE UN ID DIFERENTE."
     dependencies={[
       { key: "manejos", endpoint: "/catalogos/manejo-administracion" },
       { key: "puestos", endpoint: "/catalogos/puestos" },
@@ -48,7 +52,8 @@ const EmpleadosPage = ({
       { key: "profesionOficio", label: "Profesion u oficio" },
       { key: "fechaNacimiento", label: "Fecha nacimiento", required: true, type: "date" },
       { key: "tipoPuesto", label: "Tipo puesto", required: true, type: "select", options: tipoPuestoOptions },
-      { key: "idPuesto", label: "Puesto", required: true, type: "select", source: "puestos", getValue: (item) => item.id, getLabel: (item) => item.nombre, filterByFixedManejo: true }
+      // En Empleados Regimen (onlyOccupiedPuestos) solo se muestran puestos ocupados.
+      { key: "idPuesto", label: "Puesto", required: true, type: "select", source: "puestos", getValue: (item) => item.id, getLabel: (item) => item.nombre, filterByFixedManejo: true, onlyOccupied: onlyOccupiedPuestos }
     ]}
     formSections={[
       { title: "Datos principales", fields: ["tipoManejo", "idEmpleado", "nombres", "apellidos"] },

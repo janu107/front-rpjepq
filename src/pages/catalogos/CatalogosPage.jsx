@@ -36,6 +36,12 @@ import axiosClient from "../../api/axiosClient";
 import { useAuth } from "../../context/AuthContext";
 import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
+// Valores controlados de parametros de planilla (Version IV)
+const ESTADO_PLANILLA_OPTIONS = ["GRABADO", "GENERADO", "APROBADO"];
+const FRECUENCIA_PLANILLA_OPTIONS = ["MENSUAL", "QUINCENAL", "ANUAL", "TEMPORAL"];
+// Tipos que en MUI requieren el label "shrink" para no encimarse con el placeholder
+const SHRINK_TYPES = ["date", "datetime-local", "time", "month"];
+
 const catalogConfigs = [
   {
     key: "areas",
@@ -111,16 +117,17 @@ const catalogConfigs = [
     key: "tipo-planilla",
     label: "Tipo planilla",
     codeKey: "id",
-    searchFields: ["tipoPlanilla", "descripcion", "idTipoUso"],
+    searchFields: ["tipoPlanilla", "descripcion", "tipoUsoDescripcion"],
     columns: [
       { key: "tipoPlanilla", label: "Tipo" },
       { key: "descripcion", label: "Descripcion" },
-      { key: "idTipoUso", label: "Tipo uso" }
+      { key: "tipoUsoDescripcion", label: "Tipo uso" }
     ],
     fields: [
       { key: "tipoPlanilla", label: "Tipo planilla", required: true },
       { key: "descripcion", label: "Descripcion", required: true },
-      { key: "idTipoUso", label: "Tipo uso", required: true, type: "number" }
+      // Version IV: Tipo uso proviene de RPJ_CAT_MANEJO_ADMINISTRACION
+      { key: "idTipoUso", label: "Tipo uso", required: true, type: "select", source: "manejos" }
     ]
   },
   {
@@ -139,7 +146,7 @@ const catalogConfigs = [
       { key: "nombreEmpresa", label: "Nombre empresa", required: true },
       { key: "nit", label: "NIT", required: true },
       { key: "telefono", label: "Telefono", required: true },
-      { key: "correo", label: "Correo", required: true },
+      { key: "correo", label: "Correo", required: true, noUpper: true },
       { key: "iva", label: "IVA", type: "number" },
       { key: "porcentajePagos", label: "Porcentaje pagos", type: "number" },
       { key: "isr", label: "ISR", type: "number" },
@@ -164,8 +171,28 @@ const catalogConfigs = [
       { key: "fechaInicio", label: "Fecha inicio", required: true, type: "date" },
       { key: "fechaFinal", label: "Fecha final", required: true, type: "date" },
       { key: "fechaPago", label: "Fecha pago", required: true, type: "date" },
-      { key: "frecuencia", label: "Frecuencia", required: true },
-      { key: "estado", label: "Estado", required: true }
+      { key: "frecuencia", label: "Frecuencia", required: true, type: "select", options: FRECUENCIA_PLANILLA_OPTIONS },
+      { key: "estado", label: "Estado", required: true, type: "select", options: ESTADO_PLANILLA_OPTIONS }
+    ]
+  },
+  {
+    key: "firma-planilla",
+    label: "Firmas de planilla",
+    codeKey: "id",
+    searchFields: ["idFirma", "nombre", "puesto", "tipo", "manejoDescripcion"],
+    columns: [
+      { key: "idFirma", label: "ID" },
+      { key: "nombre", label: "Nombre" },
+      { key: "puesto", label: "Puesto" },
+      { key: "tipo", label: "Tipo" },
+      { key: "manejoDescripcion", label: "Manejo" }
+    ],
+    fields: [
+      { key: "tipoManejo", label: "Tipo manejo", required: true, type: "select", source: "manejos" },
+      { key: "idFirma", label: "ID", required: true },
+      { key: "nombre", label: "Nombre", required: true },
+      { key: "puesto", label: "Puesto", required: true },
+      { key: "tipo", label: "Tipo", required: true }
     ]
   }
 ];
@@ -225,7 +252,7 @@ const CatalogosPage = () => {
   useEffect(() => {
     setSearch("");
     loadRecords();
-    if (config.key === "puestos" || config.key === "parametro-planilla") {
+    if (["puestos", "parametro-planilla", "tipo-planilla", "firma-planilla"].includes(config.key)) {
       loadDependencies();
     }
   }, [config.key]);
@@ -307,8 +334,34 @@ const CatalogosPage = () => {
     }
   };
 
+  // Solo se convierten a MAYUSCULAS los campos de texto libre (no correos, numeros ni fechas)
+  const shouldUppercase = (field) =>
+    !field.noUpper && (!field.type || field.type === "text");
+
+  const handleFieldChange = (field, rawValue) => {
+    const value = shouldUppercase(field) ? String(rawValue).toUpperCase() : rawValue;
+    setForm({ ...form, [field.key]: value });
+  };
+
   const renderField = (field) => {
     if (field.type === "select") {
+      // Opciones fijas (array de strings) o provenientes de un catalogo (source)
+      if (Array.isArray(field.options)) {
+        return (
+          <FormControl fullWidth key={field.key}>
+            <InputLabel>{field.label}</InputLabel>
+            <Select
+              label={field.label}
+              value={form[field.key] ?? ""}
+              onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}
+            >
+              {field.options.map((option) => (
+                <MenuItem key={option} value={option}>{option}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        );
+      }
       const options = field.source === "areas" ? areas : field.source === "tiposPlanilla" ? tiposPlanilla : manejos;
       return (
         <FormControl fullWidth key={field.key}>
@@ -334,7 +387,8 @@ const CatalogosPage = () => {
         label={field.label}
         type={field.type || "text"}
         value={form[field.key] ?? ""}
-        onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}
+        onChange={(event) => handleFieldChange(field, event.target.value)}
+        InputLabelProps={SHRINK_TYPES.includes(field.type) ? { shrink: true } : undefined}
         fullWidth
       />
     );

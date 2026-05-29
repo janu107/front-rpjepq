@@ -4,12 +4,13 @@ import EditIcon from "@mui/icons-material/Edit";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import SearchIcon from "@mui/icons-material/Search";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import {
   Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
   InputAdornment, InputLabel, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
@@ -52,6 +53,36 @@ const AportacionesPage = ({ detailOnly = false }) => {
   const [detalleDialogOpen, setDetalleDialogOpen] = useState(false);
   const [editingDetalle, setEditingDetalle] = useState(null);
   const [total, setTotal] = useState(0);
+  const fileInputRef = useRef(null);
+
+  // Version IV: carga masiva de aportaciones desde Excel (id empleado, fecha, monto).
+  const handleExcelSelected = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // permite volver a seleccionar el mismo archivo
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("archivo", file);
+    try {
+      const { data } = await axiosClient.post("/aportaciones/carga-masiva", formData);
+      const resumen = data.data || {};
+      const errores = resumen.errores || [];
+      const erroresHtml = errores.slice(0, 12).map((e) => `Fila ${e.fila}: ${e.error}`).join("<br>");
+      await Swal.fire({
+        title: "Carga masiva procesada",
+        icon: errores.length > 0 ? "warning" : "success",
+        html: `Filas leidas: <b>${resumen.totalFilas ?? 0}</b><br>`
+          + `Registros insertados: <b>${resumen.insertados ?? 0}</b><br>`
+          + `Omitidos (duplicados): <b>${resumen.omitidos ?? 0}</b><br>`
+          + `Errores: <b>${errores.length}</b>`
+          + (erroresHtml ? `<hr style="margin:8px 0">${erroresHtml}` : "")
+      });
+      await loadAportaciones();
+      if (selected) await loadDetalle(selected);
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible procesar el archivo Excel.", "error");
+    }
+  };
 
   const loadAportaciones = async () => {
     const { data } = await axiosClient.get("/aportaciones");
@@ -103,6 +134,12 @@ const AportacionesPage = ({ detailOnly = false }) => {
     const required = ["tipoManejo", "idAportacion", "nombre", "apellido", "dpi", "gerencia", "fechaInicioAportacion", "estado", "fechaNacimiento", "ubicacion"];
     const missing = required.find((key) => String(form[key] ?? "").trim() === "");
     if (missing) return "Complete los campos obligatorios.";
+    // Version IV: validacion de apo_id unico antes de enviar al backend.
+    const current = String(form.idAportacion ?? "").trim();
+    const duplicated = aportaciones.some(
+      (item) => Number(item.id) !== Number(editing?.id) && String(item.idAportacion ?? "").trim() === current
+    );
+    if (current !== "" && duplicated) return "EL ID DE APORTACION YA EXISTE. INGRESE UN ID DIFERENTE.";
     return null;
   };
 
@@ -251,7 +288,15 @@ const AportacionesPage = ({ detailOnly = false }) => {
             <Typography variant="h5">Aportaciones</Typography>
             <Typography color="text.secondary">Detalle de aportaciones de empleados EPQ</Typography>
           </Box>
-          {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} disabled={!selected} onClick={() => { setEditingDetalle(null); setDetalleForm({ fechaPago: "", valor: "" }); setDetalleDialogOpen(true); }}>Nueva aportacion</Button>}
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+            {canCreate(user) && (
+              <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => fileInputRef.current?.click()}>
+                Carga masiva (Excel)
+              </Button>
+            )}
+            {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} disabled={!selected} onClick={() => { setEditingDetalle(null); setDetalleForm({ fechaPago: "", valor: "" }); setDetalleDialogOpen(true); }}>Nueva aportacion</Button>}
+          </Stack>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" hidden onChange={handleExcelSelected} />
         </Stack>
 
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>

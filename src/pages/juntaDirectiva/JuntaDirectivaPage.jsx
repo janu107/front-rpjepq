@@ -9,6 +9,8 @@ const JuntaDirectivaPage = () => (
     subtitle="Mantenimiento de miembros de junta directiva"
     endpoint="/junta-directiva"
     fixedManejoId={3}
+    uniqueIdField="idJunta"
+    uniqueIdMessage="EL ID DE JUNTA DIRECTIVA YA EXISTE. INGRESE UN ID DIFERENTE."
     dependencies={[
       { key: "manejos", endpoint: "/catalogos/manejo-administracion" },
       { key: "puestos", endpoint: "/catalogos/puestos" }

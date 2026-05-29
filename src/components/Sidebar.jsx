@@ -38,7 +38,8 @@ const items = [
       { text: "Tipo jubilaci\u00f3n", path: "/catalogos/tipo-jubilacion", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Tipo planilla", path: "/catalogos/tipo-planilla", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Par\u00e1metro general", path: "/catalogos/parametro-general", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Par\u00e1metro planilla", path: "/catalogos/parametro-planilla", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+      { text: "Par\u00e1metro planilla", path: "/catalogos/parametro-planilla", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Firmas de planilla", path: "/catalogos/firma-planilla", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]
   },
   {

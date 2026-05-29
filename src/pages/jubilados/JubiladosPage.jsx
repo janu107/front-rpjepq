@@ -5,14 +5,23 @@ const estadoCivilOptions = ["SOLTERO", "CASADO", "UNIDO", "DIVORCIADO", "VIUDO"]
 
 const JubiladosPage = () => (
   <MantenimientoPage
-    title="Jubilados"
+    title="Control de Jubilados"
     subtitle="Mantenimiento de jubilados"
     endpoint="/jubilados"
     fixedManejoId={2}
+    uniqueIdField="idJubilado"
+    uniqueIdMessage="EL ID DE JUBILADO YA EXISTE. INGRESE UN ID DIFERENTE."
     dependencies={[
       { key: "manejos", endpoint: "/catalogos/manejo-administracion" },
-      { key: "tiposJubilacion", endpoint: "/catalogos/tipo-jubilacion" }
+      { key: "tiposJubilacion", endpoint: "/catalogos/tipo-jubilacion" },
+      { key: "tiposIngreso", endpoint: "/catalogos/tipo-ingreso" }
     ]}
+    salaryConfig={{
+      fields: [
+        { key: "tipoIngreso", label: "Tipo ingreso", required: true, type: "select", source: "tiposIngreso", getValue: (item) => item.id, getLabel: (item) => `${item.tipoIngreso} - ${item.descripcion}` },
+        { key: "salario", label: "Salario", required: true, type: "number" }
+      ]
+    }}
     searchFields={["nombres", "apellidos", "dpi", "estado", "manejoDescripcion", "tipoJubilacionDescripcion"]}
     columns={[
       { key: "idJubilado", label: "ID" },

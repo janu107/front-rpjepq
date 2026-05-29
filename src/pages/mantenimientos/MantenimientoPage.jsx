@@ -68,7 +68,10 @@ const MantenimientoPage = ({
   salaryConfig,
   formSections = [],
   fixedManejoId,
-  fixedManejoDescription
+  fixedManejoDescription,
+  uniqueIdField,
+  uniqueIdMessage,
+  customValidate
 }) => {
   const { user } = useAuth();
   const [rows, setRows] = useState([]);
@@ -165,6 +168,18 @@ const MantenimientoPage = ({
   const validateForm = () => {
     const missing = fields.find((field) => field.required && String(form[field.key] ?? "").trim() === "");
     if (missing) return `El campo ${missing.label} es obligatorio.`;
+    // Version IV: validacion de ID visible unico antes de enviar al backend.
+    if (uniqueIdField) {
+      const current = String(form[uniqueIdField] ?? "").trim();
+      const duplicated = rows.some(
+        (row) => Number(row.id) !== Number(editingRow?.id) && String(row[uniqueIdField] ?? "").trim() === current
+      );
+      if (current !== "" && duplicated) return uniqueIdMessage || "EL ID YA EXISTE. INGRESE UN ID DIFERENTE.";
+    }
+    if (customValidate) {
+      const customMessage = customValidate(form);
+      if (customMessage) return customMessage;
+    }
     if (salaryConfig?.requiredOnCreate && !editingRow && salaryRows.length === 0) return "Debe agregar la informacion de salario antes de guardar el empleado.";
     return null;
   };
@@ -305,12 +320,36 @@ const MantenimientoPage = ({
   };
 
   const renderField = (field) => {
+    // Version IV: campo calculado de solo lectura (ej. horas de tiempo extra, montos de dieta).
+    if (typeof field.compute === "function") {
+      return (
+        <TextField
+          key={field.key}
+          label={field.label}
+          value={field.compute(form, options) ?? ""}
+          InputProps={{ readOnly: true }}
+          InputLabelProps={{ shrink: true }}
+          fullWidth
+          disabled
+        />
+      );
+    }
     if (field.type === "select") {
       const sourceItems = field.options || options[field.source] || [];
       const manejoFilter = form.tipoManejo || fixedManejoId;
-      const items = field.filterByFixedManejo && manejoFilter
+      let items = field.filterByFixedManejo && manejoFilter
         ? sourceItems.filter((item) => Number(item.tipoManejo) === Number(manejoFilter))
         : sourceItems;
+      // Version IV (Empleados Regimen): mostrar unicamente puestos ocupados, es decir,
+      // los que ya estan asignados a algun empleado (RPJ_MNT_EMPLEADO.emp_id_puesto).
+      if (field.onlyOccupied) {
+        const occupiedIds = new Set(rows.map((row) => Number(row.idPuesto)).filter((value) => !Number.isNaN(value)));
+        // Conservar el puesto del registro en edicion aunque cambiara su estado de ocupacion.
+        if (editingRow && editingRow.idPuesto !== undefined && editingRow.idPuesto !== null) {
+          occupiedIds.add(Number(editingRow.idPuesto));
+        }
+        items = items.filter((item) => occupiedIds.has(Number(field.getValue ? field.getValue(item) : item.value)));
+      }
       return (
         <FormControl key={field.key} fullWidth>
           <InputLabel>{field.label}</InputLabel>
@@ -325,13 +364,20 @@ const MantenimientoPage = ({
       );
     }
 
+    // Version IV: los campos de texto libre se escriben en MAYUSCULAS.
+    const isText = !field.type || field.type === "text";
+    const handleChange = (event) => {
+      const raw = event.target.value;
+      const value = isText && !field.noUpper ? raw.toUpperCase() : raw;
+      setForm({ ...form, [field.key]: value });
+    };
     return (
       <TextField
         key={field.key}
         label={field.label}
         type={field.type || "text"}
         value={form[field.key] ?? ""}
-        onChange={(event) => setForm({ ...form, [field.key]: event.target.value })}
+        onChange={handleChange}
         InputLabelProps={shrinkLabelTypes.includes(field.type) ? { shrink: true } : undefined}
         disabled={field.disabled}
         fullWidth
