@@ -2,6 +2,7 @@ import AddIcon from "@mui/icons-material/Add";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
   Button,
   Dialog,
@@ -88,11 +89,13 @@ const MantenimientoPage = ({
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
   const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
   const [planillaDialogOpen, setPlanillaDialogOpen] = useState(false);
   const [planillaTargetRow, setPlanillaTargetRow] = useState(null);
   const [planillaForm, setPlanillaForm] = useState(buildPlanillaForm());
   const [planillaExistingId, setPlanillaExistingId] = useState(null);
+  const [pendingPlanillaForm, setPendingPlanillaForm] = useState(null);
   const [bancos, setBancos] = useState([]);
   const [editingRow, setEditingRow] = useState(null);
   const [form, setForm] = useState(buildInitialForm(fields));
@@ -147,26 +150,30 @@ const MantenimientoPage = ({
     setPlanillaTargetRow(row);
     setPlanillaForm(buildPlanillaForm());
     setPlanillaExistingId(null);
-    try {
-      const idPersona = row[planillaConfig.idPersonaField || "id"];
-      const { data } = await axiosClient.get(`/datos-planilla/buscar?tipoManejo=${row.tipoManejo}&idEmpleado=${idPersona}`);
-      if (data.data) {
-        const existing = data.data;
-        setPlanillaForm({
-          idBanco: existing.idBanco || "",
-          formaPago: existing.formaPago || "",
-          cuenta: existing.cuenta || "",
-          tipoCuenta: existing.tipoCuenta || "",
-          aplicaDescIgss: Boolean(existing.aplicaDescIgss),
-          aplicaDescIsr: Boolean(existing.aplicaDescIsr),
-          aplicaSeguro: Boolean(existing.aplicaSeguro),
-          noProbidad: existing.noProbidad || "",
-          noSobrevivencia: existing.noSobrevivencia || ""
-        });
-        setPlanillaExistingId(existing.id);
+    const idPersona = row ? row[planillaConfig.idPersonaField || "id"] : null;
+    if (idPersona) {
+      try {
+        const { data } = await axiosClient.get(`/datos-planilla/buscar?tipoManejo=${row.tipoManejo}&idEmpleado=${idPersona}`);
+        if (data.data) {
+          const existing = data.data;
+          setPlanillaForm({
+            idBanco: existing.idBanco || "",
+            formaPago: existing.formaPago || "",
+            cuenta: existing.cuenta || "",
+            tipoCuenta: existing.tipoCuenta || "",
+            aplicaDescIgss: Boolean(existing.aplicaDescIgss),
+            aplicaDescIsr: Boolean(existing.aplicaDescIsr),
+            aplicaSeguro: Boolean(existing.aplicaSeguro),
+            noProbidad: existing.noProbidad || "",
+            noSobrevivencia: existing.noSobrevivencia || ""
+          });
+          setPlanillaExistingId(existing.id);
+        }
+      } catch {
+        /* no existing record */
       }
-    } catch {
-      /* no existing record */
+    } else if (pendingPlanillaForm) {
+      setPlanillaForm(pendingPlanillaForm);
     }
     if (bancos.length === 0) await loadBancos();
     setPlanillaDialogOpen(true);
@@ -176,9 +183,16 @@ const MantenimientoPage = ({
     if (!planillaForm.formaPago) { Swal.fire("Validacion", "El campo Forma de pago es obligatorio.", "warning"); return; }
     if (!planillaForm.idBanco) { Swal.fire("Validacion", "El campo Banco es obligatorio.", "warning"); return; }
     const row = planillaTargetRow;
+    const idPersona = row ? row[planillaConfig.idPersonaField || "id"] : null;
+    if (!idPersona) {
+      setPendingPlanillaForm({ ...planillaForm });
+      Swal.fire("Listo", "Datos de planilla registrados. Se guardarán junto con el empleado.", "success");
+      setPlanillaDialogOpen(false);
+      return;
+    }
     const payload = {
       tipoManejo: row.tipoManejo,
-      idEmpleado: row[planillaConfig.idPersonaField || "id"],
+      idEmpleado: idPersona,
       idBanco: planillaForm.idBanco,
       formaPago: planillaForm.formaPago,
       cuenta: planillaForm.cuenta,
@@ -235,7 +249,23 @@ const MantenimientoPage = ({
     setDialogOpen(true);
   };
 
+  const openViewDialog = async (row) => {
+    setViewOnly(true);
+    setEditingRow(row);
+    setForm(
+      fields.reduce((acc, field) => {
+        acc[field.key] = field.type === "date" ? formatDate(row[field.key]) : row[field.key] ?? "";
+        return acc;
+      }, {})
+    );
+    setSalaryRows([]);
+    setEditingSalaryIndex(null);
+    if (salaryConfig) await loadSalariesForManejo(row.tipoManejo);
+    setDialogOpen(true);
+  };
+
   const openEditDialog = async (row) => {
+    setViewOnly(false);
     setEditingRow(row);
     setForm(
       fields.reduce((acc, field) => {
@@ -369,11 +399,22 @@ const MantenimientoPage = ({
         }
         Swal.fire("Listo", "Registro actualizado correctamente.", "success");
       } else {
-        await axiosClient.post(endpoint, form);
+        const createResponse = await axiosClient.post(endpoint, form);
         if (salaryConfig && salaryRows.length > 0) {
           await axiosClient.post("/salarios/bulk", {
             salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...row }))
           });
+        }
+        if (planillaConfig && pendingPlanillaForm) {
+          const newId = createResponse.data?.data?.id;
+          if (newId) {
+            await axiosClient.post("/datos-planilla", {
+              tipoManejo: form.tipoManejo,
+              idEmpleado: newId,
+              ...pendingPlanillaForm
+            });
+            setPendingPlanillaForm(null);
+          }
         }
         Swal.fire("Listo", "Registro creado correctamente.", "success");
       }
@@ -458,7 +499,7 @@ const MantenimientoPage = ({
       return (
         <FormControl key={field.key} fullWidth>
           <InputLabel>{field.label}</InputLabel>
-          <Select label={field.label} value={form[field.key] ?? ""} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} disabled={field.disabled}>
+          <Select label={field.label} value={form[field.key] ?? ""} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} disabled={field.disabled || viewOnly}>
             {items.map((item) => (
               <MenuItem key={field.getValue ? field.getValue(item) : item.value} value={field.getValue ? field.getValue(item) : item.value}>
                 {field.getLabel ? field.getLabel(item) : item.label}
@@ -484,7 +525,7 @@ const MantenimientoPage = ({
         value={form[field.key] ?? ""}
         onChange={handleChange}
         InputLabelProps={shrinkLabelTypes.includes(field.type) ? { shrink: true } : undefined}
-        disabled={field.disabled}
+        disabled={field.disabled || viewOnly}
         fullWidth
       />
     );
@@ -505,6 +546,7 @@ const MantenimientoPage = ({
         onSearch={setSearch}
         filterKeys={searchFields}
         actions={[
+          { label: "Ver", icon: <VisibilityIcon />, onClick: openViewDialog, visible: () => true },
           { label: "Planilla", icon: <AssignmentIcon />, onClick: openPlanillaDialog, visible: () => !!planillaConfig && canEdit(user) },
           { label: "Editar", icon: <EditIcon />, onClick: openEditDialog, visible: () => canEdit(user) },
           { label: "Eliminar", icon: <DeleteIcon />, onClick: handleDelete, visible: () => canDelete(user) }
@@ -513,12 +555,12 @@ const MantenimientoPage = ({
 
       <Dialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={() => { setDialogOpen(false); setViewOnly(false); setPendingPlanillaForm(null); }}
         fullWidth
         maxWidth="lg"
         PaperProps={{ sx: { width: "min(1120px, calc(100% - 24px))" } }}
       >
-        <DialogTitle>{editingRow ? "Editar registro" : "Nuevo registro"}</DialogTitle>
+        <DialogTitle>{viewOnly ? "Ver registro" : editingRow ? "Editar registro" : "Nuevo registro"}</DialogTitle>
         <DialogContent dividers>
           {formSections.length > 0 ? (
             <Stack spacing={2.5} sx={{ mt: 0.5 }}>
@@ -546,7 +588,17 @@ const MantenimientoPage = ({
           )}
         </DialogContent>
         <DialogActions>
-          {salaryConfig && (
+          {planillaConfig && !viewOnly && (
+            <Button
+              type="button"
+              variant={pendingPlanillaForm && !editingRow ? "contained" : "outlined"}
+              color={pendingPlanillaForm && !editingRow ? "success" : "primary"}
+              onClick={() => openPlanillaDialog(editingRow || null)}
+            >
+              {pendingPlanillaForm && !editingRow ? "Planilla (1)" : "Planilla"}
+            </Button>
+          )}
+          {salaryConfig && !viewOnly && (
             <Button
               type="button"
               variant={salaryRows.length > 0 ? "contained" : "outlined"}
@@ -556,9 +608,9 @@ const MantenimientoPage = ({
               {salaryRows.length > 0 ? `Salarios (${salaryRows.length})` : "Salario"}
             </Button>
           )}
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          {addMode && !editingRow && <Button variant="outlined" onClick={handleAgregar}>Agregar</Button>}
-          <Button variant="contained" onClick={handleSave}>Guardar</Button>
+          <Button onClick={() => { setDialogOpen(false); setViewOnly(false); setPendingPlanillaForm(null); }}>{viewOnly ? "Cerrar" : "Cancelar"}</Button>
+          {!viewOnly && addMode && !editingRow && <Button variant="outlined" onClick={handleAgregar}>Agregar</Button>}
+          {!viewOnly && <Button variant="contained" onClick={handleSave}>Guardar</Button>}
         </DialogActions>
       </Dialog>
 
