@@ -1,4 +1,6 @@
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import GavelIcon from "@mui/icons-material/Gavel";
 import BadgeIcon from "@mui/icons-material/Badge";
 import CalculateIcon from "@mui/icons-material/Calculate";
 import DashboardIcon from "@mui/icons-material/Dashboard";
@@ -30,6 +32,7 @@ const items = [
     icon: <FactCheckIcon />,
     roles: ["ADMIN", "OPERADOR"],
     children: [
+      { text: "Bancos", path: "/catalogos/bancos", icon: <AccountBalanceIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "\u00c1reas", path: "/catalogos/areas", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Manejo administraci\u00f3n", path: "/catalogos/manejo-administracion", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Puestos", path: "/catalogos/puestos", icon: <FactCheckIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
@@ -62,7 +65,9 @@ const items = [
       { text: "Control de Jubilados", path: "/jubilados", icon: <PeopleAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Tiempo Extraordinario", path: "/tiempo-extra", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Juntas Directivas", path: "/junta-directiva", icon: <WorkIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Pago Dietas", path: "/dietas", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+      { text: "Pago Dietas", path: "/dietas", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Descuentos Judiciales", path: "/descuentos-judiciales", icon: <GavelIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Préstamos Régimen", path: "/prestamos-regimen", icon: <AccountBalanceWalletIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]
   },
   {
@@ -81,7 +86,8 @@ const items = [
     icon: <InsertChartIcon />,
     roles: ["ADMIN", "OPERADOR", "CONSULTA"],
     children: [
-      { text: "Reportes de N\u00f3mina", path: "/reportes/nomina", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] }
+      { text: "Reportes de N\u00f3mina", path: "/reportes/nomina", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
+      { text: "Reportes R\u00e9gimen", path: "/reportes/regimen", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] }
     ]
   },
   {

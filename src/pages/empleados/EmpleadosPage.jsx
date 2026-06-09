@@ -1,14 +1,15 @@
 import MantenimientoPage from "../mantenimientos/MantenimientoPage";
 
 const estadoCivilOptions = ["SOLTERO", "CASADO", "UNIDO", "DIVORCIADO", "VIUDO"].map((value) => ({ value, label: value }));
-// Version IV: el tipo de puesto debe limitarse a FIJO / CONTRATO / TEMPORAL.
 const tipoPuestoOptions = ["FIJO", "CONTRATO", "TEMPORAL"].map((value) => ({ value, label: value }));
+const sexoOptions = ["MASCULINO", "FEMENINO"].map((value) => ({ value, label: value }));
 
 const EmpleadosPage = ({
   title = "Empleado EPQ",
   subtitle = "Mantenimiento de empleados EPQ",
   fixedManejoId = 4,
-  onlyOccupiedPuestos = false
+  onlyOccupiedPuestos = false,
+  showPlanilla = false
 }) => (
   <MantenimientoPage
     title={title}
@@ -51,6 +52,7 @@ const EmpleadosPage = ({
       { key: "estadoCivil", label: "Estado civil", required: true, type: "select", options: estadoCivilOptions },
       { key: "profesionOficio", label: "Profesion u oficio" },
       { key: "fechaNacimiento", label: "Fecha nacimiento", required: true, type: "date" },
+      { key: "sexo", label: "Sexo", required: true, type: "select", options: sexoOptions },
       { key: "tipoPuesto", label: "Tipo puesto", required: true, type: "select", options: tipoPuestoOptions },
       // En Empleados Regimen (onlyOccupiedPuestos) solo se muestran puestos ocupados.
       { key: "idPuesto", label: "Puesto", required: true, type: "select", source: "puestos", getValue: (item) => item.id, getLabel: (item) => item.nombre, filterByFixedManejo: true, onlyOccupied: onlyOccupiedPuestos }
@@ -59,8 +61,9 @@ const EmpleadosPage = ({
       { title: "Datos principales", fields: ["tipoManejo", "idEmpleado", "nombres", "apellidos"] },
       { title: "Identificacion", fields: ["dpi", "nit", "direccion", "estadoCivil"] },
       { title: "Puesto y manejo", fields: ["tipoPuesto", "idPuesto"] },
-      { title: "Fechas y datos adicionales", fields: ["fechaNacimiento", "profesionOficio"] }
+      { title: "Fechas y datos adicionales", fields: ["fechaNacimiento", "sexo", "profesionOficio"] }
     ]}
+    planillaConfig={showPlanilla ? { tipoPersona: "EMPLEADO", idPersonaField: "id" } : undefined}
   />
 );
 

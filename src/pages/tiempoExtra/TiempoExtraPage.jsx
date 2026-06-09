@@ -20,13 +20,15 @@ const validateRango = (form) => {
 
 const TiempoExtraPage = () => (
   <MantenimientoPage
+    addMode
     title="Tiempo extraordinario"
     subtitle="Registro de horas extra de empleados"
     endpoint="/tiempo-extra"
     dependencies={[{ key: "empleados", endpoint: "/empleados" }]}
-    searchFields={["empleadoNombre", "empleadoDpi", "motivo", "tipoHora"]}
+    searchFields={["empleadoNombre", "empleadoDpi", "empleadoCodigo", "motivo", "tipoHora"]}
     customValidate={validateRango}
     columns={[
+      { key: "empleadoCodigo", label: "Codigo" },
       { key: "empleadoNombre", label: "Empleado" },
       { key: "tipoHora", label: "Tipo hora" },
       { key: "cantidadHoras", label: "Horas" },

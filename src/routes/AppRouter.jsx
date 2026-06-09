@@ -17,6 +17,9 @@ import NominaPage from "../pages/nomina/NominaPage";
 import OtrosDescuentosPage from "../pages/otrosDescuentos/OtrosDescuentosPage";
 import PrestamosPage from "../pages/prestamos/PrestamosPage";
 import ReportesNominaPage from "../pages/reportes/ReportesNominaPage";
+import ReportesRegimenPage from "../pages/reportes/ReportesRegimenPage";
+import DescuentosJudicialesPage from "../pages/descuentosJudiciales/DescuentosJudicialesPage";
+import PrestamosRegimenPage from "../pages/prestamosRegimen/PrestamosRegimenPage";
 import RolesPage from "../pages/roles/RolesPage";
 import SalariosPage from "../pages/salarios/SalariosPage";
 import TiempoExtraPage from "../pages/tiempoExtra/TiempoExtraPage";
@@ -47,8 +50,8 @@ const AppRouter = () => {
             <Route path="/aportaciones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><AportacionesPage /></ProtectedRoute>} />
             <Route path="/aportaciones/detalle" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><AportacionesPage detailOnly /></ProtectedRoute>} />
             <Route path="/empleados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><EmpleadosPage /></ProtectedRoute>} />
-            <Route path="/empleados-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><EmpleadosPage title="Control de Empleados" subtitle="Mantenimiento de empleados regimen" fixedManejoId={1} onlyOccupiedPuestos /></ProtectedRoute>} />
-            <Route path="/jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><JubiladosPage /></ProtectedRoute>} />
+            <Route path="/empleados-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><EmpleadosPage title="Control de Empleados" subtitle="Mantenimiento de empleados regimen" fixedManejoId={1} onlyOccupiedPuestos showPlanilla /></ProtectedRoute>} />
+            <Route path="/jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><JubiladosPage showPlanilla /></ProtectedRoute>} />
             <Route path="/junta-directiva" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><JuntaDirectivaPage /></ProtectedRoute>} />
             <Route path="/prestamos" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosPage /></ProtectedRoute>} />
             <Route path="/prestamos/detalle" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosPage detailOnly /></ProtectedRoute>} />
@@ -59,6 +62,9 @@ const AppRouter = () => {
             <Route path="/nomina" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><NominaPage /></ProtectedRoute>} />
             <Route path="/generacion-planilla" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><GeneracionPlanillaPage /></ProtectedRoute>} />
             <Route path="/reportes/nomina" element={<ReportesNominaPage />} />
+            <Route path="/reportes/regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReportesRegimenPage /></ProtectedRoute>} />
+            <Route path="/descuentos-judiciales" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DescuentosJudicialesPage /></ProtectedRoute>} />
+            <Route path="/prestamos-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosRegimenPage /></ProtectedRoute>} />
             <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AuditoriaPage /></ProtectedRoute>} />
             <Route path="/mantenimiento" element={<ProtectedRoute allowedRoles={["ADMIN"]}><MantenimientoPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

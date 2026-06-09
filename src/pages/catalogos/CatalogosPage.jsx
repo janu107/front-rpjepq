@@ -44,6 +44,20 @@ const SHRINK_TYPES = ["date", "datetime-local", "time", "month"];
 
 const catalogConfigs = [
   {
+    key: "bancos",
+    label: "Bancos",
+    codeKey: "id",
+    searchFields: ["nombre", "estado"],
+    columns: [
+      { key: "nombre", label: "Nombre" },
+      { key: "estado", label: "Estado" }
+    ],
+    fields: [
+      { key: "nombre", label: "Nombre banco", required: true },
+      { key: "estado", label: "Estado", type: "select", options: ["ACTIVO", "INACTIVO"] }
+    ]
+  },
+  {
     key: "areas",
     label: "Areas",
     codeKey: "id",
@@ -124,9 +138,7 @@ const catalogConfigs = [
       { key: "tipoUsoDescripcion", label: "Tipo uso" }
     ],
     fields: [
-      { key: "tipoPlanilla", label: "Tipo planilla", required: true },
       { key: "descripcion", label: "Descripcion", required: true },
-      // Version IV: Tipo uso proviene de RPJ_CAT_MANEJO_ADMINISTRACION
       { key: "idTipoUso", label: "Tipo uso", required: true, type: "select", source: "manejos" }
     ]
   },

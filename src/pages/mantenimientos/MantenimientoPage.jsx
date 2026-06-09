@@ -1,4 +1,5 @@
 import AddIcon from "@mui/icons-material/Add";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import {
@@ -57,6 +58,10 @@ const buildInitialForm = (fields) =>
     return acc;
   }, {});
 
+const FORMAS_PAGO_PLANILLA = ["ABONO CUENTA", "CHEQUE"];
+const TIPOS_CUENTA_PLANILLA = ["AHORRO", "MONETARIA"];
+const buildPlanillaForm = () => ({ idBanco: "", noCuenta: "", formaPago: "", tipoCuenta: "", estado: "ACTIVO" });
+
 const MantenimientoPage = ({
   title,
   subtitle,
@@ -71,13 +76,20 @@ const MantenimientoPage = ({
   fixedManejoDescription,
   uniqueIdField,
   uniqueIdMessage,
-  customValidate
+  customValidate,
+  planillaConfig,
+  addMode
 }) => {
   const { user } = useAuth();
   const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
+  const [planillaDialogOpen, setPlanillaDialogOpen] = useState(false);
+  const [planillaTargetRow, setPlanillaTargetRow] = useState(null);
+  const [planillaForm, setPlanillaForm] = useState(buildPlanillaForm());
+  const [planillaExistingId, setPlanillaExistingId] = useState(null);
+  const [bancos, setBancos] = useState([]);
   const [editingRow, setEditingRow] = useState(null);
   const [form, setForm] = useState(buildInitialForm(fields));
   const [salaryForm, setSalaryForm] = useState({ tipoIngreso: "", salario: "" });
@@ -118,10 +130,67 @@ const MantenimientoPage = ({
     }
   };
 
+  const loadBancos = async () => {
+    try {
+      const { data } = await axiosClient.get("/catalogos/bancos");
+      setBancos(data.data || []);
+    } catch {
+      setBancos([]);
+    }
+  };
+
+  const openPlanillaDialog = async (row) => {
+    setPlanillaTargetRow(row);
+    setPlanillaForm(buildPlanillaForm());
+    setPlanillaExistingId(null);
+    try {
+      const { data } = await axiosClient.get(`/datos-planilla/buscar?tipoPersona=${planillaConfig.tipoPersona}&idPersona=${row[planillaConfig.idPersonaField || "id"]}`);
+      if (data.data) {
+        const existing = data.data;
+        setPlanillaForm({ idBanco: existing.idBanco || "", noCuenta: existing.noCuenta || "", formaPago: existing.formaPago || "", tipoCuenta: existing.tipoCuenta || "", estado: existing.estado || "ACTIVO" });
+        setPlanillaExistingId(existing.id);
+      }
+    } catch {
+      /* no existing record */
+    }
+    if (bancos.length === 0) await loadBancos();
+    setPlanillaDialogOpen(true);
+  };
+
+  const savePlanilla = async () => {
+    if (!planillaForm.formaPago) { Swal.fire("Validacion", "El campo Forma de pago es obligatorio.", "warning"); return; }
+    if (!planillaForm.idBanco) { Swal.fire("Validacion", "El campo Banco es obligatorio.", "warning"); return; }
+    const row = planillaTargetRow;
+    const payload = {
+      tipoManejo: row.tipoManejo,
+      tipoPersona: planillaConfig.tipoPersona,
+      idPersona: row[planillaConfig.idPersonaField || "id"],
+      idBanco: planillaForm.idBanco,
+      noCuenta: planillaForm.noCuenta,
+      formaPago: planillaForm.formaPago,
+      tipoCuenta: planillaForm.tipoCuenta,
+      estado: planillaForm.estado
+    };
+    try {
+      if (planillaExistingId) {
+        await axiosClient.put(`/datos-planilla/${planillaExistingId}`, payload);
+      } else {
+        await axiosClient.post("/datos-planilla", payload);
+      }
+      Swal.fire("Listo", "Datos de planilla guardados correctamente.", "success");
+      setPlanillaDialogOpen(false);
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible guardar datos de planilla.", "error");
+    }
+  };
+
   useEffect(() => {
     loadRows();
     if (dependencies.length > 0) {
       loadDependencies();
+    }
+    if (planillaConfig) {
+      loadBancos();
     }
   }, [endpoint]);
 
@@ -297,6 +366,24 @@ const MantenimientoPage = ({
     }
   };
 
+  const handleAgregar = async () => {
+    const validation = validateForm();
+    if (validation) { Swal.fire("Validacion", validation, "warning"); return; }
+    try {
+      await axiosClient.post(endpoint, form);
+      if (salaryConfig && salaryRows.length > 0) {
+        await axiosClient.post("/salarios/bulk", { salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...row })) });
+      }
+      const fixedManejo = findFixedManejo(options.manejos, fixedManejoId, fixedManejoDescription);
+      setForm({ ...buildInitialForm(fields), tipoManejo: fixedManejo?.id || fixedManejoId || "" });
+      setSalaryRows([]);
+      setEditingSalaryIndex(null);
+      loadRows();
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible guardar el registro.", "error");
+    }
+  };
+
   const handleDelete = async (row) => {
     const result = await Swal.fire({
       title: "Eliminar registro",
@@ -400,6 +487,7 @@ const MantenimientoPage = ({
         onSearch={setSearch}
         filterKeys={searchFields}
         actions={[
+          { label: "Planilla", icon: <AssignmentIcon />, onClick: openPlanillaDialog, visible: () => !!planillaConfig && canEdit(user) },
           { label: "Editar", icon: <EditIcon />, onClick: openEditDialog, visible: () => canEdit(user) },
           { label: "Eliminar", icon: <DeleteIcon />, onClick: handleDelete, visible: () => canDelete(user) }
         ]}
@@ -451,6 +539,7 @@ const MantenimientoPage = ({
             </Button>
           )}
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          {addMode && !editingRow && <Button variant="outlined" onClick={handleAgregar}>Agregar</Button>}
           <Button variant="contained" onClick={handleSave}>Guardar</Button>
         </DialogActions>
       </Dialog>
@@ -529,6 +618,59 @@ const MantenimientoPage = ({
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setSalaryDialogOpen(false)}>Cerrar</Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
+      {planillaConfig && (
+        <Dialog open={planillaDialogOpen} onClose={() => setPlanillaDialogOpen(false)} fullWidth maxWidth="sm">
+          <DialogTitle>
+            Datos de planilla — {planillaTargetRow ? `${planillaTargetRow.nombres || ""} ${planillaTargetRow.apellidos || ""}`.trim() : ""}
+          </DialogTitle>
+          <DialogContent dividers>
+            <Grid container spacing={2} sx={{ mt: 0.5 }}>
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Banco</InputLabel>
+                  <Select label="Banco" value={planillaForm.idBanco} onChange={(e) => setPlanillaForm({ ...planillaForm, idBanco: e.target.value })}>
+                    {bancos.map((b) => <MenuItem key={b.id} value={b.id}>{b.nombre}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Forma de pago</InputLabel>
+                  <Select label="Forma de pago" value={planillaForm.formaPago} onChange={(e) => setPlanillaForm({ ...planillaForm, formaPago: e.target.value, tipoCuenta: "" })}>
+                    {FORMAS_PAGO_PLANILLA.map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Grid>
+              {planillaForm.formaPago === "ABONO CUENTA" && (
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>Tipo de cuenta</InputLabel>
+                    <Select label="Tipo de cuenta" value={planillaForm.tipoCuenta} onChange={(e) => setPlanillaForm({ ...planillaForm, tipoCuenta: e.target.value })}>
+                      {TIPOS_CUENTA_PLANILLA.map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+              <Grid item xs={12} md={6}>
+                <TextField label="No. de cuenta" value={planillaForm.noCuenta} onChange={(e) => setPlanillaForm({ ...planillaForm, noCuenta: e.target.value.toUpperCase() })} fullWidth />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Estado</InputLabel>
+                  <Select label="Estado" value={planillaForm.estado} onChange={(e) => setPlanillaForm({ ...planillaForm, estado: e.target.value })}>
+                    {["ACTIVO", "INACTIVO"].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPlanillaDialogOpen(false)}>Cancelar</Button>
+            <Button variant="contained" onClick={savePlanilla}>Guardar</Button>
           </DialogActions>
         </Dialog>
       )}

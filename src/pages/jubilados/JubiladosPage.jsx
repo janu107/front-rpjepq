@@ -2,8 +2,9 @@ import MantenimientoPage from "../mantenimientos/MantenimientoPage";
 
 const estadoOptions = ["ACTIVO", "INACTIVO"].map((value) => ({ value, label: value }));
 const estadoCivilOptions = ["SOLTERO", "CASADO", "UNIDO", "DIVORCIADO", "VIUDO"].map((value) => ({ value, label: value }));
+const sexoOptions = ["MASCULINO", "FEMENINO"].map((value) => ({ value, label: value }));
 
-const JubiladosPage = () => (
+const JubiladosPage = ({ showPlanilla = false }) => (
   <MantenimientoPage
     title="Control de Jubilados"
     subtitle="Mantenimiento de jubilados"
@@ -38,6 +39,7 @@ const JubiladosPage = () => (
       { key: "nombres", label: "Nombres", required: true },
       { key: "apellidos", label: "Apellidos", required: true },
       { key: "fechaNacimiento", label: "Fecha nacimiento", required: true, type: "date" },
+      { key: "sexo", label: "Sexo", required: true, type: "select", options: sexoOptions },
       { key: "dpi", label: "DPI", required: true },
       { key: "direccion", label: "Direccion", required: true },
       { key: "profesionOficio", label: "Profesion u oficio" },
@@ -46,6 +48,7 @@ const JubiladosPage = () => (
       { key: "fechaJubilacion", label: "Fecha jubilacion", required: true, type: "date" },
       { key: "tipoJubilacion", label: "Tipo jubilacion", required: true, type: "select", source: "tiposJubilacion", getValue: (item) => item.id, getLabel: (item) => item.descripcion }
     ]}
+    planillaConfig={showPlanilla ? { tipoPersona: "JUBILADO", idPersonaField: "id" } : undefined}
   />
 );
 
