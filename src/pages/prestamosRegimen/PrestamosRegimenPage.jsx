@@ -3,8 +3,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import {
   Button, Dialog, DialogActions, DialogContent, DialogTitle,
-  FormControl, Grid, InputLabel, MenuItem, Select, Stack,
-  TextField
+  FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
@@ -22,9 +21,9 @@ const TIPO_PERSONA_OPTS = ["EMPLEADO", "JUBILADO"];
 const ESTADO_OPTS = ["ACTIVO", "INACTIVO", "CANCELADO"];
 
 const buildForm = () => ({
-  tipoManejo: "", tipoPersona: "", idPersona: "", idBanco: "",
-  noContrato: "", monto: "", cuota: "", plazoMeses: "",
-  fechaInicio: "", fechaFin: "", tasaInteres: "", estado: "ACTIVO", observaciones: ""
+  tipoPersona: "", idPersona: "", idBanco: "",
+  noReferencia: "", monto: "", valorMes: "", saldo: "", noCuotas: "",
+  fechaInicio: "", fechaFin: "", uso: "", estado: "ACTIVO"
 });
 
 const PrestamosRegimenPage = () => {
@@ -70,7 +69,7 @@ const PrestamosRegimenPage = () => {
     const term = search.trim().toLowerCase();
     if (!term) return rows;
     return rows.filter((r) =>
-      ["noContrato", "personaNombre", "bancoNombre", "estado"].some(
+      ["noReferencia", "personaNombre", "bancoNombre", "uso", "estado"].some(
         (k) => String(r[k] || "").toLowerCase().includes(term)
       )
     );
@@ -83,25 +82,46 @@ const PrestamosRegimenPage = () => {
   const openEdit = (row) => {
     setEditingRow(row);
     setForm({
-      tipoManejo: row.tipoManejo, tipoPersona: row.tipoPersona, idPersona: row.idPersona,
-      idBanco: row.idBanco, noContrato: row.noContrato, monto: row.monto, cuota: row.cuota,
-      plazoMeses: row.plazoMeses, fechaInicio: row.fechaInicio ? String(row.fechaInicio).slice(0, 10) : "",
+      tipoPersona: Number(row.tipoManejo) === MANEJO_JUBILADOS ? "JUBILADO" : "EMPLEADO",
+      idPersona: row.idEmpleado,
+      idBanco: row.idBanco,
+      noReferencia: row.noReferencia,
+      monto: row.monto,
+      valorMes: row.valorMes,
+      saldo: row.saldo,
+      noCuotas: row.noCuotas,
+      fechaInicio: row.fechaInicio ? String(row.fechaInicio).slice(0, 10) : "",
       fechaFin: row.fechaFin ? String(row.fechaFin).slice(0, 10) : "",
-      tasaInteres: row.tasaInteres, estado: row.estado, observaciones: row.observaciones || ""
+      uso: row.uso || "",
+      estado: row.estado
     });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.tipoPersona || !form.idPersona || !form.idBanco || !form.noContrato || !form.monto || !form.cuota || !form.plazoMeses || !form.fechaInicio || !form.fechaFin) {
+    if (!form.tipoPersona || !form.idPersona || !form.idBanco || !form.noReferencia || !form.monto || !form.valorMes || !form.noCuotas || !form.fechaInicio || !form.fechaFin) {
       Swal.fire("Validacion", "Complete todos los campos obligatorios.", "warning"); return;
     }
+    const payload = {
+      tipoManejo: form.tipoPersona === "JUBILADO" ? MANEJO_JUBILADOS : MANEJO_EMPLEADOS,
+      idEmpleado: form.idPersona,
+      idBanco: form.idBanco,
+      noReferencia: form.noReferencia,
+      monto: form.monto,
+      valorMes: form.valorMes,
+      saldo: form.saldo || 0,
+      noCuotas: form.noCuotas,
+      fechaInicio: form.fechaInicio,
+      fechaFin: form.fechaFin,
+      uso: form.uso || null,
+      estado: form.estado
+    };
     try {
       if (editingRow) {
-        await axiosClient.put(`/prestamos-regimen/${editingRow.id}`, form);
+        await axiosClient.put(`/prestamos-regimen/${editingRow.id}`, payload);
         Swal.fire("Listo", "Registro actualizado correctamente.", "success");
       } else {
-        await axiosClient.post("/prestamos-regimen", form);
+        await axiosClient.post("/prestamos-regimen", payload);
         Swal.fire("Listo", "Registro creado correctamente.", "success");
       }
       setDialogOpen(false);
@@ -132,18 +152,19 @@ const PrestamosRegimenPage = () => {
       />
       <DataTable
         columns={[
-          { key: "noContrato", label: "No. Contrato" },
+          { key: "noReferencia", label: "No. Referencia" },
           { key: "personaNombre", label: "Persona" },
           { key: "bancoNombre", label: "Banco" },
           { key: "monto", label: "Monto", render: (row) => `Q ${Number(row.monto).toFixed(2)}` },
-          { key: "cuota", label: "Cuota", render: (row) => `Q ${Number(row.cuota).toFixed(2)}` },
-          { key: "plazoMeses", label: "Plazo" },
+          { key: "valorMes", label: "Valor mes", render: (row) => `Q ${Number(row.valorMes).toFixed(2)}` },
+          { key: "saldo", label: "Saldo", render: (row) => `Q ${Number(row.saldo).toFixed(2)}` },
+          { key: "noCuotas", label: "Cuotas" },
           { key: "estado", label: "Estado", render: (row) => <StatusChip value={row.estado} /> }
         ]}
         rows={filtered}
         search={search}
         onSearch={setSearch}
-        filterKeys={["noContrato", "personaNombre", "bancoNombre", "estado"]}
+        filterKeys={["noReferencia", "personaNombre", "bancoNombre", "estado"]}
         actions={[
           { label: "Editar", icon: <EditIcon />, onClick: openEdit, visible: () => canEdit(user) },
           { label: "Eliminar", icon: <DeleteIcon />, onClick: handleDelete, visible: () => canDelete(user) }
@@ -157,7 +178,7 @@ const PrestamosRegimenPage = () => {
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <InputLabel>Tipo persona *</InputLabel>
-                <Select label="Tipo persona *" value={form.tipoPersona} onChange={(e) => setForm({ ...form, tipoPersona: e.target.value, tipoManejo: e.target.value === "EMPLEADO" ? MANEJO_EMPLEADOS : e.target.value === "JUBILADO" ? MANEJO_JUBILADOS : "", idPersona: "" })}>
+                <Select label="Tipo persona *" value={form.tipoPersona} onChange={(e) => setForm({ ...form, tipoPersona: e.target.value, idPersona: "" })}>
                   {TIPO_PERSONA_OPTS.map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
                 </Select>
               </FormControl>
@@ -165,7 +186,7 @@ const PrestamosRegimenPage = () => {
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <InputLabel>Persona *</InputLabel>
-                <Select label="Persona *" value={form.idPersona} onChange={(e) => setForm({ ...form, idPersona: e.target.value })} disabled={!form.tipoPersona}>
+                <Select label="Persona *" value={form.idPersona} onChange={setf("idPersona")} disabled={!form.tipoPersona}>
                   {personas.map((p) => <MenuItem key={p.id} value={p.id}>{`${p.nombres} ${p.apellidos} - ${p.dpi}`}</MenuItem>)}
                 </Select>
               </FormControl>
@@ -174,30 +195,30 @@ const PrestamosRegimenPage = () => {
               <FormControl fullWidth>
                 <InputLabel>Banco *</InputLabel>
                 <Select label="Banco *" value={form.idBanco} onChange={setf("idBanco")}>
-                  {bancos.map((b) => <MenuItem key={b.id} value={b.id}>{b.nombre}</MenuItem>)}
+                  {bancos.map((b) => <MenuItem key={b.id} value={b.id}>{b.descripcion}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField label="No. contrato *" value={form.noContrato} onChange={setfUpper("noContrato")} fullWidth />
+              <TextField label="No. referencia *" value={form.noReferencia} onChange={setfUpper("noReferencia")} fullWidth />
             </Grid>
             <Grid item xs={12} md={4}>
               <TextField label="Monto *" type="number" value={form.monto} onChange={setf("monto")} fullWidth />
             </Grid>
             <Grid item xs={12} md={4}>
-              <TextField label="Cuota *" type="number" value={form.cuota} onChange={setf("cuota")} fullWidth />
+              <TextField label="Valor mes *" type="number" value={form.valorMes} onChange={setf("valorMes")} fullWidth />
             </Grid>
             <Grid item xs={12} md={4}>
-              <TextField label="Plazo (meses) *" type="number" value={form.plazoMeses} onChange={setf("plazoMeses")} fullWidth />
+              <TextField label="Saldo" type="number" value={form.saldo} onChange={setf("saldo")} fullWidth />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField label="No. cuotas *" type="number" value={form.noCuotas} onChange={setf("noCuotas")} fullWidth />
             </Grid>
             <Grid item xs={12} md={4}>
               <TextField label="Fecha inicio *" type="date" value={form.fechaInicio} onChange={setf("fechaInicio")} InputLabelProps={{ shrink: true }} fullWidth />
             </Grid>
             <Grid item xs={12} md={4}>
               <TextField label="Fecha fin *" type="date" value={form.fechaFin} onChange={setf("fechaFin")} InputLabelProps={{ shrink: true }} fullWidth />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField label="Tasa interes %" type="number" value={form.tasaInteres} onChange={setf("tasaInteres")} fullWidth />
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
@@ -208,7 +229,7 @@ const PrestamosRegimenPage = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField label="Observaciones" value={form.observaciones} onChange={setfUpper("observaciones")} fullWidth />
+              <TextField label="Uso" value={form.uso} onChange={setfUpper("uso")} fullWidth />
             </Grid>
           </Grid>
         </DialogContent>

@@ -60,7 +60,11 @@ const buildInitialForm = (fields) =>
 
 const FORMAS_PAGO_PLANILLA = ["ABONO CUENTA", "CHEQUE"];
 const TIPOS_CUENTA_PLANILLA = ["AHORRO", "MONETARIA"];
-const buildPlanillaForm = () => ({ idBanco: "", noCuenta: "", formaPago: "", tipoCuenta: "", estado: "ACTIVO" });
+const buildPlanillaForm = () => ({
+  idBanco: "", formaPago: "", cuenta: "", tipoCuenta: "",
+  aplicaDescIgss: false, aplicaDescIsr: false, aplicaSeguro: false,
+  noProbidad: "", noSobrevivencia: ""
+});
 
 const MantenimientoPage = ({
   title,
@@ -144,10 +148,21 @@ const MantenimientoPage = ({
     setPlanillaForm(buildPlanillaForm());
     setPlanillaExistingId(null);
     try {
-      const { data } = await axiosClient.get(`/datos-planilla/buscar?tipoPersona=${planillaConfig.tipoPersona}&idPersona=${row[planillaConfig.idPersonaField || "id"]}`);
+      const idPersona = row[planillaConfig.idPersonaField || "id"];
+      const { data } = await axiosClient.get(`/datos-planilla/buscar?tipoManejo=${row.tipoManejo}&idEmpleado=${idPersona}`);
       if (data.data) {
         const existing = data.data;
-        setPlanillaForm({ idBanco: existing.idBanco || "", noCuenta: existing.noCuenta || "", formaPago: existing.formaPago || "", tipoCuenta: existing.tipoCuenta || "", estado: existing.estado || "ACTIVO" });
+        setPlanillaForm({
+          idBanco: existing.idBanco || "",
+          formaPago: existing.formaPago || "",
+          cuenta: existing.cuenta || "",
+          tipoCuenta: existing.tipoCuenta || "",
+          aplicaDescIgss: Boolean(existing.aplicaDescIgss),
+          aplicaDescIsr: Boolean(existing.aplicaDescIsr),
+          aplicaSeguro: Boolean(existing.aplicaSeguro),
+          noProbidad: existing.noProbidad || "",
+          noSobrevivencia: existing.noSobrevivencia || ""
+        });
         setPlanillaExistingId(existing.id);
       }
     } catch {
@@ -163,13 +178,16 @@ const MantenimientoPage = ({
     const row = planillaTargetRow;
     const payload = {
       tipoManejo: row.tipoManejo,
-      tipoPersona: planillaConfig.tipoPersona,
-      idPersona: row[planillaConfig.idPersonaField || "id"],
+      idEmpleado: row[planillaConfig.idPersonaField || "id"],
       idBanco: planillaForm.idBanco,
-      noCuenta: planillaForm.noCuenta,
       formaPago: planillaForm.formaPago,
+      cuenta: planillaForm.cuenta,
       tipoCuenta: planillaForm.tipoCuenta,
-      estado: planillaForm.estado
+      aplicaDescIgss: planillaForm.aplicaDescIgss,
+      aplicaDescIsr: planillaForm.aplicaDescIsr,
+      aplicaSeguro: planillaForm.aplicaSeguro,
+      noProbidad: planillaForm.noProbidad || null,
+      noSobrevivencia: planillaForm.noSobrevivencia || null
     };
     try {
       if (planillaExistingId) {
@@ -631,40 +649,63 @@ const MantenimientoPage = ({
             <Grid container spacing={2} sx={{ mt: 0.5 }}>
               <Grid item xs={12}>
                 <FormControl fullWidth>
-                  <InputLabel>Banco</InputLabel>
-                  <Select label="Banco" value={planillaForm.idBanco} onChange={(e) => setPlanillaForm({ ...planillaForm, idBanco: e.target.value })}>
-                    {bancos.map((b) => <MenuItem key={b.id} value={b.id}>{b.nombre}</MenuItem>)}
+                  <InputLabel>Banco *</InputLabel>
+                  <Select label="Banco *" value={planillaForm.idBanco} onChange={(e) => setPlanillaForm({ ...planillaForm, idBanco: e.target.value })}>
+                    {bancos.map((b) => <MenuItem key={b.id} value={b.id}>{b.descripcion}</MenuItem>)}
                   </Select>
                 </FormControl>
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>Forma de pago</InputLabel>
-                  <Select label="Forma de pago" value={planillaForm.formaPago} onChange={(e) => setPlanillaForm({ ...planillaForm, formaPago: e.target.value, tipoCuenta: "" })}>
+                  <InputLabel>Forma de pago *</InputLabel>
+                  <Select label="Forma de pago *" value={planillaForm.formaPago} onChange={(e) => setPlanillaForm({ ...planillaForm, formaPago: e.target.value, tipoCuenta: "" })}>
                     {FORMAS_PAGO_PLANILLA.map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
                   </Select>
                 </FormControl>
               </Grid>
-              {planillaForm.formaPago === "ABONO CUENTA" && (
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Tipo de cuenta</InputLabel>
-                    <Select label="Tipo de cuenta" value={planillaForm.tipoCuenta} onChange={(e) => setPlanillaForm({ ...planillaForm, tipoCuenta: e.target.value })}>
-                      {TIPOS_CUENTA_PLANILLA.map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
-                    </Select>
-                  </FormControl>
-                </Grid>
-              )}
-              <Grid item xs={12} md={6}>
-                <TextField label="No. de cuenta" value={planillaForm.noCuenta} onChange={(e) => setPlanillaForm({ ...planillaForm, noCuenta: e.target.value.toUpperCase() })} fullWidth />
-              </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>Estado</InputLabel>
-                  <Select label="Estado" value={planillaForm.estado} onChange={(e) => setPlanillaForm({ ...planillaForm, estado: e.target.value })}>
-                    {["ACTIVO", "INACTIVO"].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+                  <InputLabel>Tipo de cuenta</InputLabel>
+                  <Select label="Tipo de cuenta" value={planillaForm.tipoCuenta} onChange={(e) => setPlanillaForm({ ...planillaForm, tipoCuenta: e.target.value })}>
+                    {TIPOS_CUENTA_PLANILLA.map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
                   </Select>
                 </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField label="No. de cuenta" value={planillaForm.cuenta} onChange={(e) => setPlanillaForm({ ...planillaForm, cuenta: e.target.value.toUpperCase() })} fullWidth />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Aplica IGSS</InputLabel>
+                  <Select label="Aplica IGSS" value={planillaForm.aplicaDescIgss ? "SI" : "NO"} onChange={(e) => setPlanillaForm({ ...planillaForm, aplicaDescIgss: e.target.value === "SI" })}>
+                    <MenuItem value="SI">SI</MenuItem>
+                    <MenuItem value="NO">NO</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Aplica ISR</InputLabel>
+                  <Select label="Aplica ISR" value={planillaForm.aplicaDescIsr ? "SI" : "NO"} onChange={(e) => setPlanillaForm({ ...planillaForm, aplicaDescIsr: e.target.value === "SI" })}>
+                    <MenuItem value="SI">SI</MenuItem>
+                    <MenuItem value="NO">NO</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Aplica seguro</InputLabel>
+                  <Select label="Aplica seguro" value={planillaForm.aplicaSeguro ? "SI" : "NO"} onChange={(e) => setPlanillaForm({ ...planillaForm, aplicaSeguro: e.target.value === "SI" })}>
+                    <MenuItem value="SI">SI</MenuItem>
+                    <MenuItem value="NO">NO</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField label="No. probidad" value={planillaForm.noProbidad} onChange={(e) => setPlanillaForm({ ...planillaForm, noProbidad: e.target.value.toUpperCase() })} fullWidth />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField label="No. sobrevivencia" value={planillaForm.noSobrevivencia} onChange={(e) => setPlanillaForm({ ...planillaForm, noSobrevivencia: e.target.value.toUpperCase() })} fullWidth />
               </Grid>
             </Grid>
           </DialogContent>

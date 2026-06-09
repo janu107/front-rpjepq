@@ -47,14 +47,12 @@ const catalogConfigs = [
     key: "bancos",
     label: "Bancos",
     codeKey: "id",
-    searchFields: ["nombre", "estado"],
+    searchFields: ["descripcion"],
     columns: [
-      { key: "nombre", label: "Nombre" },
-      { key: "estado", label: "Estado" }
+      { key: "descripcion", label: "Descripcion" }
     ],
     fields: [
-      { key: "nombre", label: "Nombre banco", required: true },
-      { key: "estado", label: "Estado", type: "select", options: ["ACTIVO", "INACTIVO"] }
+      { key: "descripcion", label: "Nombre banco", required: true }
     ]
   },
   {

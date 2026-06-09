@@ -67,17 +67,18 @@ const ReportesRegimenPage = () => {
     {
       label: "Préstamos Régimen",
       rows: data.prestamos,
-      searchKeys: ["noContrato", "personaNombre", "bancoNombre", "estado"],
+      searchKeys: ["noReferencia", "personaNombre", "bancoNombre", "estado"],
       columns: [
-        { key: "noContrato", label: "Contrato" },
+        { key: "noReferencia", label: "No. Referencia" },
         { key: "personaNombre", label: "Persona" },
-        { key: "tipoPersona", label: "Tipo" },
         { key: "bancoNombre", label: "Banco" },
         { key: "monto", label: "Monto", render: (r) => money(r.monto) },
-        { key: "cuota", label: "Cuota", render: (r) => money(r.cuota) },
-        { key: "plazoMeses", label: "Plazo" },
+        { key: "valorMes", label: "Valor mes", render: (r) => money(r.valorMes) },
+        { key: "saldo", label: "Saldo", render: (r) => money(r.saldo) },
+        { key: "noCuotas", label: "Cuotas" },
         { key: "fechaInicio", label: "Inicio", render: (r) => formatDate(r.fechaInicio) },
         { key: "fechaFin", label: "Fin", render: (r) => formatDate(r.fechaFin) },
+        { key: "uso", label: "Uso" },
         { key: "estado", label: "Estado" }
       ]
     },
