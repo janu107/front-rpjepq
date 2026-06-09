@@ -286,7 +286,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems={{ md: "center" }}>
           <Box>
             <Typography variant="h5">Aportaciones</Typography>
-            <Typography color="text.secondary">Detalle de aportaciones de empleados EPQ</Typography>
+            <Typography color="text.secondary">Detalles de aportaciones de empleados EPQ</Typography>
           </Box>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
             {canCreate(user) && (
