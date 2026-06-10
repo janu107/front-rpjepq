@@ -38,6 +38,7 @@ import { useAuth } from "../../context/AuthContext";
 import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
+const formatDatetime = (value) => (value ? String(value).replace(" ", "T").slice(0, 16) : "");
 const normalizeText = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 const findManejoById = (items = [], id) => items.find((item) => Number(item.id) === Number(id));
 const findManejoByDescription = (items = [], description) =>
@@ -254,7 +255,7 @@ const MantenimientoPage = ({
     setEditingRow(row);
     setForm(
       fields.reduce((acc, field) => {
-        acc[field.key] = field.type === "date" ? formatDate(row[field.key]) : row[field.key] ?? "";
+        acc[field.key] = field.type === "date" ? formatDate(row[field.key]) : field.type === "datetime-local" ? formatDatetime(row[field.key]) : row[field.key] ?? "";
         return acc;
       }, {})
     );
@@ -269,7 +270,7 @@ const MantenimientoPage = ({
     setEditingRow(row);
     setForm(
       fields.reduce((acc, field) => {
-        acc[field.key] = field.type === "date" ? formatDate(row[field.key]) : row[field.key] ?? "";
+        acc[field.key] = field.type === "date" ? formatDate(row[field.key]) : field.type === "datetime-local" ? formatDatetime(row[field.key]) : row[field.key] ?? "";
         return acc;
       }, {})
     );

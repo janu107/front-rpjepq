@@ -2,7 +2,7 @@ import MantenimientoPage from "../mantenimientos/MantenimientoPage";
 
 const estadoCivilOptions = ["SOLTERO", "CASADO", "UNIDO", "DIVORCIADO", "VIUDO"].map((value) => ({ value, label: value }));
 const tipoPuestoOptions = ["FIJO", "CONTRATO", "TEMPORAL"].map((value) => ({ value, label: value }));
-const sexoOptions = ["MASCULINO", "FEMENINO"].map((value) => ({ value, label: value }));
+const sexoOptions = [{ value: "M", label: "Masculino" }, { value: "F", label: "Femenino" }];
 
 const EmpleadosPage = ({
   title = "Empleado EPQ",

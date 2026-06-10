@@ -19,6 +19,7 @@ const MANEJO_EMPLEADOS = 1;
 const MANEJO_JUBILADOS = 2;
 const TIPO_PERSONA_OPTS = ["EMPLEADO", "JUBILADO"];
 const ESTADO_OPTS = ["ACTIVO", "INACTIVO"];
+const TIPO_OPTS = ["PENSION ALIMENTICIA", "DESCUENTO JUDICIAL", "OTRO"];
 
 const buildForm = () => ({
   tipoManejo: "", tipoPersona: "", idPersona: "",
@@ -184,7 +185,12 @@ const DescuentosJudicialesPage = () => {
               <TextField label="Beneficiario *" value={form.beneficiario} onChange={setfUpper("beneficiario")} fullWidth />
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField label="Tipo *" value={form.tipo} onChange={setfUpper("tipo")} fullWidth placeholder="PENSION, ALIMENTOS..." />
+              <FormControl fullWidth>
+                <InputLabel>Tipo *</InputLabel>
+                <Select label="Tipo *" value={form.tipo} onChange={setf("tipo")}>
+                  {TIPO_OPTS.map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} md={4}>
               <TextField label="Valor *" type="number" value={form.valor} onChange={setf("valor")} fullWidth />
@@ -204,7 +210,7 @@ const DescuentosJudicialesPage = () => {
               <TextField label="Fecha inicio *" type="date" value={form.fechaInicio} onChange={setf("fechaInicio")} InputLabelProps={{ shrink: true }} fullWidth />
             </Grid>
             <Grid item xs={12} md={6}>
-              <TextField label="Fecha final" type="date" value={form.fechaFinal} onChange={setf("fechaFinal")} InputLabelProps={{ shrink: true }} fullWidth />
+              <TextField label="Fecha final (opcional)" type="date" value={form.fechaFinal} onChange={setf("fechaFinal")} InputLabelProps={{ shrink: true }} fullWidth />
             </Grid>
           </Grid>
         </DialogContent>

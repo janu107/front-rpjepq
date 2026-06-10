@@ -75,7 +75,6 @@ const items = [
     icon: <CalculateIcon />,
     roles: ["ADMIN", "OPERADOR"],
     children: [
-      { text: "Salarios", path: "/salarios", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Generaci\u00f3n de Planillas", path: "/generacion-planilla", icon: <CalculateIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Otros Descuentos", path: "/otros-descuentos", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "N\u00f3mina", path: "/nomina", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
