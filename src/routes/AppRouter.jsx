@@ -23,6 +23,7 @@ import ReportePrestamosRegimenPage from "../pages/reportes/ReportePrestamosRegim
 import ReporteJuntaDirectivaPage from "../pages/reportes/ReporteJuntaDirectivaPage";
 import ReporteDietasPage from "../pages/reportes/ReporteDietasPage";
 import ReporteEmpleadosRegimenPage from "../pages/reportes/ReporteEmpleadosRegimenPage";
+import ReporteDetalleAportacionesPage from "../pages/reportes/ReporteDetalleAportacionesPage";
 import DescuentosJudicialesPage from "../pages/descuentosJudiciales/DescuentosJudicialesPage";
 import PrestamosRegimenPage from "../pages/prestamosRegimen/PrestamosRegimenPage";
 import RolesPage from "../pages/roles/RolesPage";
@@ -73,6 +74,7 @@ const AppRouter = () => {
             <Route path="/reportes/dietas" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReporteDietasPage /></ProtectedRoute>} />
             <Route path="/reportes/empleados-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReporteEmpleadosRegimenPage /></ProtectedRoute>} />
             <Route path="/reportes/aportaciones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReporteAportacionesPage /></ProtectedRoute>} />
+            <Route path="/reportes/detalle-aportaciones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReporteDetalleAportacionesPage /></ProtectedRoute>} />
             <Route path="/descuentos-judiciales" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DescuentosJudicialesPage /></ProtectedRoute>} />
             <Route path="/prestamos-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosRegimenPage /></ProtectedRoute>} />
             <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AuditoriaPage /></ProtectedRoute>} />
