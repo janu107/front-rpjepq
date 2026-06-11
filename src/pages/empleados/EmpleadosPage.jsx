@@ -55,6 +55,7 @@ const EmpleadosPage = ({
       { key: "profesionOficio", label: "Profesion u oficio" },
       { key: "fechaNacimiento", label: "Fecha nacimiento", required: true, type: "date" },
       { key: "sexo", label: "Sexo", required: true, type: "select", options: sexoOptions },
+      { key: "fechaIngreso", label: "Fecha ingreso", type: "date" },
       { key: "tipoPuesto", label: "Tipo puesto", required: true, type: "select", options: tipoPuestoOptions },
       { key: "idPuesto", label: "Puesto", required: true, type: "select", source: "puestos", getValue: (item) => item.id, getLabel: (item) => item.nombre, filterByFixedManejo: true, onlyOccupied: onlyOccupiedPuestos }
     ]}
@@ -62,7 +63,7 @@ const EmpleadosPage = ({
       { title: "Datos principales", fields: ["tipoManejo", "idEmpleado", "nombres", "apellidos"] },
       { title: "Identificacion", fields: ["dpi", "nit", "direccion", "estadoCivil"] },
       { title: "Puesto y manejo", fields: ["tipoPuesto", "idPuesto"] },
-      { title: "Fechas y datos adicionales", fields: ["fechaNacimiento", "sexo", "profesionOficio"] }
+      { title: "Fechas y datos adicionales", fields: ["profesionOficio", "fechaNacimiento", "sexo", "fechaIngreso"] }
     ]}
     planillaConfig={showPlanilla ? { tipoPersona: "EMPLEADO", idPersonaField: "id" } : undefined}
   />
