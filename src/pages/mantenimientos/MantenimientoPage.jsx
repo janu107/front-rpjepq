@@ -105,11 +105,22 @@ const MantenimientoPage = ({
   const [editingSalaryIndex, setEditingSalaryIndex] = useState(null);
   const [options, setOptions] = useState({});
 
-  const loadSalariesForManejo = async (tipoManejo) => {
-    if (!salaryConfig || !tipoManejo) return;
+  const getSalaryEntityParams = (row) => {
+    if (!salaryConfig?.idPersonaField || !row) return {};
+    const entityId = row[salaryConfig.idPersonaField];
+    if (!entityId) return {};
+    if (salaryConfig.tipoPersona === "EMPLEADO") return { idEmpleado: entityId };
+    if (salaryConfig.tipoPersona === "JUBILADO") return { idJubilado: entityId };
+    return {};
+  };
+
+  const loadSalariesForEntity = async (row) => {
+    if (!salaryConfig || !row) return;
     try {
-      const { data } = await axiosClient.get("/salarios");
-      setSalaryRows((data.data || []).filter((row) => Number(row.tipoManejo) === Number(tipoManejo)));
+      const params = getSalaryEntityParams(row);
+      const qs = Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+      const { data } = await axiosClient.get(`/salarios${qs ? "?" + qs : ""}`);
+      setSalaryRows(data.data || []);
     } catch (error) {
       Swal.fire("Error", error.response?.data?.message || "No fue posible cargar salarios.", "error");
     }
@@ -261,7 +272,7 @@ const MantenimientoPage = ({
     );
     setSalaryRows([]);
     setEditingSalaryIndex(null);
-    if (salaryConfig) await loadSalariesForManejo(row.tipoManejo);
+    if (salaryConfig) await loadSalariesForEntity(row);
     setDialogOpen(true);
   };
 
@@ -278,7 +289,7 @@ const MantenimientoPage = ({
     setSalaryRows([]);
     setEditingSalaryIndex(null);
     if (salaryConfig) {
-      await loadSalariesForManejo(row.tipoManejo);
+      await loadSalariesForEntity(row);
     }
     setDialogOpen(true);
   };
@@ -325,13 +336,14 @@ const MantenimientoPage = ({
       return;
     }
 
-    const payload = { tipoManejo: form.tipoManejo, tipoIngreso: salaryForm.tipoIngreso, salario: salaryForm.salario };
+    const entityParams = editingRow ? getSalaryEntityParams(editingRow) : {};
+    const payload = { tipoManejo: form.tipoManejo, tipoIngreso: salaryForm.tipoIngreso, salario: salaryForm.salario, ...entityParams };
     if (editingSalaryIndex !== null) {
       const currentRow = salaryRows[editingSalaryIndex];
       if (currentRow?.id) {
         try {
           await axiosClient.put(`/salarios/${currentRow.id}`, payload);
-          await loadSalariesForManejo(form.tipoManejo);
+          await loadSalariesForEntity(editingRow);
           Swal.fire("Listo", "Salario actualizado correctamente.", "success");
         } catch (error) {
           Swal.fire("Error", error.response?.data?.message || "No fue posible actualizar salario.", "error");
@@ -343,7 +355,7 @@ const MantenimientoPage = ({
     } else if (editingRow) {
       try {
         await axiosClient.post("/salarios", payload);
-        await loadSalariesForManejo(form.tipoManejo);
+        await loadSalariesForEntity(editingRow);
         Swal.fire("Listo", "Salario agregado correctamente.", "success");
       } catch (error) {
         Swal.fire("Error", error.response?.data?.message || "No fue posible agregar salario.", "error");
@@ -368,7 +380,7 @@ const MantenimientoPage = ({
       if (!result.isConfirmed) return;
       try {
         await axiosClient.delete(`/salarios/${currentRow.id}`);
-        await loadSalariesForManejo(form.tipoManejo);
+        await loadSalariesForEntity(editingRow);
         Swal.fire("Listo", "Salario eliminado correctamente.", "success");
       } catch (error) {
         Swal.fire("Error", error.response?.data?.message || "No fue posible eliminar salario.", "error");
@@ -394,16 +406,22 @@ const MantenimientoPage = ({
         await axiosClient.put(`${endpoint}/${editingRow.id}`, form);
         const pendingSalaries = salaryRows.filter((row) => !row.id);
         if (salaryConfig && pendingSalaries.length > 0) {
+          const entityParams = getSalaryEntityParams(editingRow);
           await axiosClient.post("/salarios/bulk", {
-            salarios: pendingSalaries.map((row) => ({ tipoManejo: form.tipoManejo, ...row }))
+            salarios: pendingSalaries.map((row) => ({ tipoManejo: form.tipoManejo, ...entityParams, ...row }))
           });
         }
         Swal.fire("Listo", "Registro actualizado correctamente.", "success");
       } else {
         const createResponse = await axiosClient.post(endpoint, form);
         if (salaryConfig && salaryRows.length > 0) {
+          const newId = createResponse.data?.data?.id;
+          const entityParams = newId && salaryConfig.idPersonaField ? (() => {
+            const fakeRow = { [salaryConfig.idPersonaField]: newId };
+            return getSalaryEntityParams(fakeRow);
+          })() : {};
           await axiosClient.post("/salarios/bulk", {
-            salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...row }))
+            salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...entityParams, ...row }))
           });
         }
         if (planillaConfig && pendingPlanillaForm) {
@@ -430,9 +448,14 @@ const MantenimientoPage = ({
     const validation = validateForm();
     if (validation) { Swal.fire("Validacion", validation, "warning"); return; }
     try {
-      await axiosClient.post(endpoint, form);
+      const createRes = await axiosClient.post(endpoint, form);
       if (salaryConfig && salaryRows.length > 0) {
-        await axiosClient.post("/salarios/bulk", { salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...row })) });
+        const newId = createRes.data?.data?.id;
+        const entityParams = newId && salaryConfig.idPersonaField ? (() => {
+          const fakeRow = { [salaryConfig.idPersonaField]: newId };
+          return getSalaryEntityParams(fakeRow);
+        })() : {};
+        await axiosClient.post("/salarios/bulk", { salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...entityParams, ...row })) });
       }
       const fixedManejo = findFixedManejo(options.manejos, fixedManejoId, fixedManejoDescription);
       setForm({ ...buildInitialForm(fields), tipoManejo: fixedManejo?.id || fixedManejoId || "" });

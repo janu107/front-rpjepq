@@ -30,13 +30,16 @@ const initialForm = {
   tienePrestamo: false,
   motivoRetiro: "",
   fechaNacimiento: "",
+  sexo: "",
   ubicacion: ""
 };
 
 const estados = ["ACTIVO", "INACTIVO", "RETIRADO"];
+const sexoOptions = [{ value: "M", label: "Masculino" }, { value: "F", label: "Femenino" }];
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
 const MANEJO_EPQ_ID = 4;
 const findManejoById = (items = [], id) => items.find((item) => Number(item.id) === Number(id));
+const up = (value) => String(value || "").toUpperCase();
 
 const AportacionesPage = ({ detailOnly = false }) => {
   const { user } = useAuth();
@@ -55,10 +58,9 @@ const AportacionesPage = ({ detailOnly = false }) => {
   const [total, setTotal] = useState(0);
   const fileInputRef = useRef(null);
 
-  // Version IV: carga masiva de aportaciones desde Excel (id empleado, fecha, monto).
   const handleExcelSelected = async (event) => {
     const file = event.target.files?.[0];
-    event.target.value = ""; // permite volver a seleccionar el mismo archivo
+    event.target.value = "";
     if (!file) return;
 
     const formData = new FormData();
@@ -108,7 +110,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
     const scoped = aportaciones.filter((item) => Number(item.tipoManejo) === MANEJO_EPQ_ID);
     if (!term) return scoped;
     return scoped.filter((item) =>
-      [item.nombre, item.apellido, item.dpi, item.gerencia].some((value) => String(value || "").toLowerCase().includes(term))
+      [item.nombre, item.apellido, item.dpi, item.gerencia, item.idAportacion].some((value) => String(value || "").toLowerCase().includes(term))
     );
   }, [aportaciones, search]);
 
@@ -125,7 +127,8 @@ const AportacionesPage = ({ detailOnly = false }) => {
       ...item,
       fechaInicioAportacion: formatDate(item.fechaInicioAportacion),
       fechaFinAportacion: formatDate(item.fechaFinAportacion),
-      fechaNacimiento: formatDate(item.fechaNacimiento)
+      fechaNacimiento: formatDate(item.fechaNacimiento),
+      sexo: item.sexo || ""
     });
     setDialogOpen(true);
   };
@@ -134,7 +137,6 @@ const AportacionesPage = ({ detailOnly = false }) => {
     const required = ["tipoManejo", "idAportacion", "nombre", "apellido", "dpi", "gerencia", "fechaInicioAportacion", "estado", "fechaNacimiento", "ubicacion"];
     const missing = required.find((key) => String(form[key] ?? "").trim() === "");
     if (missing) return "Complete los campos obligatorios.";
-    // Version IV: validacion de apo_id unico antes de enviar al backend.
     const current = String(form.idAportacion ?? "").trim();
     const duplicated = aportaciones.some(
       (item) => Number(item.id) !== Number(editing?.id) && String(item.idAportacion ?? "").trim() === current
@@ -280,6 +282,8 @@ const AportacionesPage = ({ detailOnly = false }) => {
     );
   }, [detalle, search]);
 
+  const sexoLabel = (v) => (v === "M" ? "Masculino" : v === "F" ? "Femenino" : v || "");
+
   if (detailOnly) {
     return (
       <Stack spacing={2.5}>
@@ -385,14 +389,14 @@ const AportacionesPage = ({ detailOnly = false }) => {
     <Stack spacing={2.5}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems={{ md: "center" }}>
         <Box>
-          <Typography variant="h5">{detailOnly ? "Aportaciones" : "Empleados EPQ"}</Typography>
-          <Typography color="text.secondary">{detailOnly ? "Aportaciones ligadas a empleados EPQ" : "Maestro de empleados EPQ para aportaciones y prestamos"}</Typography>
+          <Typography variant="h5">Empleados EPQ</Typography>
+          <Typography color="text.secondary">Maestro de empleados EPQ para aportaciones y prestamos</Typography>
         </Box>
-        {!detailOnly && canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nuevo empleado EPQ</Button>}
+        {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nuevo empleado EPQ</Button>}
       </Stack>
 
       <TextField
-        placeholder="Buscar por nombre, apellido, DPI o gerencia"
+        placeholder="Buscar por nombre, apellido, DPI, gerencia o ID"
         value={search}
         onChange={(event) => setSearch(event.target.value)}
         sx={{ maxWidth: { md: 520 } }}
@@ -403,7 +407,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
             <TableRow>
-              <TableCell>ID</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell><TableCell>Gerencia</TableCell><TableCell>Estado</TableCell><TableCell>Prestamo</TableCell><TableCell>Manejo</TableCell><TableCell align="right">Acciones</TableCell>
+              <TableCell>ID</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell><TableCell>Gerencia</TableCell><TableCell>Sexo</TableCell><TableCell>Estado</TableCell><TableCell>Prestamo</TableCell><TableCell>Manejo</TableCell><TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -413,20 +417,21 @@ const AportacionesPage = ({ detailOnly = false }) => {
                 <TableCell>{item.nombre} {item.apellido}</TableCell>
                 <TableCell>{item.dpi}</TableCell>
                 <TableCell>{item.gerencia}</TableCell>
+                <TableCell>{sexoLabel(item.sexo)}</TableCell>
                 <TableCell><Chip label={item.estado} color={item.estado === "ACTIVO" ? "success" : "default"} size="small" /></TableCell>
                 <TableCell><Chip label={item.tienePrestamo ? "SI" : "NO"} color={item.tienePrestamo ? "warning" : "default"} size="small" /></TableCell>
                 <TableCell>{item.manejoDescripcion}</TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                  {!detailOnly && canEdit(user) && <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>}
-                  <Tooltip title={detailOnly ? "Ver aportaciones" : "Ver detalle"}><IconButton size="small" color="primary" onClick={() => openDetalle(item)}><ListAltIcon /></IconButton></Tooltip>
-                  {!detailOnly && canEdit(user) && <Tooltip title="Cambiar estado"><IconButton size="small" color="primary" onClick={() => changeStatus(item)}><PowerSettingsNewIcon /></IconButton></Tooltip>}
-                  {!detailOnly && canDelete(user) && <Tooltip title="Eliminar"><IconButton size="small" color="primary" onClick={() => deleteAportacion(item)}><DeleteIcon /></IconButton></Tooltip>}
+                    {canEdit(user) && <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>}
+                    <Tooltip title="Ver detalle"><IconButton size="small" color="primary" onClick={() => openDetalle(item)}><ListAltIcon /></IconButton></Tooltip>
+                    {canEdit(user) && <Tooltip title="Cambiar estado"><IconButton size="small" color="primary" onClick={() => changeStatus(item)}><PowerSettingsNewIcon /></IconButton></Tooltip>}
+                    {canDelete(user) && <Tooltip title="Eliminar"><IconButton size="small" color="primary" onClick={() => deleteAportacion(item)}><DeleteIcon /></IconButton></Tooltip>}
                   </Stack>
                 </TableCell>
               </TableRow>
             ))}
-            {filtered.length === 0 && <TableRow><TableCell colSpan={8} align="center">No hay aportaciones para mostrar.</TableCell></TableRow>}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={9} align="center">No hay aportaciones para mostrar.</TableCell></TableRow>}
           </TableBody>
         </Table>
       </TableContainer>
@@ -435,22 +440,56 @@ const AportacionesPage = ({ detailOnly = false }) => {
         <DialogTitle>{editing ? "Editar empleado EPQ" : "Nuevo empleado EPQ"}</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}><FormControl fullWidth><InputLabel>Tipo manejo</InputLabel><Select label="Tipo manejo" value={form.tipoManejo} onChange={(e) => setForm({ ...form, tipoManejo: e.target.value })} disabled>{manejos.map((m) => <MenuItem key={m.id} value={m.id}>{m.descripcion}</MenuItem>)}</Select></FormControl></Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Tipo manejo</InputLabel>
+                <Select label="Tipo manejo" value={form.tipoManejo} onChange={(e) => setForm({ ...form, tipoManejo: e.target.value })} disabled>
+                  {manejos.map((m) => <MenuItem key={m.id} value={m.id}>{m.descripcion}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
             <Grid item xs={12} md={6}><TextField label="ID aportacion" type="number" value={form.idAportacion} onChange={(e) => setForm({ ...form, idAportacion: e.target.value })} fullWidth /></Grid>
-            <Grid item xs={12} md={6}><TextField label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} fullWidth /></Grid>
-            <Grid item xs={12} md={6}><TextField label="Apellido" value={form.apellido} onChange={(e) => setForm({ ...form, apellido: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: up(e.target.value) })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Apellido" value={form.apellido} onChange={(e) => setForm({ ...form, apellido: up(e.target.value) })} fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="DPI" value={form.dpi} onChange={(e) => setForm({ ...form, dpi: e.target.value })} fullWidth /></Grid>
-            <Grid item xs={12} md={6}><TextField label="Gerencia" value={form.gerencia} onChange={(e) => setForm({ ...form, gerencia: e.target.value })} fullWidth /></Grid>
-            <Grid item xs={12} md={6}><TextField label="Fecha inicio aportacion" type="date" value={form.fechaInicioAportacion} onChange={(e) => setForm({ ...form, fechaInicioAportacion: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
-            <Grid item xs={12} md={6}><TextField label="Fecha fin aportacion" type="date" value={form.fechaFinAportacion || ""} onChange={(e) => setForm({ ...form, fechaFinAportacion: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
-            <Grid item xs={12} md={6}><FormControl fullWidth><InputLabel>Estado</InputLabel><Select label="Estado" value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}>{estados.map((estado) => <MenuItem key={estado} value={estado}>{estado}</MenuItem>)}</Select></FormControl></Grid>
-            <Grid item xs={12} md={6}><FormControl fullWidth><InputLabel>Tiene prestamo</InputLabel><Select label="Tiene prestamo" value={form.tienePrestamo ? "1" : "0"} onChange={(e) => setForm({ ...form, tienePrestamo: e.target.value === "1" })}><MenuItem value="0">NO</MenuItem><MenuItem value="1">SI</MenuItem></Select></FormControl></Grid>
+            <Grid item xs={12} md={6}><TextField label="Gerencia" value={form.gerencia} onChange={(e) => setForm({ ...form, gerencia: up(e.target.value) })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Sexo</InputLabel>
+                <Select label="Sexo" value={form.sexo || ""} onChange={(e) => setForm({ ...form, sexo: e.target.value })}>
+                  <MenuItem value=""><em>Sin especificar</em></MenuItem>
+                  {sexoOptions.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
             <Grid item xs={12} md={6}><TextField label="Fecha nacimiento" type="date" value={form.fechaNacimiento} onChange={(e) => setForm({ ...form, fechaNacimiento: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
-            <Grid item xs={12} md={6}><TextField label="Ubicacion" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} fullWidth /></Grid>
-            <Grid item xs={12}><TextField label="Motivo retiro" value={form.motivoRetiro || ""} onChange={(e) => setForm({ ...form, motivoRetiro: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Fecha inicio aportacion" type="date" value={form.fechaInicioAportacion} onChange={(e) => setForm({ ...form, fechaInicioAportacion: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Fecha fin aportacion (opcional)" type="date" value={form.fechaFinAportacion || ""} onChange={(e) => setForm({ ...form, fechaFinAportacion: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Estado</InputLabel>
+                <Select label="Estado" value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}>
+                  {estados.map((estado) => <MenuItem key={estado} value={estado}>{estado}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Tiene prestamo</InputLabel>
+                <Select label="Tiene prestamo" value={form.tienePrestamo ? "1" : "0"} onChange={(e) => setForm({ ...form, tienePrestamo: e.target.value === "1" })}>
+                  <MenuItem value="0">NO</MenuItem>
+                  <MenuItem value="1">SI</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}><TextField label="Ubicacion" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: up(e.target.value) })} fullWidth /></Grid>
+            <Grid item xs={12}><TextField label="Motivo retiro" value={form.motivoRetiro || ""} onChange={(e) => setForm({ ...form, motivoRetiro: up(e.target.value) })} fullWidth /></Grid>
           </Grid>
         </DialogContent>
-        <DialogActions><Button onClick={() => setDialogOpen(false)}>Cancelar</Button><Button variant="contained" onClick={saveAportacion}>Guardar</Button></DialogActions>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={saveAportacion}>Guardar</Button>
+        </DialogActions>
       </Dialog>
 
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} fullWidth maxWidth="md">
@@ -477,8 +516,26 @@ const AportacionesPage = ({ detailOnly = false }) => {
               {editingDetalle && <Button onClick={() => { setEditingDetalle(null); setDetalleForm({ fechaPago: "", valor: "" }); }}>Cancelar edicion</Button>}
             </Stack>
             <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
-              <Table size="small"><TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}><TableRow><TableCell>Codigo empleado</TableCell><TableCell>Nombre</TableCell><TableCell>Valor</TableCell><TableCell>Fecha</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
-                <TableBody>{detalle.map((row) => <TableRow key={row.id}><TableCell>{row.codigoEmpleado || selected?.idAportacion}</TableCell><TableCell>{row.nombre || `${selected?.nombre || ""} ${selected?.apellido || ""}`}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell>{formatDate(row.fechaPago)}</TableCell><TableCell align="right"><Stack direction="row" spacing={0.5} justifyContent="flex-end">{canEdit(user) && <IconButton size="small" color="primary" onClick={() => editDetalleInline(row)}><EditIcon /></IconButton>}{canDelete(user) && <IconButton size="small" color="primary" onClick={() => deleteDetalle(row)}><DeleteIcon /></IconButton>}</Stack></TableCell></TableRow>)}</TableBody>
+              <Table size="small">
+                <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
+                  <TableRow><TableCell>Codigo empleado</TableCell><TableCell>Nombre</TableCell><TableCell>Valor</TableCell><TableCell>Fecha</TableCell><TableCell align="right">Acciones</TableCell></TableRow>
+                </TableHead>
+                <TableBody>
+                  {detalle.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.codigoEmpleado || selected?.idAportacion}</TableCell>
+                      <TableCell>{row.nombre || `${selected?.nombre || ""} ${selected?.apellido || ""}`}</TableCell>
+                      <TableCell>Q {Number(row.valor).toFixed(2)}</TableCell>
+                      <TableCell>{formatDate(row.fechaPago)}</TableCell>
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                          {canEdit(user) && <IconButton size="small" color="primary" onClick={() => editDetalleInline(row)}><EditIcon /></IconButton>}
+                          {canDelete(user) && <IconButton size="small" color="primary" onClick={() => deleteDetalle(row)}><DeleteIcon /></IconButton>}
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
               </Table>
             </TableContainer>
           </Stack>

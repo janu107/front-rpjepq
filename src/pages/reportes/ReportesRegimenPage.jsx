@@ -1,15 +1,20 @@
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import SearchIcon from "@mui/icons-material/Search";
 import {
-  Box, InputAdornment, Paper, Stack, Tab, Table, TableBody,
-  TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, Typography
+  Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
+  IconButton, InputAdornment, Paper, Stack, Tab, Table, TableBody,
+  TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, Tooltip, Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
 
 const formatDate = (v) => (v ? String(v).slice(0, 10) : "");
 const money = (v) => `Q ${Number(v || 0).toFixed(2)}`;
+const sexoLabel = (v) => (v === "M" ? "Masculino" : v === "F" ? "Femenino" : v ?? "");
 
 const ReportTable = ({ columns, rows, search, searchKeys }) => {
   const filtered = useMemo(() => {
@@ -42,9 +47,14 @@ const ReportTable = ({ columns, rows, search, searchKeys }) => {
 };
 
 const ReportesRegimenPage = () => {
+  const navigate = useNavigate();
   const [tab, setTab] = useState(0);
   const [search, setSearch] = useState("");
   const [data, setData] = useState({ prestamos: [], junta: [], dietas: [], empleados: [], aportaciones: [] });
+  const [detalleOpen, setDetalleOpen] = useState(false);
+  const [detalleRows, setDetalleRows] = useState([]);
+  const [detalleTitle, setDetalleTitle] = useState("");
+  const [loadingDetalle, setLoadingDetalle] = useState(false);
 
   useEffect(() => {
     const endpoints = [
@@ -62,6 +72,21 @@ const ReportesRegimenPage = () => {
       setData(next);
     });
   }, []);
+
+  const openDetalle = async (row) => {
+    setDetalleTitle(`${row.aportanteId} — ${row.nombre} ${row.apellido}`);
+    setDetalleRows([]);
+    setDetalleOpen(true);
+    setLoadingDetalle(true);
+    try {
+      const { data: res } = await axiosClient.get(`/reportes/regimen/aportaciones/${row.id}/detalle`);
+      setDetalleRows(res.data || []);
+    } catch {
+      Swal.fire("Error", "No fue posible cargar el detalle.", "error");
+    } finally {
+      setLoadingDetalle(false);
+    }
+  };
 
   const tabs = [
     {
@@ -124,7 +149,7 @@ const ReportesRegimenPage = () => {
         { key: "idEmpleado", label: "ID" },
         { key: "nombres", label: "Nombres" },
         { key: "apellidos", label: "Apellidos" },
-        { key: "sexo", label: "Sexo" },
+        { key: "sexo", label: "Sexo", render: (r) => sexoLabel(r.sexo) },
         { key: "dpi", label: "DPI" },
         { key: "estadoCivil", label: "Est. civil" },
         { key: "puestoNombre", label: "Puesto" },
@@ -140,12 +165,26 @@ const ReportesRegimenPage = () => {
         { key: "aportanteId", label: "ID" },
         { key: "nombre", label: "Nombre" },
         { key: "apellido", label: "Apellido" },
+        { key: "sexo", label: "Sexo", render: (r) => sexoLabel(r.sexo) },
         { key: "dpi", label: "DPI" },
         { key: "gerencia", label: "Gerencia" },
         { key: "estado", label: "Estado" },
+        { key: "tienePrestamo", label: "Préstamo", render: (r) => <Chip label={r.tienePrestamo ? "SI" : "NO"} size="small" color={r.tienePrestamo ? "warning" : "default"} /> },
+        { key: "fechaInicio", label: "F. inicio", render: (r) => formatDate(r.fechaInicio) },
+        { key: "fechaFin", label: "F. fin", render: (r) => formatDate(r.fechaFin) },
         { key: "manejoDescripcion", label: "Manejo" },
         { key: "totalAportado", label: "Total aportado", render: (r) => money(r.totalAportado) },
-        { key: "cantidadAportes", label: "Cantidad aportes" }
+        { key: "cantidadAportes", label: "Cantidad aportes" },
+        {
+          key: "_detalle", label: "Detalle",
+          render: (r) => (
+            <Tooltip title="Ver detalle de pagos">
+              <IconButton size="small" color="primary" onClick={() => openDetalle(r)}>
+                <ListAltIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )
+        }
       ]
     }
   ];
@@ -161,15 +200,74 @@ const ReportesRegimenPage = () => {
       <Tabs value={tab} onChange={(_, v) => { setTab(v); setSearch(""); }} variant="scrollable" scrollButtons="auto">
         {tabs.map((t, i) => <Tab key={i} label={t.label} />)}
       </Tabs>
-      <TextField
-        placeholder="Buscar"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ maxWidth: { md: 420 } }}
-        fullWidth
-        InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
-      />
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
+        <TextField
+          placeholder="Buscar"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{ maxWidth: { md: 420 }, flexGrow: 1 }}
+          fullWidth
+          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
+        />
+        {tab === 4 && (
+          <Button
+            variant="outlined"
+            startIcon={<PictureAsPdfIcon />}
+            onClick={() => navigate("/reportes/aportaciones")}
+            sx={{ whiteSpace: "nowrap" }}
+          >
+            Exportar PDF
+          </Button>
+        )}
+      </Stack>
       <ReportTable columns={current.columns} rows={current.rows} search={search} searchKeys={current.searchKeys} />
+
+      <Dialog open={detalleOpen} onClose={() => setDetalleOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>Detalle de aportaciones — {detalleTitle}</DialogTitle>
+        <DialogContent dividers>
+          {loadingDetalle ? (
+            <Typography align="center" sx={{ py: 3 }}>Cargando...</Typography>
+          ) : (
+            <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+              <Table size="small">
+                <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 800 }}>ID</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Fecha pago</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Valor</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Fecha creacion</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Usuario</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {detalleRows.map((row) => (
+                    <TableRow key={row.id} hover>
+                      <TableCell>{row.id}</TableCell>
+                      <TableCell>{formatDate(row.fechaPago)}</TableCell>
+                      <TableCell>{money(row.valor)}</TableCell>
+                      <TableCell>{formatDate(row.fechaCreacion)}</TableCell>
+                      <TableCell>{row.usuarioCreacion}</TableCell>
+                    </TableRow>
+                  ))}
+                  {detalleRows.length === 0 && (
+                    <TableRow><TableCell colSpan={5} align="center">Sin registros de pago.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+          {!loadingDetalle && detalleRows.length > 0 && (
+            <Box sx={{ mt: 1.5, textAlign: "right" }}>
+              <Typography variant="subtitle2">
+                Total: {money(detalleRows.reduce((s, r) => s + Number(r.valor || 0), 0))} &nbsp;|&nbsp; {detalleRows.length} pagos
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetalleOpen(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 };

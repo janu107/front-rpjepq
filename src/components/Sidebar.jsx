@@ -86,7 +86,12 @@ const items = [
     roles: ["ADMIN", "OPERADOR", "CONSULTA"],
     children: [
       { text: "Reportes de N\u00f3mina", path: "/reportes/nomina", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Reportes R\u00e9gimen", path: "/reportes/regimen", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] }
+      { text: "Resumen R\u00e9gimen", path: "/reportes/regimen", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
+      { text: "Reporte Pr\u00e9stamos", path: "/reportes/prestamos-regimen", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
+      { text: "Reporte Junta Directiva", path: "/reportes/junta-directiva", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
+      { text: "Reporte Dietas", path: "/reportes/dietas", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
+      { text: "Reporte Empleados R\u00e9gimen", path: "/reportes/empleados-regimen", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
+      { text: "Reporte Aportaciones", path: "/reportes/aportaciones", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] }
     ]
   },
   {

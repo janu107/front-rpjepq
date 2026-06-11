@@ -35,7 +35,7 @@ const TiempoExtraPage = () => (
       { key: "motivo", label: "Motivo" }
     ]}
     fields={[
-      { key: "idEmpleado", label: "Empleado", required: true, type: "select", source: "empleados", getValue: (item) => item.id, getLabel: (item) => `${item.nombres} ${item.apellidos} - ${item.dpi}` },
+      { key: "idEmpleado", label: "Empleado", required: true, type: "select", source: "empleados", getValue: (item) => item.id, getLabel: (item) => `${item.idEmpleado} - ${item.nombres} ${item.apellidos}` },
       { key: "fechaHoraInicio", label: "Fecha/hora inicio", required: true, type: "datetime-local" },
       { key: "fechaHoraFinal", label: "Fecha/hora final", required: true, type: "datetime-local" },
       // Calculado automaticamente a partir de inicio/final (solo lectura).

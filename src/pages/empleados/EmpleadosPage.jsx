@@ -25,6 +25,8 @@ const EmpleadosPage = ({
     ]}
     salaryConfig={{
       requiredOnCreate: true,
+      tipoPersona: "EMPLEADO",
+      idPersonaField: "id",
       fields: [
         { key: "tipoIngreso", label: "Tipo ingreso", required: true, type: "select", source: "tiposIngreso", getValue: (item) => item.id, getLabel: (item) => `${item.tipoIngreso} - ${item.descripcion}` },
         { key: "salario", label: "Salario", required: true, type: "number" }
@@ -54,7 +56,6 @@ const EmpleadosPage = ({
       { key: "fechaNacimiento", label: "Fecha nacimiento", required: true, type: "date" },
       { key: "sexo", label: "Sexo", required: true, type: "select", options: sexoOptions },
       { key: "tipoPuesto", label: "Tipo puesto", required: true, type: "select", options: tipoPuestoOptions },
-      // En Empleados Regimen (onlyOccupiedPuestos) solo se muestran puestos ocupados.
       { key: "idPuesto", label: "Puesto", required: true, type: "select", source: "puestos", getValue: (item) => item.id, getLabel: (item) => item.nombre, filterByFixedManejo: true, onlyOccupied: onlyOccupiedPuestos }
     ]}
     formSections={[

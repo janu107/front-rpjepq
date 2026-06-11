@@ -18,6 +18,8 @@ const JubiladosPage = ({ showPlanilla = false }) => (
       { key: "tiposIngreso", endpoint: "/catalogos/tipo-ingreso" }
     ]}
     salaryConfig={{
+      tipoPersona: "JUBILADO",
+      idPersonaField: "id",
       fields: [
         { key: "tipoIngreso", label: "Tipo ingreso", required: true, type: "select", source: "tiposIngreso", getValue: (item) => item.id, getLabel: (item) => `${item.tipoIngreso} - ${item.descripcion}` },
         { key: "salario", label: "Salario", required: true, type: "number" }

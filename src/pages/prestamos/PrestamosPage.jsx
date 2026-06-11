@@ -46,7 +46,7 @@ const PrestamosPage = ({ detailOnly = false }) => {
 
   const loadAportaciones = async () => {
     const { data } = await axiosClient.get("/aportaciones");
-    setAportaciones((data.data || []).filter((item) => item.estado === "ACTIVO" && Number(item.tipoManejo) === MANEJO_EPQ_ID));
+    setAportaciones((data.data || []).filter((item) => item.estado === "ACTIVO" && Number(item.tipoManejo) === MANEJO_EPQ_ID && item.tienePrestamo));
   };
 
   useEffect(() => {
