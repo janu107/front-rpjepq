@@ -65,7 +65,7 @@ const TIPOS_CUENTA_PLANILLA = ["AHORRO", "MONETARIA"];
 const buildPlanillaForm = () => ({
   idBanco: "", formaPago: "", cuenta: "", tipoCuenta: "",
   aplicaDescIgss: false, aplicaDescIsr: false, aplicaSeguro: false,
-  noProbidad: "", noSobrevivencia: ""
+  noProbidad: "", noSobrevivencia: "", aplicaNomina: true
 });
 
 const MantenimientoPage = ({
@@ -177,7 +177,8 @@ const MantenimientoPage = ({
             aplicaDescIsr: Boolean(existing.aplicaDescIsr),
             aplicaSeguro: Boolean(existing.aplicaSeguro),
             noProbidad: existing.noProbidad || "",
-            noSobrevivencia: existing.noSobrevivencia || ""
+            noSobrevivencia: existing.noSobrevivencia || "",
+            aplicaNomina: existing.aplicaNomina !== undefined ? Boolean(existing.aplicaNomina) : true
           });
           setPlanillaExistingId(existing.id);
         }
@@ -213,7 +214,8 @@ const MantenimientoPage = ({
       aplicaDescIsr: planillaForm.aplicaDescIsr,
       aplicaSeguro: planillaForm.aplicaSeguro,
       noProbidad: planillaForm.noProbidad || null,
-      noSobrevivencia: planillaForm.noSobrevivencia || null
+      noSobrevivencia: planillaForm.noSobrevivencia || null,
+      aplicaNomina: planillaForm.aplicaNomina
     };
     try {
       if (planillaExistingId) {
@@ -772,6 +774,15 @@ const MantenimientoPage = ({
                 <FormControl fullWidth>
                   <InputLabel>Aplica seguro</InputLabel>
                   <Select label="Aplica seguro" value={planillaForm.aplicaSeguro ? "SI" : "NO"} onChange={(e) => setPlanillaForm({ ...planillaForm, aplicaSeguro: e.target.value === "SI" })}>
+                    <MenuItem value="SI">SI</MenuItem>
+                    <MenuItem value="NO">NO</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Aplica nomina</InputLabel>
+                  <Select label="Aplica nomina" value={planillaForm.aplicaNomina ? "SI" : "NO"} onChange={(e) => setPlanillaForm({ ...planillaForm, aplicaNomina: e.target.value === "SI" })}>
                     <MenuItem value="SI">SI</MenuItem>
                     <MenuItem value="NO">NO</MenuItem>
                   </Select>

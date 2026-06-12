@@ -161,7 +161,10 @@ const catalogConfigs = [
       { key: "porcentajePagos", label: "Porcentaje pagos", type: "number" },
       { key: "isr", label: "ISR", type: "number" },
       { key: "porcentajeTiempoExtra", label: "Porcentaje tiempo extra", type: "number" },
-      { key: "pagoDieta", label: "Pago dieta", type: "number" }
+      { key: "pagoDieta", label: "Pago dieta", type: "number" },
+      { key: "igss", label: "IGSS", type: "number" },
+      { key: "igssPatronal", label: "IGSS Patronal", type: "number" },
+      { key: "intecap", label: "INTECAP", type: "number" }
     ]
   },
   {

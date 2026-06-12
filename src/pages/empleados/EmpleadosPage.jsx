@@ -1,7 +1,11 @@
 import MantenimientoPage from "../mantenimientos/MantenimientoPage";
 
 const estadoCivilOptions = ["SOLTERO", "CASADO", "UNIDO", "DIVORCIADO", "VIUDO"].map((value) => ({ value, label: value }));
-const tipoPuestoOptions = ["FIJO", "CONTRATO", "TEMPORAL"].map((value) => ({ value, label: value }));
+const tipoPuestoOptions = [
+  { value: "FIJO", label: "PLANILLA" },
+  { value: "CONTRATO", label: "CONTRATO" },
+  { value: "TEMPORAL", label: "TEMPORAL" }
+];
 const sexoOptions = [{ value: "M", label: "Masculino" }, { value: "F", label: "Femenino" }];
 
 const EmpleadosPage = ({
@@ -39,7 +43,7 @@ const EmpleadosPage = ({
       { key: "nombres", label: "Nombres" },
       { key: "apellidos", label: "Apellidos" },
       { key: "dpi", label: "DPI" },
-      { key: "tipoPuesto", label: "Tipo puesto" },
+      { key: "tipoPuesto", label: "Tipo puesto", render: (row) => (row.tipoPuesto === "FIJO" ? "PLANILLA" : row.tipoPuesto) },
       { key: "puestoNombre", label: "Puesto" },
       { key: "manejoDescripcion", label: "Manejo" }
     ]}

@@ -41,17 +41,33 @@ const PrestamosPage = ({ detailOnly = false }) => {
 
   const loadPrestamos = async () => {
     const { data } = await axiosClient.get("/prestamos");
-    setPrestamos(data.data || []);
+    const list = data.data || [];
+    setPrestamos(list);
+    return list;
   };
 
-  const loadAportaciones = async () => {
+  const loadAportaciones = async (prestamosActuales) => {
     const { data } = await axiosClient.get("/aportaciones");
-    setAportaciones((data.data || []).filter((item) => item.estado === "ACTIVO" && Number(item.tipoManejo) === MANEJO_EPQ_ID && item.tienePrestamo));
+    const activeLoanIds = new Set(
+      (prestamosActuales || [])
+        .filter((p) => ["ACTIVO", "MORA"].includes(p.estado))
+        .map((p) => Number(p.idAportacion))
+    );
+    setAportaciones(
+      (data.data || []).filter(
+        (item) =>
+          item.estado === "ACTIVO" &&
+          Number(item.tipoManejo) === MANEJO_EPQ_ID &&
+          item.tienePrestamo &&
+          !activeLoanIds.has(Number(item.id))
+      )
+    );
   };
 
   useEffect(() => {
-    loadPrestamos().catch((error) => Swal.fire("Error", error.response?.data?.message || "No fue posible cargar prestamos.", "error"));
-    loadAportaciones().catch(() => {});
+    loadPrestamos()
+      .then((loaded) => loadAportaciones(loaded).catch(() => {}))
+      .catch((error) => Swal.fire("Error", error.response?.data?.message || "No fue posible cargar prestamos.", "error"));
   }, []);
 
   const filtered = useMemo(() => {
@@ -98,8 +114,7 @@ const PrestamosPage = ({ detailOnly = false }) => {
         Swal.fire("Listo", "Prestamo creado correctamente.", "success");
       }
       setDialogOpen(false);
-      loadPrestamos();
-      loadAportaciones();
+      loadPrestamos().then((loaded) => loadAportaciones(loaded).catch(() => {})).catch(() => {});
     } catch (error) {
       Swal.fire("Error", error.response?.data?.message || "No fue posible guardar el prestamo.", "error");
     }
