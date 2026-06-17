@@ -76,6 +76,7 @@ const items = [
     roles: ["ADMIN", "OPERADOR"],
     children: [
       { text: "Generaci\u00f3n de Planillas", path: "/generacion-planilla", icon: <CalculateIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Planilla de Pensionados", path: "/planillas-pensionados", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Otros Descuentos", path: "/otros-descuentos", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "N\u00f3mina", path: "/nomina", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]

@@ -77,9 +77,18 @@ const PrestamosPage = ({ detailOnly = false }) => {
     return scoped.filter((item) => [item.noContrato, item.aportacionNombre, item.aportacionDpi].some((value) => String(value || "").toLowerCase().includes(term)));
   }, [prestamos, search]);
 
+  // En modo edición incluir el aportante actual aunque ya tenga préstamo activo
+  const aportacionesParaSelect = useMemo(() => {
+    if (!editing) return aportaciones;
+    const yaIncluido = aportaciones.some((a) => Number(a.id) === Number(editing.idAportacion));
+    if (yaIncluido) return aportaciones;
+    const currentApo = { id: editing.idAportacion, nombre: editing.aportacionNombre?.split(" ")[0] || "", apellido: editing.aportacionNombre?.split(" ").slice(1).join(" ") || "", dpi: editing.aportacionDpi, tienePrestamo: true };
+    return [currentApo, ...aportaciones];
+  }, [aportaciones, editing]);
+
   const selectedAportacion = useMemo(
-    () => aportaciones.find((item) => Number(item.id) === Number(form.idAportacion)),
-    [aportaciones, form.idAportacion]
+    () => aportacionesParaSelect.find((item) => Number(item.id) === Number(form.idAportacion)),
+    [aportacionesParaSelect, form.idAportacion]
   );
 
   const openCreate = () => {
@@ -228,7 +237,7 @@ const PrestamosPage = ({ detailOnly = false }) => {
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth><InputLabel>Aportante</InputLabel><Select label="Aportante" value={form.idAportacion} onChange={(e) => setForm({ ...form, idAportacion: e.target.value })}>{aportaciones.map((a) => <MenuItem key={a.id} value={a.id}>{a.nombre} {a.apellido} - {a.dpi}</MenuItem>)}</Select></FormControl>
+              <FormControl fullWidth><InputLabel>Aportante</InputLabel><Select label="Aportante" value={form.idAportacion} onChange={(e) => setForm({ ...form, idAportacion: e.target.value })}>{aportacionesParaSelect.map((a) => <MenuItem key={a.id} value={a.id}>{a.nombre} {a.apellido} - {a.dpi}</MenuItem>)}</Select></FormControl>
             </Grid>
             <Grid item xs={12} md={6}><TextField label="No. contrato" value={form.noContrato} onChange={(e) => setForm({ ...form, noContrato: e.target.value })} fullWidth /></Grid>
             {selectedAportacion && (

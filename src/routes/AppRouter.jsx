@@ -24,6 +24,8 @@ import ReporteJuntaDirectivaPage from "../pages/reportes/ReporteJuntaDirectivaPa
 import ReporteDietasPage from "../pages/reportes/ReporteDietasPage";
 import ReporteEmpleadosRegimenPage from "../pages/reportes/ReporteEmpleadosRegimenPage";
 import ReporteDetalleAportacionesPage from "../pages/reportes/ReporteDetalleAportacionesPage";
+import PlanillasPensionadosPage from "../pages/planillasPensionados/PlanillasPensionadosPage";
+import DetallePlanillaPensionadosPage from "../pages/planillasPensionados/DetallePlanillaPensionadosPage";
 import DescuentosJudicialesPage from "../pages/descuentosJudiciales/DescuentosJudicialesPage";
 import PrestamosRegimenPage from "../pages/prestamosRegimen/PrestamosRegimenPage";
 import RolesPage from "../pages/roles/RolesPage";
@@ -77,6 +79,8 @@ const AppRouter = () => {
             <Route path="/reportes/detalle-aportaciones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReporteDetalleAportacionesPage /></ProtectedRoute>} />
             <Route path="/descuentos-judiciales" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DescuentosJudicialesPage /></ProtectedRoute>} />
             <Route path="/prestamos-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosRegimenPage /></ProtectedRoute>} />
+            <Route path="/planillas-pensionados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PlanillasPensionadosPage /></ProtectedRoute>} />
+            <Route path="/planillas-pensionados/:id" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DetallePlanillaPensionadosPage /></ProtectedRoute>} />
             <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AuditoriaPage /></ProtectedRoute>} />
             <Route path="/mantenimiento" element={<ProtectedRoute allowedRoles={["ADMIN"]}><MantenimientoPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
