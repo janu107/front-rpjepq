@@ -64,7 +64,7 @@ const FORMAS_PAGO_PLANILLA = ["ABONO CUENTA", "CHEQUE"];
 const TIPOS_CUENTA_PLANILLA = ["AHORRO", "MONETARIA"];
 const buildPlanillaForm = () => ({
   idBanco: "", formaPago: "", cuenta: "", tipoCuenta: "",
-  aplicaDescIgss: false, aplicaDescIsr: false, aplicaSeguro: false,
+  aplicaDescIgss: false, aplicaDescIsr: false, aplicaIntecap: false, aplicaDasociacion: false, aplicaSeguro: false,
   noProbidad: "", noSobrevivencia: "", aplicaNomina: true
 });
 
@@ -175,6 +175,8 @@ const MantenimientoPage = ({
             tipoCuenta: existing.tipoCuenta || "",
             aplicaDescIgss: Boolean(existing.aplicaDescIgss),
             aplicaDescIsr: Boolean(existing.aplicaDescIsr),
+            aplicaIntecap: Boolean(existing.aplicaIntecap),
+            aplicaDasociacion: Boolean(existing.aplicaDasociacion),
             aplicaSeguro: Boolean(existing.aplicaSeguro),
             noProbidad: existing.noProbidad || "",
             noSobrevivencia: existing.noSobrevivencia || "",
@@ -212,6 +214,8 @@ const MantenimientoPage = ({
       tipoCuenta: planillaForm.tipoCuenta,
       aplicaDescIgss: planillaForm.aplicaDescIgss,
       aplicaDescIsr: planillaForm.aplicaDescIsr,
+      aplicaIntecap: planillaForm.aplicaIntecap,
+      aplicaDasociacion: planillaForm.aplicaDasociacion,
       aplicaSeguro: planillaForm.aplicaSeguro,
       noProbidad: planillaForm.noProbidad || null,
       noSobrevivencia: planillaForm.noSobrevivencia || null,
@@ -765,6 +769,24 @@ const MantenimientoPage = ({
                 <FormControl fullWidth>
                   <InputLabel>Aplica ISR</InputLabel>
                   <Select label="Aplica ISR" value={planillaForm.aplicaDescIsr ? "SI" : "NO"} onChange={(e) => setPlanillaForm({ ...planillaForm, aplicaDescIsr: e.target.value === "SI" })}>
+                    <MenuItem value="SI">SI</MenuItem>
+                    <MenuItem value="NO">NO</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Aplica INTECAP</InputLabel>
+                  <Select label="Aplica INTECAP" value={planillaForm.aplicaIntecap ? "SI" : "NO"} onChange={(e) => setPlanillaForm({ ...planillaForm, aplicaIntecap: e.target.value === "SI" })}>
+                    <MenuItem value="SI">SI</MenuItem>
+                    <MenuItem value="NO">NO</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Aplica asociacion</InputLabel>
+                  <Select label="Aplica asociacion" value={planillaForm.aplicaDasociacion ? "SI" : "NO"} onChange={(e) => setPlanillaForm({ ...planillaForm, aplicaDasociacion: e.target.value === "SI" })}>
                     <MenuItem value="SI">SI</MenuItem>
                     <MenuItem value="NO">NO</MenuItem>
                   </Select>

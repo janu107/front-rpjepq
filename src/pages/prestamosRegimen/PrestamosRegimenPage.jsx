@@ -83,7 +83,8 @@ const PrestamosRegimenPage = () => {
     setEditingRow(row);
     setForm({
       tipoPersona: Number(row.tipoManejo) === MANEJO_JUBILADOS ? "JUBILADO" : "EMPLEADO",
-      idPersona: row.idEmpleado,
+      // id unificado: empleados usan idEmpleado, jubilados idJubilado
+      idPersona: row.idPersona ?? row.idEmpleado ?? row.idJubilado,
       idBanco: row.idBanco,
       noReferencia: row.noReferencia,
       monto: row.monto,

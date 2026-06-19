@@ -79,7 +79,8 @@ const DescuentosJudicialesPage = () => {
     setForm({
       tipoManejo: row.tipoManejo,
       tipoPersona: Number(row.tipoManejo) === MANEJO_JUBILADOS ? "JUBILADO" : "EMPLEADO",
-      idPersona: row.idEmpleado,
+      // id unificado: empleados usan idEmpleado, jubilados idJubilado
+      idPersona: row.idPersona ?? row.idEmpleado ?? row.idJubilado,
       beneficiario: row.beneficiario,
       tipo: row.tipo,
       valor: row.valor,
