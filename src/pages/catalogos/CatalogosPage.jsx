@@ -164,7 +164,8 @@ const catalogConfigs = [
       { key: "pagoDieta", label: "Pago dieta", type: "number" },
       { key: "igss", label: "IGSS", type: "number" },
       { key: "igssPatronal", label: "IGSS Patronal", type: "number" },
-      { key: "intecap", label: "INTECAP", type: "number" }
+      { key: "intecap", label: "INTECAP", type: "number" },
+      { key: "descAsociacion", label: "Desc. Asociacion", type: "number" }
     ]
   },
   {
@@ -174,7 +175,8 @@ const catalogConfigs = [
     searchFields: ["numero", "frecuencia", "estado", "tipoPlanillaNombre"],
     columns: [
       { key: "numero", label: "Numero" },
-      { key: "tipoPlanillaNombre", label: "Tipo planilla" },
+      { key: "tipoPlanilla", label: "Tipo planilla",
+        render: (r) => Number(r.tipoPlanilla) === 1 ? "REGIMEN (1)" : Number(r.tipoPlanilla) === 2 ? "JUBILADOS (2)" : (r.tipoPlanillaDescripcion || r.tipoPlanillaNombre || "-") },
       { key: "frecuencia", label: "Frecuencia" },
       { key: "estado", label: "Estado" }
     ],
@@ -288,7 +290,11 @@ const CatalogosPage = () => {
     setEditingRecord(record);
     setForm(
       config.fields.reduce((acc, field) => {
-        acc[field.key] = record[field.key] ?? "";
+        let value = record[field.key] ?? "";
+        // Las fechas vienen como ISO/datetime ("2026-08-01T06:00:00.000Z");
+        // el input type="date" requiere "yyyy-MM-dd".
+        if (field.type === "date" && value) value = String(value).slice(0, 10);
+        acc[field.key] = value;
         return acc;
       }, {})
     );
@@ -451,7 +457,7 @@ const CatalogosPage = () => {
               <TableRow key={record.id} hover>
                 <TableCell>{record[config.codeKey] ?? record.id}</TableCell>
                 {config.columns.map((column) => (
-                  <TableCell key={column.key}>{record[column.key]}</TableCell>
+                  <TableCell key={column.key}>{column.render ? column.render(record) : record[column.key]}</TableCell>
                 ))}
                 <TableCell>{record.usuarioCreacion || ""}</TableCell>
                 <TableCell align="right">
