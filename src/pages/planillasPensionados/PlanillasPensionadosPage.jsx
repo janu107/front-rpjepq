@@ -4,7 +4,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
   Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
-  FormControl, Grid, InputLabel, MenuItem, Paper, Select, Stack,
+  Grid, Paper, Stack,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Typography
 } from "@mui/material";
@@ -41,7 +41,6 @@ const PlanillasPensionadosPage = () => {
   const isAdmin = user?.rol?.toUpperCase() === "ADMIN";
 
   const [planillas, setPlanillas] = useState([]);
-  const [tiposPlanilla, setTiposPlanilla] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deudaDialogOpen, setDeudaDialogOpen] = useState(false);
@@ -52,12 +51,10 @@ const PlanillasPensionadosPage = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [r1, r2] = await Promise.all([
-        axiosClient.get("/planillas-pensionados"),
-        axiosClient.get("/catalogos/tipo-planilla")
-      ]);
+      // CAMBIO X: la planilla de pensionados es siempre NÓMINA JUBILADOS; ya no
+      // se carga el catálogo de tipos para elegir.
+      const r1 = await axiosClient.get("/planillas-pensionados");
       setPlanillas(r1.data.data || []);
-      setTiposPlanilla(r2.data.data || []);
     } catch (_) {}
     finally { setLoading(false); }
   };
@@ -177,14 +174,12 @@ const PlanillasPensionadosPage = () => {
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Tipo de Planilla</InputLabel>
-                <Select label="Tipo de Planilla" value={form.tipoPlanilla} onChange={(e) => setF("tipoPlanilla", e.target.value)}>
-                  {tiposPlanilla.map((t) => (
-                    <MenuItem key={t.id} value={t.id}>{t.descripcion}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {/* CAMBIO X: tipo de planilla fijo NÓMINA JUBILADOS (no editable) */}
+              <TextField
+                fullWidth size="small" label="Tipo de Planilla"
+                value="NÓMINA JUBILADOS" InputProps={{ readOnly: true }} disabled
+                helperText="Las planillas de pensionados siempre son NÓMINA JUBILADOS"
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField

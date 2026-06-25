@@ -1,6 +1,7 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DownloadIcon from "@mui/icons-material/Download";
+import EditIcon from "@mui/icons-material/Edit";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import UndoIcon from "@mui/icons-material/Undo";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
@@ -14,27 +15,19 @@ import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import {
+  ESTADO_COLORS, puedeGenerar, puedeReversar, puedeCerrar, puedeEditarMontos,
+  esConsulta, tieneDetalle, textoBotonGenerar
+} from "../../utils/planillaEstado";
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const formatPeriodo = (p) => { if (!p) return "-"; const s = String(p); return `${MESES[parseInt(s.slice(4,6))-1]||""} ${s.slice(0,4)}`; };
 const money = (v) => `Q ${Number(v||0).toLocaleString("es-GT",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const fmtDate = (d) => d ? String(d).slice(0,10) : "-";
 
-const ESTADO_COLORS = {
-  ABIERTA:  { color: "success", bg: "#e8f5e9", txt: "#2e7d32" },
-  GENERADA: { color: "info",    bg: "#e3f2fd", txt: "#1565c0" },
-  CERRADA:  { color: "default", bg: "#f5f5f5", txt: "#616161" },
-  REVERSADA:{ color: "error",   bg: "#ffebee", txt: "#c62828" }
-};
-
 const EstadoBadge = ({ estado }) => {
-  const cfg = ESTADO_COLORS[estado] || { color: "default", bg: "#f5f5f5", txt: "#333" };
-  return (
-    <Chip
-      label={estado || "-"}
-      sx={{ bgcolor: cfg.bg, color: cfg.txt, fontWeight: 700, fontSize: "0.85rem", px: 1 }}
-    />
-  );
+  const cfg = ESTADO_COLORS[estado] || { bg: "#f5f5f5", txt: "#333" };
+  return <Chip label={estado || "-"} sx={{ bgcolor: cfg.bg, color: cfg.txt, fontWeight: 700, fontSize: "0.85rem", px: 1 }} />;
 };
 
 const InfoCard = ({ label, value, currency = false, highlight = false }) => (
@@ -59,6 +52,7 @@ const DetallePlanillaPensionadosPage = () => {
   const [reversarDialog, setReversarDialog] = useState({ open: false, tipo: null, idJubilado: null, nombre: "" });
   const [motivo, setMotivo] = useState("");
   const [estadoCuentaDialog, setEstadoCuentaDialog] = useState({ open: false, data: null });
+  const [montosDialog, setMontosDialog] = useState({ open: false, idJubilado: null, nombre: "", ingresos: [], descuentos: [], loading: false, saving: false });
 
   const loadAll = async () => {
     setLoading(true);
@@ -70,9 +64,11 @@ const DetallePlanillaPensionadosPage = () => {
       setPlanilla(r1.data.data);
       setPreview(r2.data.data);
 
-      if (["GENERADA","CERRADA","REVERSADA"].includes(r1.data.data?.estadoProceso)) {
+      if (tieneDetalle(r1.data.data?.estadoProceso)) {
         const r3 = await axiosClient.get(`/planillas-pensionados/${id}/detalle`);
         setDetalle(r3.data.data || []);
+      } else {
+        setDetalle([]);
       }
     } catch (_) {}
     finally { setLoading(false); }
@@ -82,7 +78,7 @@ const DetallePlanillaPensionadosPage = () => {
 
   const handleGenerar = async () => {
     const confirmResult = await Swal.fire({
-      title: "Generar nómina de pensionados",
+      title: textoBotonGenerar(planilla?.estadoProceso),
       html: preview ? `<b>${preview.conDatosPlanilla}</b> jubilados serán procesados.<br>${preview.excluidos} excluidos.<br>Porcentaje: <b>${preview.porcentajePago}%</b>` : "¿Confirma generar la nómina?",
       icon: "question",
       showCancelButton: true,
@@ -105,7 +101,7 @@ const DetallePlanillaPensionadosPage = () => {
   const handleCerrar = async () => {
     const confirmResult = await Swal.fire({
       title: "Cerrar planilla",
-      html: `<b>Total ingresos:</b> ${money(planilla?.totalIngresos)}<br><b>Total descuentos:</b> ${money(planilla?.totalDescuentos)}<br><b>Neto a pagar:</b> ${money(planilla?.netoPagar)}<br><br>¿Confirma el cierre definitivo?`,
+      html: `<b>Total ingresos:</b> ${money(planilla?.totalIngresos)}<br><b>Total descuentos:</b> ${money(planilla?.totalDescuentos)}<br><b>Neto a pagar:</b> ${money(planilla?.netoPagar)}<br><br>Una vez cerrada, la planilla sólo podrá consultarse.<br>¿Confirma el cierre definitivo?`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Sí, cerrar",
@@ -150,6 +146,46 @@ const DetallePlanillaPensionadosPage = () => {
     } catch (_) {}
   };
 
+  // ---- Edición de montos ----
+  const openMontosDialog = async (idJubilado, nombre) => {
+    setMontosDialog({ open: true, idJubilado, nombre, ingresos: [], descuentos: [], loading: true, saving: false });
+    try {
+      const r = await axiosClient.get(`/planillas-pensionados/${id}/jubilados/${idJubilado}/montos`);
+      const lineas = r.data.data || [];
+      setMontosDialog((p) => ({
+        ...p,
+        loading: false,
+        ingresos: lineas.filter((l) => l.clase === "INGRESO"),
+        descuentos: lineas.filter((l) => l.clase === "DESCUENTO")
+      }));
+    } catch (_) {
+      setMontosDialog((p) => ({ ...p, open: false }));
+    }
+  };
+
+  const setLineaValor = (clase, lid, valor) => {
+    setMontosDialog((p) => ({ ...p, [clase]: p[clase].map((l) => (l.id === lid ? { ...l, valor } : l)) }));
+  };
+
+  const handleGuardarMontos = async () => {
+    const { idJubilado, ingresos, descuentos } = montosDialog;
+    const invalida = [...ingresos, ...descuentos].some((l) => l.valor === "" || Number.isNaN(Number(l.valor)) || Number(l.valor) < 0);
+    if (invalida) { Swal.fire("Atención", "Los montos deben ser números mayores o iguales a 0", "warning"); return; }
+    setMontosDialog((p) => ({ ...p, saving: true }));
+    try {
+      const r = await axiosClient.put(`/planillas-pensionados/${id}/jubilados/${idJubilado}/montos`, {
+        ingresos: ingresos.map((l) => ({ id: l.id, valor: Number(l.valor) })),
+        descuentos: descuentos.map((l) => ({ id: l.id, valor: Number(l.valor) }))
+      });
+      setDetalle(r.data.data || []);
+      setMontosDialog({ open: false, idJubilado: null, nombre: "", ingresos: [], descuentos: [], loading: false, saving: false });
+      Swal.fire("Éxito", "MONTOS ACTUALIZADOS CORRECTAMENTE", "success");
+      loadAll();
+    } catch (_) {
+      setMontosDialog((p) => ({ ...p, saving: false }));
+    }
+  };
+
   const download = async (url, filename) => {
     try {
       const response = await axiosClient.get(url, { responseType: "blob" });
@@ -178,10 +214,12 @@ const DetallePlanillaPensionadosPage = () => {
   }
 
   const estado = planilla.estadoProceso;
-  const isAbierta  = estado === "ABIERTA";
-  const isGenerada = estado === "GENERADA";
-  const isCerrada  = estado === "CERRADA";
-  const isReversada = estado === "REVERSADA";
+  const mostrarGeneracion = puedeGenerar(estado);
+  const mostrarDetalle    = tieneDetalle(estado);
+  const consulta          = esConsulta(estado);
+  const aptos = preview?.jubiladosAptos || [];
+  const excluidos = preview?.jubiladosExcluidos || [];
+  const listaPreview = [...aptos, ...excluidos];
 
   const totIngresos    = detalle.reduce((s,r) => s + r.totalIngreso, 0);
   const totDescuentos  = detalle.reduce((s,r) => s + r.totalDescuentos, 0);
@@ -213,34 +251,87 @@ const DetallePlanillaPensionadosPage = () => {
         </Box>
       </Stack>
 
-      {/* =========================================================
-          VISTA 2 — ABIERTA: Preview y Generar
-         ========================================================= */}
-      {isAbierta && (
+      {/* ABIERTA / REVERSADA: Preview con lista de jubilados y botón Generar / Volver a Generar */}
+      {mostrarGeneracion && (
         <Box>
+          {estado === "REVERSADA" && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Esta planilla fue <b>reversada</b>. Puede volver a generar la nómina cuando esté listo.
+            </Alert>
+          )}
           <Typography variant="h6" mb={2}>Vista previa de generación</Typography>
           <Grid container spacing={2} mb={3}>
-            <Grid item xs={6} sm={3}><InfoCard label="Jubilados Activos Tipo 2" value={preview?.totalActivos ?? "-"} /></Grid>
-            <Grid item xs={6} sm={3}><InfoCard label="Con datos planilla activos" value={preview?.conDatosPlanilla ?? "-"} /></Grid>
+            <Grid item xs={6} sm={3}><InfoCard label="Jubilados Activos" value={preview?.totalActivos ?? "-"} /></Grid>
+            <Grid item xs={6} sm={3}><InfoCard label="Aptos para generar" value={preview?.conDatosPlanilla ?? "-"} highlight /></Grid>
             <Grid item xs={6} sm={3}><InfoCard label="Serán excluidos" value={preview?.excluidos ?? "-"} /></Grid>
-            <Grid item xs={6} sm={3}><InfoCard label="Porcentaje de pago" value={`${preview?.porcentajePago ?? 0}%`} highlight /></Grid>
+            <Grid item xs={6} sm={3}><InfoCard label="Porcentaje de pago" value={`${preview?.porcentajePago ?? 0}%`} /></Grid>
           </Grid>
+
+          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", mb: 3 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: "#f5f7fa" }}>
+                  <TableCell>Jubilado</TableCell>
+                  <TableCell>Fecha jubilación</TableCell>
+                  <TableCell align="right">Pensión base</TableCell>
+                  <TableCell align="center">Estado</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {listaPreview.map((j) => (
+                  <TableRow key={j.idJubilado} hover>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={500}>{j.nombreCompleto}</Typography>
+                      <Typography variant="caption" color="text.secondary">DPI: {j.dpi}</Typography>
+                    </TableCell>
+                    <TableCell>{fmtDate(j.fechaJubilacion)}</TableCell>
+                    <TableCell align="right">{money(j.salarioBase)}</TableCell>
+                    <TableCell align="center">
+                      {j.apto
+                        ? <Chip size="small" color="success" label="APTO" />
+                        : <Tooltip title={j.motivo || "Excluido"}><Chip size="small" color="warning" variant="outlined" label="EXCLUIDO" /></Tooltip>
+                      }
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {!listaPreview.length && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">
+                        No hay jubilados activos. Verifique que existan jubilados ACTIVOS con datos de planilla y pensión configurada.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {excluidos.length > 0 && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {excluidos.length} jubilado(s) serán excluidos. Pase el cursor sobre "EXCLUIDO" para ver el motivo.
+            </Alert>
+          )}
+
           <Button
-            variant="contained" size="large" startIcon={generating ? <CircularProgress size={18} color="inherit" /> : <PlayCircleIcon />}
-            onClick={handleGenerar} disabled={generating}
+            variant="contained" size="large"
+            startIcon={generating ? <CircularProgress size={18} color="inherit" /> : <PlayCircleIcon />}
+            onClick={handleGenerar} disabled={generating || (preview?.conDatosPlanilla ?? 0) === 0}
             sx={{ px: 4 }}
           >
-            {generating ? "Generando nómina..." : "Generar Nómina de Pensionados"}
+            {generating ? "Generando nómina..." : textoBotonGenerar(estado)}
           </Button>
+          {(preview?.conDatosPlanilla ?? 0) === 0 && (
+            <Typography variant="caption" color="error" sx={{ display: "block", mt: 1 }}>
+              No hay jubilados aptos para generar.
+            </Typography>
+          )}
         </Box>
       )}
 
-      {/* =========================================================
-          VISTA 3 — GENERADA: Detalle + acciones individuales
-         ========================================================= */}
-      {(isGenerada || isCerrada || isReversada) && (
+      {/* GENERADA / CERRADA: Detalle + acciones */}
+      {mostrarDetalle && (
         <Box>
-          {/* Resumen totales */}
           <Grid container spacing={2} mb={3}>
             <Grid item xs={6} sm={2}><InfoCard label="Procesados" value={detalle.length} /></Grid>
             <Grid item xs={6} sm={2}><InfoCard label="Pago corriente" value={totCorriente} currency /></Grid>
@@ -250,37 +341,31 @@ const DetallePlanillaPensionadosPage = () => {
             <Grid item xs={6} sm={2}><InfoCard label="Neto a pagar" value={totNeto} currency highlight /></Grid>
           </Grid>
 
-          {/* Botones de acción según estado */}
+          {consulta && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              La planilla está <b>CERRADA</b>. Los datos son de sólo consulta; puede exportar reportes.
+            </Alert>
+          )}
+
           <Stack direction="row" spacing={1} mb={2} flexWrap="wrap">
-            {isGenerada && (
+            {puedeCerrar(estado) && (
               <Button variant="contained" color="success" startIcon={<CheckCircleIcon />} onClick={handleCerrar}>
                 Cerrar Planilla
               </Button>
             )}
-            {(isGenerada || isCerrada) && (
+            {puedeReversar(estado) && (
               <Button variant="outlined" color="error" startIcon={<UndoIcon />} onClick={() => openReversarDialog("planilla")}>
                 Reversar Planilla Completa
               </Button>
             )}
-            {(isGenerada || isCerrada) && (
-              <>
-                <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExportExcel}>
-                  Exportar Excel
-                </Button>
-                <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExportBanco}>
-                  Archivo Banco
-                </Button>
-              </>
-            )}
+            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExportExcel}>
+              Exportar Excel
+            </Button>
+            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExportBanco}>
+              Archivo Banco
+            </Button>
           </Stack>
 
-          {isReversada && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              Esta planilla fue reversada. Los datos mostrados son de solo consulta histórica.
-            </Alert>
-          )}
-
-          {/* Tabla detalle */}
           <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
             <Table size="small">
               <TableHead>
@@ -293,7 +378,7 @@ const DetallePlanillaPensionadosPage = () => {
                   <TableCell align="right">Total ingreso</TableCell>
                   <TableCell align="right" sx={{ color: "error.main" }}>Descuentos</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700 }}>Neto a pagar</TableCell>
-                  {(isGenerada) && <TableCell align="center">Acciones</TableCell>}
+                  <TableCell align="center">Acciones</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -317,25 +402,29 @@ const DetallePlanillaPensionadosPage = () => {
                     <TableCell align="right">{money(r.totalIngreso)}</TableCell>
                     <TableCell align="right" sx={{ color: "error.main" }}>{r.totalDescuentos > 0 ? money(r.totalDescuentos) : "—"}</TableCell>
                     <TableCell align="right"><b>{money(r.netoPagar)}</b></TableCell>
-                    {isGenerada && (
-                      <TableCell align="center">
-                        <Stack direction="row" spacing={0.5} justifyContent="center">
-                          <Tooltip title="Estado de cuenta">
-                            <Button size="small" variant="text" onClick={() => handleEstadoCuenta(r.idJubilado)}>
-                              <AccountCircleIcon fontSize="small" />
+                    <TableCell align="center">
+                      <Stack direction="row" spacing={0.5} justifyContent="center">
+                        <Tooltip title="Estado de cuenta">
+                          <Button size="small" variant="text" onClick={() => handleEstadoCuenta(r.idJubilado)}>
+                            <AccountCircleIcon fontSize="small" />
+                          </Button>
+                        </Tooltip>
+                        {puedeEditarMontos(estado) && (
+                          <Tooltip title="Editar montos">
+                            <Button size="small" variant="text" onClick={() => openMontosDialog(r.idJubilado, r.nombreCompleto)}>
+                              <EditIcon fontSize="small" />
                             </Button>
                           </Tooltip>
+                        )}
+                        {puedeReversar(estado) && (
                           <Tooltip title="Reversar pago">
-                            <Button
-                              size="small" variant="text" color="error"
-                              onClick={() => openReversarDialog("jubilado", r.idJubilado, r.nombreCompleto)}
-                            >
+                            <Button size="small" variant="text" color="error" onClick={() => openReversarDialog("jubilado", r.idJubilado, r.nombreCompleto)}>
                               <UndoIcon fontSize="small" />
                             </Button>
                           </Tooltip>
-                        </Stack>
-                      </TableCell>
-                    )}
+                        )}
+                      </Stack>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {!detalle.length && (
@@ -354,16 +443,13 @@ const DetallePlanillaPensionadosPage = () => {
       {/* Dialog: Reverso */}
       <Dialog open={reversarDialog.open} onClose={() => setReversarDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {reversarDialog.tipo === "jubilado"
-            ? `Reversar pago — ${reversarDialog.nombre}`
-            : "Reversar planilla completa"
-          }
+          {reversarDialog.tipo === "jubilado" ? `Reversar pago — ${reversarDialog.nombre}` : "Reversar planilla completa"}
         </DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
             {reversarDialog.tipo === "jubilado"
               ? "Se restaurará la deuda histórica y los saldos de préstamos y judiciales de este pensionado."
-              : "Se reversarán TODOS los pagos de esta planilla y se restaurarán todas las deudas y saldos."
+              : "Se reversarán TODOS los pagos de esta planilla y se restaurarán todas las deudas y saldos. Luego podrá volver a generar."
             }
           </Alert>
           <TextField
@@ -376,6 +462,46 @@ const DetallePlanillaPensionadosPage = () => {
           <Button onClick={() => setReversarDialog((p) => ({ ...p, open: false }))}>Cancelar</Button>
           <Button variant="contained" color="error" onClick={handleReversar} startIcon={<UndoIcon />}>
             Confirmar Reverso
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog: Editar montos */}
+      <Dialog open={montosDialog.open} onClose={() => setMontosDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>
+        <DialogTitle>Editar montos — {montosDialog.nombre}</DialogTitle>
+        <DialogContent>
+          {montosDialog.loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}><CircularProgress size={28} /></Box>
+          ) : (
+            <Box>
+              <Typography variant="subtitle2" sx={{ mt: 1, mb: 1 }}>Ingresos</Typography>
+              {montosDialog.ingresos.map((l) => (
+                <Stack key={l.id} direction="row" spacing={2} alignItems="center" mb={1}>
+                  <Typography sx={{ flex: 1 }}>{l.concepto}</Typography>
+                  <TextField size="small" type="number" value={l.valor}
+                    onChange={(e) => setLineaValor("ingresos", l.id, e.target.value)}
+                    inputProps={{ min: 0, step: 0.01 }} sx={{ width: 140 }} />
+                </Stack>
+              ))}
+              {!montosDialog.ingresos.length && <Typography variant="caption" color="text.secondary">Sin ingresos.</Typography>}
+
+              <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, color: "error.main" }}>Descuentos</Typography>
+              {montosDialog.descuentos.map((l) => (
+                <Stack key={l.id} direction="row" spacing={2} alignItems="center" mb={1}>
+                  <Typography sx={{ flex: 1 }}>{l.concepto}</Typography>
+                  <TextField size="small" type="number" value={l.valor}
+                    onChange={(e) => setLineaValor("descuentos", l.id, e.target.value)}
+                    inputProps={{ min: 0, step: 0.01 }} sx={{ width: 140 }} />
+                </Stack>
+              ))}
+              {!montosDialog.descuentos.length && <Typography variant="caption" color="text.secondary">Sin descuentos.</Typography>}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMontosDialog((p) => ({ ...p, open: false }))}>Cancelar</Button>
+          <Button variant="contained" onClick={handleGuardarMontos} disabled={montosDialog.saving || montosDialog.loading}>
+            {montosDialog.saving ? "Guardando..." : "Guardar montos"}
           </Button>
         </DialogActions>
       </Dialog>
