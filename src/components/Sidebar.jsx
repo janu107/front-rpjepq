@@ -75,11 +75,12 @@ const items = [
     icon: <CalculateIcon />,
     roles: ["ADMIN", "OPERADOR"],
     children: [
-      { text: "Generaci\u00f3n de Planillas", path: "/generacion-planilla", icon: <CalculateIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      // CAMBIO: "Generaci\u00f3n de Planillas" se omite del men\u00fa (pantalla descontinuada).
+      // La ruta permanece en AppRouter para no romper navegaci\u00f3n, pero no es visible.
       { text: "Planilla de Empleados", path: "/planillas-trabajadores", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Planilla de Pensionados", path: "/planillas-pensionados", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Otros Descuentos", path: "/otros-descuentos", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "N\u00f3mina", path: "/nomina", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+      { text: "Consulta N\u00f3mina", path: "/nomina", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]
   },
   {

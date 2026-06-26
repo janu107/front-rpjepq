@@ -24,15 +24,15 @@ const NominaTable = ({ type, rows, config, onNew, onEdit, onDelete, search, setS
     return rows.filter((r) => [r.empleadoNombre, r.jubiladoNombre, r.puesto, r.area, r.numeroPlanilla].some((v) => String(v || "").toLowerCase().includes(term)));
   }, [rows, search]);
 
+  // CONSULTA NÓMINA: pantalla de solo consulta (sin botón Nuevo ni acciones).
   return (
     <Stack spacing={2}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between">
         <TextField placeholder="Buscar" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ maxWidth: 420 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} />
-        {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={onNew}>Nuevo {type}</Button>}
       </Stack>
       <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
-        <Table><TableHead><TableRow><TableCell>Planilla</TableCell><TableCell>Persona</TableCell><TableCell>Tipo</TableCell><TableCell>Valor</TableCell><TableCell>Dias</TableCell><TableCell>Puesto</TableCell><TableCell>Area</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
-          <TableBody>{filtered.map((row) => <TableRow key={row.id} hover><TableCell>{row.numeroPlanilla}</TableCell><TableCell>{row.empleadoNombre || row.jubiladoNombre}</TableCell><TableCell>{row[config.typeLabel]}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell>{row.diasTrabajados}</TableCell><TableCell>{row.puesto}</TableCell><TableCell>{row.area}</TableCell><TableCell align="right">{canEdit(user) && <Tooltip title="Editar"><IconButton color="primary" onClick={() => onEdit(row)}><EditIcon /></IconButton></Tooltip>}{canDelete(user) && <Tooltip title="Eliminar"><IconButton color="primary" onClick={() => onDelete(row)}><DeleteIcon /></IconButton></Tooltip>}</TableCell></TableRow>)}</TableBody>
+        <Table><TableHead><TableRow><TableCell>Planilla</TableCell><TableCell>Persona</TableCell><TableCell>Tipo</TableCell><TableCell>Valor</TableCell><TableCell>Dias</TableCell><TableCell>Puesto</TableCell><TableCell>Area</TableCell></TableRow></TableHead>
+          <TableBody>{filtered.map((row) => <TableRow key={row.id} hover><TableCell>{row.numeroPlanilla}</TableCell><TableCell>{row.empleadoNombre || row.jubiladoNombre}</TableCell><TableCell>{row[config.typeLabel]}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell>{row.diasTrabajados}</TableCell><TableCell>{row.puesto}</TableCell><TableCell>{row.area}</TableCell></TableRow>)}</TableBody>
         </Table>
       </TableContainer>
     </Stack>
@@ -123,7 +123,7 @@ const NominaPage = () => {
 
   return (
     <Stack spacing={2.5}>
-      <Box><Typography variant="h5">Nomina</Typography><Typography color="text.secondary">Ingresos, descuentos y resumen por planilla</Typography></Box>
+      <Box><Typography variant="h5">Consulta Nómina</Typography><Typography color="text.secondary">Consulta de ingresos, descuentos y resumen por planilla</Typography></Box>
       <Paper elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
         <Tabs
           value={tab}

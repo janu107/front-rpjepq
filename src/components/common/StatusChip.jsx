@@ -6,7 +6,11 @@ const statusColor = {
   RETIRADO: "warning",
   CANCELADO: "error",
   MORA: "warning",
-  ANULADO: "error"
+  ANULADO: "error",
+  // Estados de pago de dietas
+  PENDIENTE: "warning",
+  PAGADO: "info",
+  RECIBIDO: "success"
 };
 
 const StatusChip = ({ value }) => {

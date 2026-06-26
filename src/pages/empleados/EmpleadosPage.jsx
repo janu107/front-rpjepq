@@ -7,6 +7,7 @@ const tipoPuestoOptions = [
   { value: "TEMPORAL", label: "TEMPORAL" }
 ];
 const sexoOptions = [{ value: "M", label: "Masculino" }, { value: "F", label: "Femenino" }];
+const estadoOptions = [{ value: "ACTIVO", label: "ACTIVO" }, { value: "INACTIVO", label: "INACTIVO" }];
 
 const EmpleadosPage = ({
   title = "Empleado EPQ",
@@ -45,7 +46,8 @@ const EmpleadosPage = ({
       { key: "dpi", label: "DPI" },
       { key: "tipoPuesto", label: "Tipo puesto", render: (row) => (row.tipoPuesto === "FIJO" ? "PLANILLA" : row.tipoPuesto) },
       { key: "puestoNombre", label: "Puesto" },
-      { key: "manejoDescripcion", label: "Manejo" }
+      { key: "manejoDescripcion", label: "Manejo" },
+      { key: "estado", label: "Estado", chip: true }
     ]}
     fields={[
       { key: "tipoManejo", label: "Manejo administracion", required: true, type: "select", source: "manejos", getValue: (item) => item.id, getLabel: (item) => item.descripcion, disabled: true },
@@ -61,12 +63,13 @@ const EmpleadosPage = ({
       { key: "sexo", label: "Sexo", required: true, type: "select", options: sexoOptions },
       { key: "fechaIngreso", label: "Fecha ingreso", type: "date" },
       { key: "tipoPuesto", label: "Tipo puesto", required: true, type: "select", options: tipoPuestoOptions },
-      { key: "idPuesto", label: "Puesto", required: true, type: "select", source: "puestos", getValue: (item) => item.id, getLabel: (item) => item.nombre, filterByFixedManejo: true, onlyOccupied: onlyOccupiedPuestos }
+      { key: "idPuesto", label: "Puesto", required: true, type: "select", source: "puestos", getValue: (item) => item.id, getLabel: (item) => item.nombre, filterByFixedManejo: true, onlyOccupied: onlyOccupiedPuestos },
+      { key: "estado", label: "Estado", required: true, type: "select", options: estadoOptions, defaultValue: "ACTIVO" }
     ]}
     formSections={[
       { title: "Datos principales", fields: ["tipoManejo", "idEmpleado", "nombres", "apellidos"] },
       { title: "Identificacion", fields: ["dpi", "nit", "direccion", "estadoCivil"] },
-      { title: "Puesto y manejo", fields: ["tipoPuesto", "idPuesto"] },
+      { title: "Puesto y manejo", fields: ["tipoPuesto", "idPuesto", "estado"] },
       { title: "Fechas y datos adicionales", fields: ["profesionOficio", "fechaNacimiento", "sexo", "fechaIngreso"] }
     ]}
     planillaConfig={showPlanilla ? { tipoPersona: "EMPLEADO", idPersonaField: "id" } : undefined}
