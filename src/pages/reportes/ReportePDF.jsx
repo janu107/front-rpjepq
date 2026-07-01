@@ -6,10 +6,19 @@ import {
   Paper, Select, Skeleton, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TextField, Typography
 } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import axiosClient from "../../api/axiosClient";
 
 const today = () =>
   new Date().toLocaleDateString("es-GT", { day: "2-digit", month: "long", year: "numeric" });
+
+// Roles de firma en el pie de todos los reportes (se eligen de RPJ_CAT_FIRMA_PLANILLA).
+const FIRMA_ROLES = [
+  { key: "elabora", label: "Elaborado por" },
+  { key: "revisa", label: "Revisado por" },
+  { key: "autoriza", label: "Autorizado por" }
+];
 
 /**
  * Componente base reutilizable para todos los reportes PDF del sistema.
@@ -35,6 +44,16 @@ const ReportePDF = ({
 }) => {
   const [busqueda, setBusqueda] = useState("");
   const [filterValues, setFilterValues] = useState({});
+  const [firmas, setFirmas] = useState([]);
+  const [firmaSel, setFirmaSel] = useState({ elabora: "", revisa: "", autoriza: "" });
+
+  useEffect(() => {
+    axiosClient.get("/catalogos/firma-planilla")
+      .then((res) => setFirmas(res.data.data || []))
+      .catch(() => setFirmas([]));
+  }, []);
+
+  const firmaById = (id) => firmas.find((f) => Number(f.id) === Number(id));
 
   const dynamicOptions = useMemo(() => {
     const opts = {};
@@ -125,6 +144,28 @@ const ReportePDF = ({
           </Stack>
         </Paper>
       )}
+
+      {/* ── Selector de firmas (oculto al imprimir) ── */}
+      <Paper elevation={0} className="no-print" sx={{ p: 2, border: "1px solid #dde3ea" }}>
+        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>Firmas del reporte</Typography>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} flexWrap="wrap" useFlexGap>
+          {FIRMA_ROLES.map((rol) => (
+            <FormControl key={rol.key} size="small" sx={{ minWidth: 220 }}>
+              <InputLabel>{rol.label}</InputLabel>
+              <Select
+                label={rol.label}
+                value={firmaSel[rol.key] || ""}
+                onChange={(e) => setFirmaSel((prev) => ({ ...prev, [rol.key]: e.target.value }))}
+              >
+                <MenuItem value=""><em>Sin asignar</em></MenuItem>
+                {firmas.map((f) => (
+                  <MenuItem key={f.id} value={f.id}>{f.nombre}{f.puesto ? ` — ${f.puesto}` : ""}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ))}
+        </Stack>
+      </Paper>
 
       {/* ── Documento formal (visible en pantalla y al imprimir) ── */}
       {loading ? (
@@ -217,15 +258,24 @@ const ReportePDF = ({
 
           {/* Firmas */}
           <Box sx={{ mt: 5, pt: 3, borderTop: "1px dashed #bbb", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 3, "@media print": { mt: 3, pt: 2 } }}>
-            {["Elaborado por", "Revisado por", "Autorizado por"].map((label) => (
-              <Box key={label} sx={{ textAlign: "center" }}>
-                <Box sx={{ height: 1, bgcolor: "#555", mb: 0.75, mx: 3 }} />
-                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  {label}
-                </Typography>
-                <Box sx={{ height: 30 }} />
-              </Box>
-            ))}
+            {FIRMA_ROLES.map((rol) => {
+              const firma = firmaById(firmaSel[rol.key]);
+              return (
+                <Box key={rol.key} sx={{ textAlign: "center" }}>
+                  <Typography variant="body2" fontWeight={700} sx={{ minHeight: 20 }}>
+                    {firma ? firma.nombre : " "}
+                  </Typography>
+                  <Box sx={{ height: 1, bgcolor: "#555", mb: 0.75, mx: 3 }} />
+                  <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    {rol.label}
+                  </Typography>
+                  <Typography variant="caption" display="block" color="text.secondary">
+                    {firma ? firma.puesto : " "}
+                  </Typography>
+                  <Box sx={{ height: 12 }} />
+                </Box>
+              );
+            })}
           </Box>
         </Box>
       )}

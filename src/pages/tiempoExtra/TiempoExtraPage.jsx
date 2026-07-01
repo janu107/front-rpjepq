@@ -24,6 +24,12 @@ const ultimoDia = (form) => {
   const [y, m] = String(f).slice(0, 7).split("-").map(Number);
   return `${String(f).slice(0, 7)}-${String(lastDayOfMonth(y, m)).padStart(2, "0")}`;
 };
+// Muestra una fecha "YYYY-MM-DD" como "DD/MM/YYYY".
+const ddmmyyyy = (v) => {
+  if (!v) return "";
+  const [y, m, d] = String(v).slice(0, 10).split("-");
+  return d && m && y ? `${d}/${m}/${y}` : String(v);
+};
 
 const TiempoExtraPage = () => (
   <MantenimientoPage
@@ -36,7 +42,7 @@ const TiempoExtraPage = () => (
     columns={[
       { key: "empleadoCodigo", label: "Codigo" },
       { key: "empleadoNombre", label: "Empleado" },
-      { key: "fechaPago", label: "Fecha pago" },
+      { key: "fechaPago", label: "Fecha pago", render: (row) => ddmmyyyy(row.fechaPago) },
       { key: "tipoHoraNombre", label: "Tipo hora" },
       { key: "cantidadHoras", label: "Horas al mes" },
       { key: "motivo", label: "Motivo" }

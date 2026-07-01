@@ -181,7 +181,7 @@ const SesionesTab = ({ user, miembros }) => {
 // ---------------------------------------------------------------------------
 // Tab 2: Pagos del mes (recalcular, emitir pago, marcar recibido, voucher)
 // ---------------------------------------------------------------------------
-const PagosTab = ({ user, parIsr }) => {
+const PagosTab = ({ user, parIsr, bancos }) => {
   const [periodo, setPeriodo] = useState(currentPeriodo());
   const [rows, setRows] = useState([]);
   const [pagoDialog, setPagoDialog] = useState({ open: false, row: null, noDocumento: "", tipoDocumento: "CHEQUE", banco: "", fechaPago: "" });
@@ -329,7 +329,14 @@ const PagosTab = ({ user, parIsr }) => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={6}><TextField label="No. documento" value={pagoDialog.noDocumento} onChange={(e) => setPagoDialog({ ...pagoDialog, noDocumento: e.target.value.toUpperCase() })} fullWidth /></Grid>
-            <Grid item xs={12} md={6}><TextField label="Banco" value={pagoDialog.banco} onChange={(e) => setPagoDialog({ ...pagoDialog, banco: e.target.value.toUpperCase() })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Banco</InputLabel>
+                <Select label="Banco" value={pagoDialog.banco} onChange={(e) => setPagoDialog({ ...pagoDialog, banco: e.target.value })}>
+                  {(bancos || []).map((b) => <MenuItem key={b.id} value={b.descripcion}>{b.descripcion}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
             <Grid item xs={12} md={6}><TextField label="Fecha de pago" type="date" InputLabelProps={{ shrink: true }} value={pagoDialog.fechaPago} onChange={(e) => setPagoDialog({ ...pagoDialog, fechaPago: e.target.value })} fullWidth /></Grid>
           </Grid>
         </DialogContent>
@@ -398,17 +405,20 @@ const DietasPage = () => {
   const [tab, setTab] = useState(0);
   const [miembros, setMiembros] = useState([]);
   const [parIsr, setParIsr] = useState(0);
+  const [bancos, setBancos] = useState([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const [junta, params] = await Promise.all([
+        const [junta, params, bancosRes] = await Promise.all([
           axiosClient.get("/junta-directiva"),
-          axiosClient.get("/catalogos/parametro-general")
+          axiosClient.get("/catalogos/parametro-general"),
+          axiosClient.get("/catalogos/bancos")
         ]);
         setMiembros(junta.data.data || []);
         const list = params.data.data || [];
         setParIsr(list.length ? Number(list[list.length - 1].isr || 0) : 0);
+        setBancos(bancosRes.data.data || []);
       } catch {
         /* las pestañas muestran su propio error al cargar */
       }
@@ -425,7 +435,7 @@ const DietasPage = () => {
         </Tabs>
       </Box>
       {tab === 0 && <SesionesTab user={user} miembros={miembros} />}
-      {tab === 1 && <PagosTab user={user} parIsr={parIsr} />}
+      {tab === 1 && <PagosTab user={user} parIsr={parIsr} bancos={bancos} />}
     </Stack>
   );
 };
