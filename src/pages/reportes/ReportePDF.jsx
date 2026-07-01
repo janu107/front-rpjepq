@@ -262,10 +262,10 @@ const ReportePDF = ({
               const firma = firmaById(firmaSel[rol.key]);
               return (
                 <Box key={rol.key} sx={{ textAlign: "center" }}>
-                  <Typography variant="body2" fontWeight={700} sx={{ minHeight: 20 }}>
+                  <Typography variant="body2" fontWeight={700} sx={{ minHeight: 42, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
                     {firma ? firma.nombre : " "}
                   </Typography>
-                  <Box sx={{ height: 1, bgcolor: "#555", mb: 0.75, mx: 3 }} />
+                  <Box sx={{ borderBottom: "1px solid #333", mb: 0.75, mx: 2 }} />
                   <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
                     {rol.label}
                   </Typography>

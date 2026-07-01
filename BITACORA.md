@@ -30,6 +30,16 @@
 - Confirmado: el bloque **Firmas del reporte** (combos Elaborado/Revisado/Autorizado desde
   `RPJ_CAT_FIRMA_PLANILLA`) se muestra y funciona en todos los reportes.
 
+## 2026-07-01 — Firmas de reportes: quitar recuadro gris
+
+- **Causa:** en `ReportePDF.jsx` la línea de firma se dibujaba con
+  `<Box sx={{ height: 1, bgcolor: "#555" }} />`. En MUI, en `sx`, un número ≤ 1 para
+  `height`/`width` se interpreta como **porcentaje** (`height: 1` = 100%), por lo que la
+  "línea" se convertía en un **recuadro gris que llenaba toda la celda**.
+- **Cambio:** la firma ahora usa `borderBottom: "1px solid #333"` (línea real), con un
+  espacio de 42px arriba para firmar a mano y el nombre/puesto del firmante debajo. Aplica a
+  TODOS los reportes (componente compartido `ReportePDF.jsx`).
+
 ### Nota
 - El bundle sigue mostrando el warning de tamaño (>500 kB) — preexistente, no bloquea.
 - Si un combo de firma sale vacío, es porque no hay registros en **Catálogos → Firmas de
