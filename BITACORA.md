@@ -22,5 +22,15 @@
   Aportaciones y Detalle Aportaciones. (Reportes de Nómina y Resumen Régimen son páginas
   resumen, no documentos con firma.)
 
+### Reporte de Pago de Dietas — columnas al modelo vdi_*
+- `src/pages/reportes/ReporteDietasPage.jsx`: el reporte daba error 500 (el backend usaba
+  columnas viejas `die_*`; ya corregido en backend). Se actualizaron las columnas al modelo
+  mensual: **Periodo, Sesiones, Valor, Ret. ISR, Líquido, Estado, F. Pago** (se quitaron
+  Acta y F. Sesión, que no aplican al encabezado). Filtro y búsqueda por estado/periodo.
+- Confirmado: el bloque **Firmas del reporte** (combos Elaborado/Revisado/Autorizado desde
+  `RPJ_CAT_FIRMA_PLANILLA`) se muestra y funciona en todos los reportes.
+
 ### Nota
 - El bundle sigue mostrando el warning de tamaño (>500 kB) — preexistente, no bloquea.
+- Si un combo de firma sale vacío, es porque no hay registros en **Catálogos → Firmas de
+  planilla**; agregue ahí los firmantes (nombre y puesto).

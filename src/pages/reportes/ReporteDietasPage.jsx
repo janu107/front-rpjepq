@@ -6,22 +6,22 @@ const money = (v) => `Q ${Number(v || 0).toLocaleString("es-GT", { minimumFracti
 const fmt = (v) => (v ? String(v).slice(0, 10) : "—");
 
 const COLUMNS = [
-  { key: "miembroNombre", label: "Miembro", width: 200, bold: true },
-  { key: "puesto", label: "Puesto", width: 150 },
-  { key: "tipoJunta", label: "Tipo junta", width: 120 },
-  { key: "manejoDescripcion", label: "Manejo", width: 110 },
-  { key: "acta", label: "Acta", width: 80 },
+  { key: "miembroNombre", label: "Miembro", width: 190, bold: true },
+  { key: "puesto", label: "Puesto", width: 140 },
+  { key: "tipoJunta", label: "Tipo junta", width: 100 },
+  { key: "periodo", label: "Periodo", width: 80 },
   { key: "sesionesMes", label: "Sesiones", width: 70 },
   { key: "valor", label: "Valor Q", width: 90, render: (r) => money(r.valor) },
   { key: "retencionIsr", label: "Ret. ISR", width: 90, render: (r) => money(r.retencionIsr) },
   { key: "liquido", label: "Liquido Q", width: 90, render: (r) => money(r.liquido) },
-  { key: "fechaSesion", label: "F. Sesion", width: 90, render: (r) => fmt(r.fechaSesion) },
+  { key: "estado", label: "Estado", width: 90 },
   { key: "fechaPago", label: "F. Pago", width: 90, render: (r) => fmt(r.fechaPago) }
 ];
 
 const FILTER_DEFS = [
   { key: "tipoJunta", label: "Tipo junta", dynamic: true },
-  { key: "puesto", label: "Puesto", dynamic: true }
+  { key: "puesto", label: "Puesto", dynamic: true },
+  { key: "estado", label: "Estado", dynamic: true }
 ];
 
 const ReporteDietasPage = () => {
@@ -41,7 +41,7 @@ const ReporteDietasPage = () => {
       rows={rows}
       loading={loading}
       columns={COLUMNS}
-      searchKeys={["miembroNombre", "puesto", "tipoJunta", "acta"]}
+      searchKeys={["miembroNombre", "puesto", "tipoJunta", "estado", "periodo"]}
       filterDefs={FILTER_DEFS}
       getTotales={(f) => [
         { label: "Total registros", value: f.length },
