@@ -29,6 +29,14 @@ import PlanillasPensionadosPage from "../pages/planillasPensionados/PlanillasPen
 import DetallePlanillaPensionadosPage from "../pages/planillasPensionados/DetallePlanillaPensionadosPage";
 import PlanillasTrabajadoresPage from "../pages/planillasTrabajadores/PlanillasTrabajadoresPage";
 import DetallePlanillaTrabajadoresPage from "../pages/planillasTrabajadores/DetallePlanillaTrabajadoresPage";
+import BeneficiariosPage from "../pages/beneficiarios/BeneficiariosPage";
+import AmparistasPage from "../pages/amparistas/AmparistasPage";
+import EstadoCuentaPage from "../pages/estadoCuenta/EstadoCuentaPage";
+import FallecimientoPage from "../pages/fallecimientos/FallecimientoPage";
+import ConveniosPage from "../pages/convenios/ConveniosPage";
+import SuspensionesPage from "../pages/suspensiones/SuspensionesPage";
+import DashboardReportesPage from "../pages/reportesJubilados/DashboardReportesPage";
+import NominasJubiladosPage from "../pages/nominasJubilados/NominasJubiladosPage";
 import DescuentosJudicialesPage from "../pages/descuentosJudiciales/DescuentosJudicialesPage";
 import PrestamosRegimenPage from "../pages/prestamosRegimen/PrestamosRegimenPage";
 import RolesPage from "../pages/roles/RolesPage";
@@ -87,6 +95,14 @@ const AppRouter = () => {
             <Route path="/planillas-pensionados/:id" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DetallePlanillaPensionadosPage /></ProtectedRoute>} />
             <Route path="/planillas-trabajadores" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PlanillasTrabajadoresPage /></ProtectedRoute>} />
             <Route path="/planillas-trabajadores/:id" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DetallePlanillaTrabajadoresPage /></ProtectedRoute>} />
+            <Route path="/beneficiarios" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><BeneficiariosPage /></ProtectedRoute>} />
+            <Route path="/amparistas" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><AmparistasPage /></ProtectedRoute>} />
+            <Route path="/estado-cuenta" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><EstadoCuentaPage /></ProtectedRoute>} />
+            <Route path="/fallecimientos" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><FallecimientoPage /></ProtectedRoute>} />
+            <Route path="/convenios" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><ConveniosPage /></ProtectedRoute>} />
+            <Route path="/suspensiones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><SuspensionesPage /></ProtectedRoute>} />
+            <Route path="/reportes-jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><DashboardReportesPage /></ProtectedRoute>} />
+            <Route path="/nominas-jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><NominasJubiladosPage /></ProtectedRoute>} />
             <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AuditoriaPage /></ProtectedRoute>} />
             <Route path="/mantenimiento" element={<ProtectedRoute allowedRoles={["ADMIN"]}><MantenimientoPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

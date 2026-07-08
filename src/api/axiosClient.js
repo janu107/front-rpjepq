@@ -32,7 +32,7 @@ axiosClient.interceptors.response.use(
       window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
     }
 
-    if (status === 400 && backendMessage) {
+    if ((status === 400 || status === 409) && backendMessage) {
       Swal.fire("Validacion", backendMessage, "warning");
     }
 

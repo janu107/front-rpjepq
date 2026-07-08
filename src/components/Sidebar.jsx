@@ -71,6 +71,21 @@ const items = [
     ]
   },
   {
+    text: "Jubilados y Pensiones",
+    icon: <PeopleAltIcon />,
+    roles: ["ADMIN", "OPERADOR", "CONSULTA"],
+    children: [
+      { text: "Beneficiarios", path: "/beneficiarios", icon: <GroupIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Registrar Fallecimiento", path: "/fallecimientos", icon: <PeopleAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Amparistas", path: "/amparistas", icon: <GavelIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Convenios de Pago", path: "/convenios", icon: <AccountBalanceWalletIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Suspensiones", path: "/suspensiones", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Estado de Cuenta", path: "/estado-cuenta", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
+      { text: "Reportes y Dashboard", path: "/reportes-jubilados", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
+      { text: "Nóminas Jubilados", path: "/nominas-jubilados", icon: <CalculateIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+    ]
+  },
+  {
     text: "N\u00f3minas",
     icon: <CalculateIcon />,
     roles: ["ADMIN", "OPERADOR"],
