@@ -67,7 +67,7 @@ const AmparistasPage = () => {
     try {
       setGuardando(true);
       const { data } = await axiosClient.post("/amparistas/registrar", { idJubilado: jubilado.id, ...form });
-      Swal.fire("Listo", `Amparista registrado. ${data.data?.deudasAjustadas ?? 0} deudas ajustadas al 100%.`, "success");
+      Swal.fire("Listo", data.data?.message || "Amparista registrado.", "success");
       setJubilado(null); setForm(nuevoForm()); setExpedienteError(""); cargarVigentes();
     } catch (error) {
       Swal.fire("Error", error.response?.data?.message || "No fue posible registrar el amparista.", "error");

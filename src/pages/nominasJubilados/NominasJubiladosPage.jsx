@@ -75,9 +75,10 @@ const NominasJubiladosPage = () => {
           <Typography variant="h6" sx={{ mb: 1.5, color: PRIMARIO }}>Resultado</Typography>
           {resultado.tipo === "jubilados" && (
             <Box>
-              <Typography>Jubilados procesados: <b>{resultado.data?.jubilados?.procesados ?? 0}</b> (excluidos: {resultado.data?.jubilados?.excluidos ?? 0})</Typography>
-              <Typography>Total pagado jubilados: <b>{fmtQ(resultado.data?.jubilados?.totalPagado)}</b> — Descuentos: {fmtQ(resultado.data?.jubilados?.totalDescuentos)}</Typography>
-              <Typography>Beneficiarios procesados: <b>{resultado.data?.beneficiarios?.procesados ?? 0}</b> — Total: {fmtQ(resultado.data?.beneficiarios?.total)}</Typography>
+              <Typography>Jubilados procesados: <b>{resultado.data?.jubilados?.procesados ?? 0}</b></Typography>
+              <Typography>Total pagado jubilados: <b>{fmtQ(resultado.data?.jubilados?.totalPagado)}</b></Typography>
+              <Typography>Beneficiarios procesados: <b>{resultado.data?.beneficiarios?.procesados ?? 0}</b></Typography>
+              {resultado.data?.message && <Typography sx={{ mt: 1 }} color="text.secondary">{resultado.data.message}</Typography>}
             </Box>
           )}
           {resultado.tipo === "amparistas" && (
