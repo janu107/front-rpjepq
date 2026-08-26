@@ -16,6 +16,7 @@ import GeneracionPlanillaPage from "../pages/generacionPlanilla/GeneracionPlanil
 import NominaPage from "../pages/nomina/NominaPage";
 import NominaTiempoExtraPage from "../pages/nominaTiempoExtra/NominaTiempoExtraPage";
 import OtrosDescuentosPage from "../pages/otrosDescuentos/OtrosDescuentosPage";
+import PrestacionesPage from "../pages/prestaciones/PrestacionesPage";
 import PrestamosPage from "../pages/prestamos/PrestamosPage";
 import ReportesNominaPage from "../pages/reportes/ReportesNominaPage";
 import ReportesRegimenPage from "../pages/reportes/ReportesRegimenPage";
@@ -80,6 +81,7 @@ const AppRouter = () => {
             <Route path="/otros-descuentos" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><OtrosDescuentosPage /></ProtectedRoute>} />
             <Route path="/nomina" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><NominaPage /></ProtectedRoute>} />
             <Route path="/nomina-tiempo-extra" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><NominaTiempoExtraPage /></ProtectedRoute>} />
+            <Route path="/prestaciones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestacionesPage /></ProtectedRoute>} />
             <Route path="/generacion-planilla" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><GeneracionPlanillaPage /></ProtectedRoute>} />
             <Route path="/reportes/nomina" element={<ReportesNominaPage />} />
             <Route path="/reportes/regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReportesRegimenPage /></ProtectedRoute>} />
