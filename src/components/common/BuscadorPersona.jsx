@@ -7,7 +7,7 @@ import axiosClient from "../../api/axiosClient";
 // props: endpoint (GET, responde {data:[...]}), extraParams, getOptionLabel,
 //        onSelect(opcionSeleccionada|null), value, label, placeholder, renderOption, minChars.
 const BuscadorPersona = ({
-  label = "Buscar", placeholder = "Mínimo 3 caracteres", endpoint, extraParams = {},
+  label = "Buscar", placeholder = "Código, nombre o DPI", endpoint, extraParams = {},
   getOptionLabel, onSelect, value = null, minChars = 3, renderOption
 }) => {
   const [input, setInput] = useState("");
@@ -15,10 +15,15 @@ const BuscadorPersona = ({
   const [loading, setLoading] = useState(false);
   const timer = useRef(null);
 
+  // Un término puramente numérico se acepta desde 1 carácter: es una búsqueda por
+  // código. Para texto se mantiene el mínimo configurado (3 por defecto).
+  const minimoActual = /^\d+$/.test(input.trim()) ? 1 : minChars;
+
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     const term = input.trim();
-    if (term.length < minChars) { setOpts([]); return undefined; }
+    const minimo = /^\d+$/.test(term) ? 1 : minChars;
+    if (term.length < minimo) { setOpts([]); return undefined; }
     timer.current = setTimeout(async () => {
       try {
         setLoading(true);
@@ -40,7 +45,7 @@ const BuscadorPersona = ({
       getOptionLabel={getOptionLabel}
       isOptionEqualToValue={(o, v) => o.id === v.id}
       renderOption={renderOption}
-      noOptionsText={input.trim().length < minChars ? `Escriba al menos ${minChars} caracteres` : "Sin resultados"}
+      noOptionsText={input.trim().length < minimoActual ? `Escriba al menos ${minimoActual} caracteres (o el código)` : "Sin resultados"}
       renderInput={(params) => (
         <TextField
           {...params}

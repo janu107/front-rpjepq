@@ -96,10 +96,10 @@ const AmparistasPage = () => {
 
       <Paper sx={{ p: 2.5 }}>
         <BuscadorPersona
-          label="Buscar jubilado (NORMAL sin juicio vigente)"
+          label="Buscar jubilado por código, nombre o DPI (NORMAL sin juicio vigente)"
           endpoint="/jubilados/no-amparistas"
           value={jubilado}
-          getOptionLabel={(o) => (o ? `${o.nombreCompleto} — ${o.dpi}` : "")}
+          getOptionLabel={(o) => (o ? `${o.idJubilado} - ${o.nombreCompleto} — ${o.dpi}` : "")}
           onSelect={setJubilado}
         />
         {jubilado && (

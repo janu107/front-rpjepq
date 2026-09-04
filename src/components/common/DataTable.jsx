@@ -1,19 +1,39 @@
 import SearchIcon from "@mui/icons-material/Search";
 import {
   Box, Button, CircularProgress, Divider, IconButton, InputAdornment, Paper, Stack, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
+  TableContainer, TableHead, TablePagination, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import EmptyState from "./EmptyState";
 
-const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMessage = "No hay registros para mostrar.", filterKeys }) => {
+const DataTable = ({
+  loading, columns, rows, search, onSearch, actions,
+  emptyMessage = "No hay registros para mostrar.", filterKeys,
+  paginado = true, filasPorPagina = 20
+}) => {
   const filteredRows = useMemo(() => {
     if (!search) return rows;
     const term = search.trim().toLowerCase();
     const keys = filterKeys?.length ? filterKeys : columns.map((column) => column.key);
     return rows.filter((row) => keys.some((key) => String(row[key] || "").toLowerCase().includes(term)));
   }, [columns, filterKeys, rows, search]);
+
+  // Paginación: 20 registros por página por defecto.
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(filasPorPagina);
+
+  // Al filtrar o recargar, volver a la primera página para no quedar en una
+  // página que ya no existe (ej. estabas en la 5 y el filtro dejó 3 registros).
+  useEffect(() => { setPage(0); }, [search, rows.length]);
+
+  const ultimaPagina = Math.max(0, Math.ceil(filteredRows.length / rowsPerPage) - 1);
+  const paginaActual = Math.min(page, ultimaPagina);
+
+  const pagedRows = useMemo(() => {
+    if (!paginado) return filteredRows;
+    return filteredRows.slice(paginaActual * rowsPerPage, paginaActual * rowsPerPage + rowsPerPage);
+  }, [filteredRows, paginado, paginaActual, rowsPerPage]);
 
   return (
     <Stack spacing={2}>
@@ -45,7 +65,7 @@ const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMes
           </TableHead>
           <TableBody>
             {loading && <TableRow><TableCell colSpan={columns.length + 1} align="center"><CircularProgress size={24} /></TableCell></TableRow>}
-            {!loading && filteredRows.map((row) => (
+            {!loading && pagedRows.map((row) => (
               <TableRow
                 key={row.id || JSON.stringify(row)}
                 hover
@@ -94,7 +114,7 @@ const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMes
           </Paper>
         )}
 
-        {!loading && filteredRows.map((row) => (
+        {!loading && pagedRows.map((row) => (
           <Paper
             key={row.id || JSON.stringify(row)}
             elevation={0}
@@ -143,6 +163,21 @@ const DataTable = ({ loading, columns, rows, search, onSearch, actions, emptyMes
           </Paper>
         ))}
       </Stack>
+
+      {paginado && filteredRows.length > 0 && (
+        <TablePagination
+          component="div"
+          count={filteredRows.length}
+          page={paginaActual}
+          onPageChange={(_, nueva) => setPage(nueva)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }}
+          rowsPerPageOptions={[20, 50, 100]}
+          labelRowsPerPage="Registros por página"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+          sx={{ borderTop: "1px solid #dde3ea" }}
+        />
+      )}
     </Stack>
   );
 };

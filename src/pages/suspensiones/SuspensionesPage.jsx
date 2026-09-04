@@ -86,10 +86,10 @@ const SuspensionesPage = () => {
         {tab === 0 && (
           <Box sx={{ p: 2.5 }}>
             <BuscadorPersona
-              label="Buscar beneficiario activo"
+              label="Buscar beneficiario por código, nombre o DPI"
               endpoint="/beneficiarios/activos"
               value={null}
-              getOptionLabel={(o) => (o ? `${o.nombres || ""} ${o.apellidos} — ${o.dpi}` : "")}
+              getOptionLabel={(o) => (o ? `${o.id} - ${o.nombres || ""} ${o.apellidos} — ${o.dpi}` : "")}
               onSelect={seleccionarBen}
             />
             {ben && (

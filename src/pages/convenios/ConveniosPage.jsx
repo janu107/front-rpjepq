@@ -95,10 +95,10 @@ const ConveniosPage = () => {
 
       <Paper sx={{ p: 2.5 }}>
         <BuscadorPersona
-          label="Buscar persona con deuda pendiente"
+          label="Buscar por código, nombre o DPI (personas con deuda pendiente)"
           endpoint="/convenios/candidatos"
           value={null}
-          getOptionLabel={(o) => (o ? `${o.nombre} — ${o.dpi} (${o.tipo})` : "")}
+          getOptionLabel={(o) => (o ? `${o.codigo} - ${o.nombre} — ${o.dpi} (${o.tipo})` : "")}
           onSelect={(o) => (o ? cargarDeuda(o.tipo, o.id, o.nombre) : setPersona(null))}
         />
         {persona && (

@@ -6,7 +6,7 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import SearchIcon from "@mui/icons-material/Search";
 import {
-  Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
+  Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
   InputAdornment, InputLabel, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
@@ -22,6 +22,17 @@ const MANEJO_EPQ_ID = 4;
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
 const initialForm = { idAportacion: "", noContrato: "", montoAutorizado: "", cuotaNivelada: "", plazoMeses: "", fechaInicio: "", fechaFin: "", totalPagar: "", tasaInteres: "", estado: "ACTIVO" };
 const initialDetalle = { fechaPago: "", descuentoNominaAportacion: 0, cuotaNivelada: "", amortizacion: "", intereses: "", saldo: "", mora: 0, seguro: 0 };
+
+// Filtro del buscador editable: acepta código, número de contrato, nombre o DPI.
+// Busca todas las palabras escritas en cualquier orden.
+const filtrarPrestamo = (opciones, { inputValue }) => {
+  const terminos = String(inputValue || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terminos.length) return opciones;
+  return opciones.filter((o) => {
+    const texto = `${o.id || ""} ${o.noContrato || ""} ${o.aportacionNombre || ""} ${o.aportacionDpi || ""}`.toLowerCase();
+    return terminos.every((t) => texto.includes(t));
+  });
+};
 
 const PrestamosPage = ({ detailOnly = false }) => {
   const { user } = useAuth();
@@ -70,12 +81,18 @@ const PrestamosPage = ({ detailOnly = false }) => {
       .catch((error) => Swal.fire("Error", error.response?.data?.message || "No fue posible cargar prestamos.", "error"));
   }, []);
 
+  // Universo de préstamos EPQ sin filtrar: alimenta las opciones del buscador editable.
+  const prestamosEpq = useMemo(
+    () => prestamos.filter((item) => Number(item.tipoManejo) === MANEJO_EPQ_ID),
+    [prestamos]
+  );
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const scoped = prestamos.filter((item) => Number(item.tipoManejo) === MANEJO_EPQ_ID);
+    const scoped = prestamosEpq;
     if (!term) return scoped;
-    return scoped.filter((item) => [item.noContrato, item.aportacionNombre, item.aportacionDpi].some((value) => String(value || "").toLowerCase().includes(term)));
-  }, [prestamos, search]);
+    return scoped.filter((item) => [item.id, item.noContrato, item.aportacionNombre, item.aportacionDpi].some((value) => String(value || "").toLowerCase().includes(term)));
+  }, [prestamosEpq, search]);
 
   // En modo edición incluir el aportante actual aunque ya tenga préstamo activo
   const aportacionesParaSelect = useMemo(() => {
@@ -215,7 +232,29 @@ const PrestamosPage = ({ detailOnly = false }) => {
         {!detailOnly && canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nuevo prestamo</Button>}
       </Stack>
 
-      <TextField placeholder="Buscar por contrato, nombre o DPI" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ maxWidth: { md: 520 } }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} />
+      <Autocomplete
+        freeSolo
+        options={prestamosEpq}
+        inputValue={search}
+        onInputChange={(_, valor, motivo) => { if (motivo !== "reset") setSearch(valor); }}
+        onChange={(_, item) => setSearch(item && typeof item === "object" ? item.noContrato : "")}
+        filterOptions={filtrarPrestamo}
+        getOptionLabel={(o) => (typeof o === "object" ? o.noContrato || "" : String(o || ""))}
+        noOptionsText="Sin coincidencias"
+        sx={{ maxWidth: { md: 560 } }}
+        renderOption={(props, o) => (
+          <li {...props} key={o.id}>
+            {o.id} — {o.noContrato} — {o.aportacionNombre}{o.aportacionDpi ? ` (${o.aportacionDpi})` : ""}
+          </li>
+        )}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            placeholder="Buscar por contrato, código, nombre o DPI"
+            InputProps={{ ...params.InputProps, startAdornment: (<><InputAdornment position="start"><SearchIcon /></InputAdornment>{params.InputProps.startAdornment}</>) }}
+          />
+        )}
+      />
 
       <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
         <Table size="small">

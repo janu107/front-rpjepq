@@ -6,9 +6,9 @@ import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import SearchIcon from "@mui/icons-material/Search";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import {
-  Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
+  Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
   InputAdornment, InputLabel, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
+  TableContainer, TableHead, TablePagination, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
@@ -40,6 +40,17 @@ const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
 const MANEJO_EPQ_ID = 4;
 const findManejoById = (items = [], id) => items.find((item) => Number(item.id) === Number(id));
 const up = (value) => String(value || "").toUpperCase();
+
+// Filtro del buscador editable: acepta código (idAportacion), nombre, apellido o DPI.
+// Se buscan todas las palabras escritas, en cualquier orden ("perez juan" encuentra "Juan Perez").
+const filtrarEmpleadoEpq = (opciones, { inputValue }) => {
+  const terminos = String(inputValue || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terminos.length) return opciones;
+  return opciones.filter((o) => {
+    const texto = `${o.idAportacion || ""} ${o.nombre || ""} ${o.apellido || ""} ${o.dpi || ""}`.toLowerCase();
+    return terminos.every((t) => texto.includes(t));
+  });
+};
 
 const AportacionesPage = ({ detailOnly = false }) => {
   const { user } = useAuth();
@@ -105,14 +116,31 @@ const AportacionesPage = ({ detailOnly = false }) => {
     loadManejos().catch(() => {});
   }, []);
 
+  // Universo de empleados EPQ sin filtrar: alimenta el buscador editable del detalle.
+  const empleadosEpq = useMemo(
+    () => aportaciones.filter((item) => Number(item.tipoManejo) === MANEJO_EPQ_ID),
+    [aportaciones]
+  );
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const scoped = aportaciones.filter((item) => Number(item.tipoManejo) === MANEJO_EPQ_ID);
+    const scoped = empleadosEpq;
     if (!term) return scoped;
     return scoped.filter((item) =>
       [item.nombre, item.apellido, item.dpi, item.gerencia, item.idAportacion].some((value) => String(value || "").toLowerCase().includes(term))
     );
-  }, [aportaciones, search]);
+  }, [empleadosEpq, search]);
+
+  // Paginación del maestro de empleados EPQ: 20 registros por página.
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  useEffect(() => { setPage(0); }, [search, filtered.length]);
+  const ultimaPagina = Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1);
+  const paginaActual = Math.min(page, ultimaPagina);
+  const paginados = useMemo(
+    () => filtered.slice(paginaActual * rowsPerPage, paginaActual * rowsPerPage + rowsPerPage),
+    [filtered, paginaActual, rowsPerPage]
+  );
 
   const openCreate = () => {
     setEditing(null);
@@ -260,8 +288,8 @@ const AportacionesPage = ({ detailOnly = false }) => {
     loadDetalle(selected);
   };
 
-  const selectDetalleEmpleado = async (id) => {
-    const item = filtered.find((row) => Number(row.id) === Number(id));
+  // Recibe el empleado ya seleccionado en el buscador (o null al limpiarlo).
+  const selectDetalleEmpleado = async (item) => {
     if (!item) {
       setSelected(null);
       setDetalle([]);
@@ -302,16 +330,23 @@ const AportacionesPage = ({ detailOnly = false }) => {
           </Stack>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" hidden onChange={handleExcelSelected} />
         </Stack>
-
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-          <FormControl sx={{ minWidth: { md: 360 } }}>
-            <InputLabel>Empleado EPQ</InputLabel>
-            <Select label="Empleado EPQ" value={selected?.id || ""} onChange={(event) => selectDetalleEmpleado(event.target.value)}>
-              {filtered.map((item) => (
-                <MenuItem key={item.id} value={item.id}>{item.idAportacion} - {item.nombre} {item.apellido}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            sx={{ minWidth: { md: 420 } }}
+            options={empleadosEpq}
+            value={selected}
+            onChange={(_, item) => selectDetalleEmpleado(item)}
+            isOptionEqualToValue={(o, v) => o.id === v?.id}
+            getOptionLabel={(o) => (o ? `${o.idAportacion} - ${o.nombre} ${o.apellido}` : "")}
+            filterOptions={filtrarEmpleadoEpq}
+            noOptionsText="Sin coincidencias"
+            renderOption={(props, o) => (
+              <li {...props} key={o.id}>{o.idAportacion} - {o.nombre} {o.apellido}{o.dpi ? ` — ${o.dpi}` : ""}</li>
+            )}
+            renderInput={(params) => (
+              <TextField {...params} label="Empleado EPQ" placeholder="Escriba código, nombre o DPI" />
+            )}
+          />
           <TextField
             placeholder="Buscar en aportaciones"
             value={search}
@@ -411,7 +446,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filtered.map((item) => (
+            {paginados.map((item) => (
               <TableRow key={item.id} hover>
                 <TableCell>{item.idAportacion}</TableCell>
                 <TableCell>{item.nombre} {item.apellido}</TableCell>
@@ -434,6 +469,20 @@ const AportacionesPage = ({ detailOnly = false }) => {
             {filtered.length === 0 && <TableRow><TableCell colSpan={9} align="center">No hay aportaciones para mostrar.</TableCell></TableRow>}
           </TableBody>
         </Table>
+        {filtered.length > 0 && (
+          <TablePagination
+            component="div"
+            count={filtered.length}
+            page={paginaActual}
+            onPageChange={(_, nueva) => setPage(nueva)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }}
+            rowsPerPageOptions={[20, 50, 100]}
+            labelRowsPerPage="Registros por página"
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+            sx={{ borderTop: "1px solid #dde3ea" }}
+          />
+        )}
       </TableContainer>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">

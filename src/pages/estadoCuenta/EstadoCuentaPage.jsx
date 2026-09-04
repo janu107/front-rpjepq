@@ -93,12 +93,12 @@ const EstadoCuentaPage = () => {
 
       <Paper sx={{ p: 2.5 }}>
         <BuscadorPersona
-          label="Buscar jubilado (vivos y fallecidos)"
+          label="Buscar jubilado por código, nombre o DPI (vivos y fallecidos)"
           endpoint="/jubilados/buscar"
           value={null}
-          getOptionLabel={(o) => (o ? `${o.nombreCompleto} — ${o.dpi}` : "")}
+          getOptionLabel={(o) => (o ? `${o.idJubilado} - ${o.nombreCompleto} — ${o.dpi}` : "")}
           renderOption={(props, o) => (
-            <li {...props} key={o.id}>{o.estadoPago === "FALLECIDO" ? "⚰️ " : ""}{o.nombreCompleto} — {o.dpi}</li>
+            <li {...props} key={o.id}>{o.estadoPago === "FALLECIDO" ? "⚰️ " : ""}{o.idJubilado} - {o.nombreCompleto} — {o.dpi}</li>
           )}
           onSelect={seleccionar}
         />

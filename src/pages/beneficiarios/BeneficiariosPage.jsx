@@ -61,11 +61,12 @@ const BeneficiariosPage = () => {
 
   const soloLectura = !canCreate(user);
 
-  // Autocomplete con debounce (mín. 3 caracteres)
+  // Autocomplete con debounce. Un término numérico (código) se acepta desde 1 carácter.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const term = jubInput.trim();
-    if (term.length < 3) { setJubOpts([]); return; }
+    const minimo = /^\d+$/.test(term) ? 1 : 3;
+    if (term.length < minimo) { setJubOpts([]); return; }
     debounceRef.current = setTimeout(async () => {
       try {
         setJubLoading(true);
@@ -203,14 +204,14 @@ const BeneficiariosPage = () => {
           value={jubilado}
           onChange={(_, val) => seleccionarJubilado(val)}
           onInputChange={(_, val, reason) => { if (reason === "input") setJubInput(val); }}
-          getOptionLabel={(o) => (o ? `${o.nombreCompleto} — ${o.dpi}` : "")}
+          getOptionLabel={(o) => (o ? `${o.idJubilado} - ${o.nombreCompleto} — ${o.dpi}` : "")}
           isOptionEqualToValue={(o, v) => o.id === v.id}
-          noOptionsText={jubInput.trim().length < 3 ? "Escriba al menos 3 caracteres" : "Sin resultados"}
+          noOptionsText={jubInput.trim().length < (/^\d+$/.test(jubInput.trim()) ? 1 : 3) ? "Escriba al menos 3 caracteres (o el código)" : "Sin resultados"}
           renderInput={(params) => (
             <TextField
               {...params}
-              label="Buscar jubilado (nombre o DPI)"
-              placeholder="Mínimo 3 caracteres"
+              label="Buscar jubilado por código, nombre o DPI"
+              placeholder="Código, nombre o DPI"
               InputProps={{ ...params.InputProps, endAdornment: (<>{jubLoading ? <CircularProgress size={18} /> : null}{params.InputProps.endAdornment}</>) }}
             />
           )}

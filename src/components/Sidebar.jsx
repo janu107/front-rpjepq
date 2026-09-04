@@ -62,7 +62,6 @@ const items = [
     roles: ["ADMIN", "OPERADOR"],
     children: [
       { text: "Control de Empleados", path: "/empleados-regimen", icon: <BadgeIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Control de Jubilados", path: "/jubilados", icon: <PeopleAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Tiempo Extraordinario", path: "/tiempo-extra", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Juntas Directivas", path: "/junta-directiva", icon: <WorkIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Pago Dietas", path: "/dietas", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
@@ -75,6 +74,7 @@ const items = [
     icon: <PeopleAltIcon />,
     roles: ["ADMIN", "OPERADOR", "CONSULTA"],
     children: [
+      { text: "Control de Jubilados", path: "/jubilados", icon: <PeopleAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Beneficiarios", path: "/beneficiarios", icon: <GroupIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Registrar Fallecimiento", path: "/fallecimientos", icon: <PeopleAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Amparistas", path: "/amparistas", icon: <GavelIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },

@@ -82,11 +82,11 @@ const FallecimientoPage = () => {
 
       <Paper sx={{ p: 2.5 }}>
         <BuscadorPersona
-          label="Buscar jubilado (solo vivos)"
+          label="Buscar jubilado por código, nombre o DPI (solo vivos)"
           endpoint="/jubilados/buscar"
           extraParams={{ estado: "ACTIVO" }}
           value={null}
-          getOptionLabel={(o) => (o ? `${o.nombreCompleto} — ${o.dpi}` : "")}
+          getOptionLabel={(o) => (o ? `${o.idJubilado} - ${o.nombreCompleto} — ${o.dpi}` : "")}
           onSelect={seleccionar}
         />
       </Paper>
