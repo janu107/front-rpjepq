@@ -4,6 +4,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
+  Autocomplete,
   Button,
   Dialog,
   DialogActions,
@@ -511,7 +512,8 @@ const MantenimientoPage = ({
         />
       );
     }
-    if (field.type === "select") {
+    // Opciones de un campo de lista, compartidas por "select" y "autocomplete".
+    const resolverItems = () => {
       const sourceItems = field.options || options[field.source] || [];
       const manejoFilter = form.tipoManejo || fixedManejoId;
       let items = field.filterByFixedManejo && manejoFilter
@@ -527,6 +529,50 @@ const MantenimientoPage = ({
         }
         items = items.filter((item) => occupiedIds.has(Number(field.getValue ? field.getValue(item) : item.value)));
       }
+      return items;
+    };
+
+    const valorDe = (item) => (field.getValue ? field.getValue(item) : item.value);
+    const etiquetaDe = (item) => (field.getLabel ? field.getLabel(item) : item.label);
+
+    // Lista editable: se escribe y va filtrando. Útil cuando el catálogo es largo
+    // (empleados, jubilados) y bajar un desplegable cerrado es incómodo.
+    if (field.type === "autocomplete") {
+      const items = resolverItems();
+      const seleccionado = items.find((item) => String(valorDe(item)) === String(form[field.key] ?? "")) || null;
+      return (
+        <Autocomplete
+          key={field.key}
+          options={items}
+          value={seleccionado}
+          onChange={(_, item) => setForm({ ...form, [field.key]: item ? valorDe(item) : "" })}
+          getOptionLabel={(item) => String(etiquetaDe(item) ?? "")}
+          isOptionEqualToValue={(o, v) => String(valorDe(o)) === String(valorDe(v))}
+          // Todas las palabras escritas, en cualquier orden: "perez juan" encuentra
+          // "1234 - Juan Perez", y escribir el código también sirve.
+          filterOptions={(opciones, { inputValue }) => {
+            const terminos = String(inputValue || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+            if (!terminos.length) return opciones;
+            return opciones.filter((item) => {
+              const texto = String(etiquetaDe(item) ?? "").toLowerCase();
+              return terminos.every((t) => texto.includes(t));
+            });
+          }}
+          disabled={field.disabled || viewOnly}
+          noOptionsText="Sin coincidencias"
+          fullWidth
+          renderOption={(props, item) => (
+            <li {...props} key={valorDe(item)}>{etiquetaDe(item)}</li>
+          )}
+          renderInput={(params) => (
+            <TextField {...params} label={field.label} placeholder={field.placeholder || "Escriba para buscar"} />
+          )}
+        />
+      );
+    }
+
+    if (field.type === "select") {
+      const items = resolverItems();
       return (
         <FormControl key={field.key} fullWidth>
           <InputLabel>{field.label}</InputLabel>
