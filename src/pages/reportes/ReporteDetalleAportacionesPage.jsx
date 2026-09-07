@@ -3,6 +3,7 @@ import {
   Alert, Autocomplete, Box, Grid, InputAdornment, Paper, TextField, Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
 import ReportePDF from "./ReportePDF";
@@ -68,6 +69,29 @@ const ReporteDetalleAportacionesPage = () => {
     () => movimientos.reduce((s, m) => s + Number(m.valor || 0), 0),
     [movimientos]
   );
+
+  // El PDF de este reporte lo genera el backend (carta vertical), igual que el
+  // resto de las Impresiones: así no depende de los márgenes ni del encabezado
+  // que agrega el diálogo de impresión del navegador.
+  const descargarPdf = async () => {
+    if (!seleccionado) return;
+    try {
+      const respuesta = await axiosClient.get(
+        `/impresiones/aportaciones/${seleccionado.id}/estado-cuenta/pdf`,
+        { responseType: "blob" }
+      );
+      const url = window.URL.createObjectURL(new Blob([respuesta.data], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `aportaciones_${seleccionado.aportanteId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      Swal.fire("Error", "No fue posible generar el PDF.", "error");
+    }
+  };
 
   const selector = (
     <Paper elevation={0} className="no-print" sx={{ p: 2, border: "1px solid #dde3ea" }}>
@@ -144,6 +168,7 @@ const ReporteDetalleAportacionesPage = () => {
           columns={COLUMNS}
           orientacion="vertical"
           encabezado={ficha}
+          onImprimir={descargarPdf}
           getTotales={(f) => [
             { label: "Cantidad de aportes", value: f.length },
             { label: "Total aportado", value: money(f.reduce((s, r) => s + Number(r.valor || 0), 0)), main: true }

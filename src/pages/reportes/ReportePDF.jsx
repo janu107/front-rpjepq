@@ -34,6 +34,8 @@ const FIRMA_ROLES = [
  *  getTotales  fn(filtered)  — Devuelve [{ label, value, main? }] para la fila de totales
  *  orientacion string        — "horizontal" (por defecto) o "vertical" al imprimir
  *  encabezado  node          — Bloque libre que se dibuja arriba de la tabla (ej. ficha del empleado)
+ *  onImprimir  fn            — Si viene, el botón la llama en vez de abrir el diálogo del navegador
+ *                               (para reportes cuyo PDF lo genera el backend)
  */
 const ReportePDF = ({
   titulo = "Reporte",
@@ -45,7 +47,8 @@ const ReportePDF = ({
   getTotales,
   filasPorPagina = 20,
   orientacion = "horizontal",
-  encabezado = null
+  encabezado = null,
+  onImprimir = null
 }) => {
   const [busqueda, setBusqueda] = useState("");
   const [filterValues, setFilterValues] = useState({});
@@ -117,6 +120,9 @@ const ReportePDF = ({
   const desplazamiento = imprimiendo ? 0 : paginaActual * rowsPerPage;
 
   const imprimir = () => {
+    // Si el reporte tiene su propio PDF en el backend, se descarga ese: el
+    // diálogo del navegador agrega márgenes y encabezados propios.
+    if (onImprimir) { onImprimir(); return; }
     setImprimiendo(true);
     // Se deja un ciclo de repintado para que la tabla completa esté en el DOM
     // antes de abrir el diálogo del navegador.
