@@ -32,6 +32,8 @@ const FIRMA_ROLES = [
  *  filterDefs  array         — [{ key, label, options?, dynamic? }]
  *                               dynamic=true deriva opciones unicas de rows[key]
  *  getTotales  fn(filtered)  — Devuelve [{ label, value, main? }] para la fila de totales
+ *  orientacion string        — "horizontal" (por defecto) o "vertical" al imprimir
+ *  encabezado  node          — Bloque libre que se dibuja arriba de la tabla (ej. ficha del empleado)
  */
 const ReportePDF = ({
   titulo = "Reporte",
@@ -41,7 +43,9 @@ const ReportePDF = ({
   searchKeys = [],
   filterDefs = [],
   getTotales,
-  filasPorPagina = 20
+  filasPorPagina = 20,
+  orientacion = "horizontal",
+  encabezado = null
 }) => {
   const [busqueda, setBusqueda] = useState("");
   const [filterValues, setFilterValues] = useState({});
@@ -53,6 +57,19 @@ const ReportePDF = ({
       .then((res) => setFirmas(res.data.data || []))
       .catch(() => setFirmas([]));
   }, []);
+
+  // La orientación de impresión vive en una regla @page global (horizontal por
+  // defecto, en styles.css). Como @page no se puede acotar a un elemento, el
+  // reporte que necesita vertical inyecta su propia regla mientras está montado:
+  // al ser posterior, gana sobre la global.
+  useEffect(() => {
+    if (orientacion !== "vertical") return undefined;
+    const estilo = document.createElement("style");
+    estilo.id = "orientacion-impresion";
+    estilo.textContent = "@media print { @page { size: A4 portrait; margin: 1.2cm; } }";
+    document.head.appendChild(estilo);
+    return () => { estilo.remove(); };
+  }, [orientacion]);
 
   const firmaById = (id) => firmas.find((f) => Number(f.id) === Number(id));
 
@@ -236,6 +253,9 @@ const ReportePDF = ({
               </Typography>
             </Stack>
           </Box>
+
+          {/* Bloque libre del reporte (ficha del empleado, resumen, etc.) */}
+          {encabezado && <Box sx={{ mb: 2 }}>{encabezado}</Box>}
 
           {/* Tabla de datos */}
           <TableContainer sx={{ "@media print": { overflow: "visible" } }}>
