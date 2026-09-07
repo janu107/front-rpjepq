@@ -27,6 +27,10 @@ const DataTable = ({
   // página que ya no existe (ej. estabas en la 5 y el filtro dejó 3 registros).
   useEffect(() => { setPage(0); }, [search, rows.length]);
 
+  // La lista de opciones incluye el tamaño configurado para evitar el aviso de MUI
+  // cuando una pantalla pide un tamaño distinto al estándar (ej. 15).
+  const opcionesPorPagina = [...new Set([filasPorPagina, 20, 50, 100])].sort((a, b) => a - b);
+
   const ultimaPagina = Math.max(0, Math.ceil(filteredRows.length / rowsPerPage) - 1);
   const paginaActual = Math.min(page, ultimaPagina);
 
@@ -172,7 +176,7 @@ const DataTable = ({
           onPageChange={(_, nueva) => setPage(nueva)}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={(event) => { setRowsPerPage(Number(event.target.value)); setPage(0); }}
-          rowsPerPageOptions={[20, 50, 100]}
+          rowsPerPageOptions={opcionesPorPagina}
           labelRowsPerPage="Registros por página"
           labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
           sx={{ borderTop: "1px solid #dde3ea" }}

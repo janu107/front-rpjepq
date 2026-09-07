@@ -310,6 +310,18 @@ const AportacionesPage = ({ detailOnly = false }) => {
     );
   }, [detalle, search]);
 
+  // Paginación del detalle de aportaciones: 15 registros. Un empleado con
+  // muchos años acumula cientos de renglones y montarlos todos traba la vista.
+  const [pageDet, setPageDet] = useState(0);
+  const [rppDet, setRppDet] = useState(15);
+  useEffect(() => { setPageDet(0); }, [search, selected, detalleFiltered.length]);
+  const ultimaPaginaDet = Math.max(0, Math.ceil(detalleFiltered.length / rppDet) - 1);
+  const paginaDet = Math.min(pageDet, ultimaPaginaDet);
+  const detallePaginado = useMemo(
+    () => detalleFiltered.slice(paginaDet * rppDet, paginaDet * rppDet + rppDet),
+    [detalleFiltered, paginaDet, rppDet]
+  );
+
   const sexoLabel = (v) => (v === "M" ? "Masculino" : v === "F" ? "Femenino" : v || "");
 
   if (detailOnly) {
@@ -381,7 +393,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {detalleFiltered.map((row) => (
+              {detallePaginado.map((row) => (
                 <TableRow key={row.id} hover>
                   <TableCell>{row.id}</TableCell>
                   <TableCell>{row.idAportacion}</TableCell>
@@ -400,6 +412,20 @@ const AportacionesPage = ({ detailOnly = false }) => {
               {detalleFiltered.length === 0 && <TableRow><TableCell colSpan={7} align="center">{selected ? "No hay aportaciones para mostrar." : "Seleccione un empleado EPQ."}</TableCell></TableRow>}
             </TableBody>
           </Table>
+          {detalleFiltered.length > rppDet && (
+            <TablePagination
+              component="div"
+              count={detalleFiltered.length}
+              page={paginaDet}
+              onPageChange={(_, nueva) => setPageDet(nueva)}
+              rowsPerPage={rppDet}
+              onRowsPerPageChange={(e) => { setRppDet(Number(e.target.value)); setPageDet(0); }}
+              rowsPerPageOptions={[15, 30, 60]}
+              labelRowsPerPage="Registros por página"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+              sx={{ borderTop: "1px solid #dde3ea" }}
+            />
+          )}
         </TableContainer>
 
         <Dialog open={detalleDialogOpen} onClose={() => { setDetalleDialogOpen(false); setEditingDetalle(null); }} fullWidth maxWidth="sm">

@@ -6,7 +6,8 @@ const money = (v) => `Q ${Number(v || 0).toLocaleString("es-GT", { minimumFracti
 const fmt = (v) => (v ? String(v).slice(0, 10) : "—");
 
 const COLUMNS = [
-  { key: "correlativo", label: "Correlativo", width: 80 },
+  { key: "aportanteId", label: "Código", width: 70 },
+  { key: "correlativo", label: "Correlativo", width: 90 },
   { key: "_nombre", label: "Nombre completo", width: 220, bold: true, render: (r) => `${r.nombre} ${r.apellido}` },
   { key: "dpi", label: "DPI", width: 120 },
   { key: "gerencia", label: "Gerencia", width: 150 },
@@ -39,7 +40,7 @@ const ReporteDetalleAportacionesPage = () => {
       rows={rows}
       loading={loading}
       columns={COLUMNS}
-      searchKeys={["nombre", "apellido", "dpi", "gerencia", "estado"]}
+      searchKeys={["aportanteId", "correlativo", "nombre", "apellido", "dpi", "gerencia", "estado"]}
       filterDefs={FILTER_DEFS}
       getTotales={(f) => [
         { label: "Total registros", value: f.length },

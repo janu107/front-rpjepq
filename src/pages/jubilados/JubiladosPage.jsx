@@ -25,6 +25,7 @@ const JubiladosPage = ({ showPlanilla = false }) => (
         { key: "salario", label: "Salario", required: true, type: "number" }
       ]
     }}
+    filasPorPagina={15}
     searchFields={["nombres", "apellidos", "dpi", "estado", "manejoDescripcion", "tipoJubilacionDescripcion"]}
     columns={[
       { key: "idJubilado", label: "ID" },

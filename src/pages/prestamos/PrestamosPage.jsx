@@ -8,7 +8,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import {
   Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
   InputAdornment, InputLabel, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
+  TableContainer, TableHead, TablePagination, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
@@ -20,6 +20,8 @@ import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 const estados = ["ACTIVO", "CANCELADO", "MORA", "ANULADO"];
 const MANEJO_EPQ_ID = 4;
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
+// Montos con separador de millares (es-GT): 12,823.36
+const money = (v) => `Q ${Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const initialForm = { idAportacion: "", noContrato: "", montoAutorizado: "", cuotaNivelada: "", plazoMeses: "", fechaInicio: "", fechaFin: "", totalPagar: "", tasaInteres: "", estado: "ACTIVO" };
 const initialDetalle = { fechaPago: "", descuentoNominaAportacion: 0, cuotaNivelada: "", amortizacion: "", intereses: "", saldo: "", mora: 0, seguro: 0 };
 
@@ -29,7 +31,7 @@ const filtrarPrestamo = (opciones, { inputValue }) => {
   const terminos = String(inputValue || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (!terminos.length) return opciones;
   return opciones.filter((o) => {
-    const texto = `${o.id || ""} ${o.noContrato || ""} ${o.aportacionNombre || ""} ${o.aportacionDpi || ""}`.toLowerCase();
+    const texto = `${o.id || ""} ${o.aportacionCodigo || ""} ${o.noContrato || ""} ${o.aportacionNombre || ""} ${o.aportacionDpi || ""}`.toLowerCase();
     return terminos.every((t) => texto.includes(t));
   });
 };
@@ -91,8 +93,32 @@ const PrestamosPage = ({ detailOnly = false }) => {
     const term = search.trim().toLowerCase();
     const scoped = prestamosEpq;
     if (!term) return scoped;
-    return scoped.filter((item) => [item.id, item.noContrato, item.aportacionNombre, item.aportacionDpi].some((value) => String(value || "").toLowerCase().includes(term)));
+    return scoped.filter((item) => [item.id, item.aportacionCodigo, item.noContrato, item.aportacionNombre, item.aportacionDpi].some((value) => String(value || "").toLowerCase().includes(term)));
   }, [prestamosEpq, search]);
+
+  // Paginación del listado de préstamos: 15 registros.
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(15);
+  useEffect(() => { setPage(0); }, [search, filtered.length]);
+  const ultimaPagina = Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1);
+  const paginaActual = Math.min(page, ultimaPagina);
+  const paginados = useMemo(
+    () => filtered.slice(paginaActual * rowsPerPage, paginaActual * rowsPerPage + rowsPerPage),
+    [filtered, paginaActual, rowsPerPage]
+  );
+
+  // Paginación de las cuotas del préstamo: 15 registros. Un préstamo a 120
+  // meses trae 120 renglones y el diálogo se volvía interminable.
+  const [pageDet, setPageDet] = useState(0);
+  const [rppDet, setRppDet] = useState(15);
+  useEffect(() => { setPageDet(0); }, [selected, detalle.length]);
+  const ultimaPaginaDet = Math.max(0, Math.ceil(detalle.length / rppDet) - 1);
+  const paginaDet = Math.min(pageDet, ultimaPaginaDet);
+  const desplazamientoDet = paginaDet * rppDet;
+  const detallePaginadoPrestamo = useMemo(
+    () => detalle.slice(desplazamientoDet, desplazamientoDet + rppDet),
+    [detalle, desplazamientoDet, rppDet]
+  );
 
   // En modo edición incluir el aportante actual aunque ya tenga préstamo activo
   const aportacionesParaSelect = useMemo(() => {
@@ -259,10 +285,24 @@ const PrestamosPage = ({ detailOnly = false }) => {
       <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
-            <TableRow><TableCell>Codigo</TableCell><TableCell>Contrato</TableCell><TableCell>Aportacion</TableCell><TableCell>DPI</TableCell><TableCell>Monto</TableCell><TableCell>Cuota</TableCell><TableCell>Estado</TableCell><TableCell align="right">Acciones</TableCell></TableRow>
+            <TableRow><TableCell>Codigo</TableCell><TableCell>Codigo empleado</TableCell><TableCell>Contrato</TableCell><TableCell>Aportacion</TableCell><TableCell>Monto</TableCell><TableCell>Cuota</TableCell><TableCell>Estado</TableCell><TableCell align="right">Acciones</TableCell></TableRow>
           </TableHead>
-          <TableBody>{filtered.map((item) => <TableRow key={item.id} hover><TableCell>{item.id}</TableCell><TableCell>{item.noContrato}</TableCell><TableCell>{item.aportacionNombre}</TableCell><TableCell>{item.aportacionDpi}</TableCell><TableCell>Q {Number(item.montoAutorizado).toFixed(2)}</TableCell><TableCell>Q {Number(item.cuotaNivelada).toFixed(2)}</TableCell><TableCell><Chip label={item.estado} color={item.estado === "ACTIVO" ? "success" : "default"} size="small" /></TableCell><TableCell align="right"><Stack direction="row" spacing={0.5} justifyContent="flex-end">{!detailOnly && canEdit(user) && <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>}<Tooltip title="Detalle"><IconButton size="small" color="primary" onClick={() => openDetalle(item)}><ListAltIcon /></IconButton></Tooltip>{!detailOnly && canEdit(user) && <Tooltip title="Estado"><IconButton size="small" color="primary" onClick={() => changeStatus(item)}><PowerSettingsNewIcon /></IconButton></Tooltip>}{!detailOnly && canDelete(user) && <Tooltip title="Eliminar"><IconButton size="small" color="primary" onClick={() => deletePrestamo(item)}><DeleteIcon /></IconButton></Tooltip>}</Stack></TableCell></TableRow>)}</TableBody>
+          <TableBody>{paginados.map((item) => <TableRow key={item.id} hover><TableCell>{item.id}</TableCell><TableCell>{item.aportacionCodigo}</TableCell><TableCell>{item.noContrato}</TableCell><TableCell>{item.aportacionNombre}</TableCell><TableCell>{money(item.montoAutorizado)}</TableCell><TableCell>{money(item.cuotaNivelada)}</TableCell><TableCell><Chip label={item.estado} color={item.estado === "ACTIVO" ? "success" : "default"} size="small" /></TableCell><TableCell align="right"><Stack direction="row" spacing={0.5} justifyContent="flex-end">{!detailOnly && canEdit(user) && <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>}<Tooltip title="Detalle"><IconButton size="small" color="primary" onClick={() => openDetalle(item)}><ListAltIcon /></IconButton></Tooltip>{!detailOnly && canEdit(user) && <Tooltip title="Estado"><IconButton size="small" color="primary" onClick={() => changeStatus(item)}><PowerSettingsNewIcon /></IconButton></Tooltip>}{!detailOnly && canDelete(user) && <Tooltip title="Eliminar"><IconButton size="small" color="primary" onClick={() => deletePrestamo(item)}><DeleteIcon /></IconButton></Tooltip>}</Stack></TableCell></TableRow>)}</TableBody>
         </Table>
+        {filtered.length > rowsPerPage && (
+          <TablePagination
+            component="div"
+            count={filtered.length}
+            page={paginaActual}
+            onPageChange={(_, nueva) => setPage(nueva)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
+            rowsPerPageOptions={[15, 30, 60]}
+            labelRowsPerPage="Registros por página"
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+            sx={{ borderTop: "1px solid #dde3ea" }}
+          />
+        )}
       </TableContainer>
 
       <Dialog
@@ -310,13 +350,68 @@ const PrestamosPage = ({ detailOnly = false }) => {
         <DialogTitle>Detalle de prestamo</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography variant="h6">Total pagado: Q {Number(totalPagado).toFixed(2)} | Saldo actual: Q {Number(saldo).toFixed(2)}</Typography>
+            <Box>
+              <Typography variant="h6">
+                Total pagado: {money(totalPagado)} &nbsp;|&nbsp; Saldo actual: {money(saldo)}
+              </Typography>
+              {/* Contrato y aportante viven aquí arriba: son los mismos en todos los
+                  renglones, así que repetirlos en cada fila sólo robaba ancho. */}
+              <Typography variant="body2" color="text.secondary">
+                Código préstamo <b>{selected?.id}</b> &nbsp;·&nbsp; Contrato <b>{selected?.noContrato}</b>
+                &nbsp;·&nbsp; Aportante <b>{selected?.aportacionNombre}</b>
+                {selected?.aportacionCodigo ? <> &nbsp;·&nbsp; Código empleado <b>{selected.aportacionCodigo}</b></> : null}
+                &nbsp;·&nbsp; Cuotas registradas <b>{detalle.length}</b>
+              </Typography>
+            </Box>
             {canCreate(user) && <Grid container spacing={2}><Grid item xs={12} md={2}><TextField label="Fecha pago" type="date" value={detalleForm.fechaPago} onChange={(e) => setDetalleForm({ ...detalleForm, fechaPago: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Cuota" type="number" value={detalleForm.cuotaNivelada} onChange={(e) => setDetalleForm({ ...detalleForm, cuotaNivelada: e.target.value })} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Amortizacion" type="number" value={detalleForm.amortizacion} onChange={(e) => setDetalleForm({ ...detalleForm, amortizacion: e.target.value })} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Intereses" type="number" value={detalleForm.intereses} onChange={(e) => setDetalleForm({ ...detalleForm, intereses: e.target.value })} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Saldo" type="number" value={detalleForm.saldo} onChange={(e) => setDetalleForm({ ...detalleForm, saldo: e.target.value })} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Mora" type="number" value={detalleForm.mora} onChange={(e) => setDetalleForm({ ...detalleForm, mora: e.target.value })} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Seguro" type="number" value={detalleForm.seguro} onChange={(e) => setDetalleForm({ ...detalleForm, seguro: e.target.value })} fullWidth /></Grid><Grid item xs={12}><Button variant="contained" onClick={saveDetalle}>{editingDetalle ? "Actualizar pago" : "Agregar pago"}</Button>{editingDetalle && <Button sx={{ ml: 1 }} onClick={() => { setEditingDetalle(null); setDetalleForm(initialDetalle); }}>Cancelar edicion</Button>}</Grid></Grid>}
             <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
               <Table size="small">
-                <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}><TableRow><TableCell>Codigo prestamo</TableCell><TableCell>No. contrato</TableCell><TableCell>Nombre aportante</TableCell><TableCell>Fecha pago</TableCell><TableCell>Cuota nivelada</TableCell><TableCell>Amortizacion</TableCell><TableCell>Intereses</TableCell><TableCell>Saldo</TableCell><TableCell>Mora</TableCell><TableCell>Seguro</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
-                <TableBody>{detalle.map((d) => <TableRow key={d.id}><TableCell>{selected?.id}</TableCell><TableCell>{selected?.noContrato}</TableCell><TableCell>{selected?.aportacionNombre}</TableCell><TableCell>{formatDate(d.fechaPago)}</TableCell><TableCell>Q {Number(d.cuotaNivelada).toFixed(2)}</TableCell><TableCell>Q {Number(d.amortizacion).toFixed(2)}</TableCell><TableCell>Q {Number(d.intereses).toFixed(2)}</TableCell><TableCell>Q {Number(d.saldo).toFixed(2)}</TableCell><TableCell>Q {Number(d.mora).toFixed(2)}</TableCell><TableCell>Q {Number(d.seguro || 0).toFixed(2)}</TableCell><TableCell align="right"><Stack direction="row" spacing={0.5} justifyContent="flex-end">{canEdit(user) && <IconButton size="small" color="primary" onClick={() => openEditDetalle(d)}><EditIcon /></IconButton>}{canDelete(user) && <IconButton size="small" color="primary" onClick={() => deleteDetalle(d)}><DeleteIcon /></IconButton>}</Stack></TableCell></TableRow>)}</TableBody>
+                <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
+                  <TableRow>
+                    <TableCell>No. cuota</TableCell><TableCell>Fecha pago</TableCell><TableCell align="right">Cuota nivelada</TableCell>
+                    <TableCell align="right">Amortizacion</TableCell><TableCell align="right">Intereses</TableCell>
+                    <TableCell align="right">Saldo</TableCell><TableCell align="right">Mora</TableCell>
+                    <TableCell align="right">Seguro</TableCell><TableCell align="right">Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {detallePaginadoPrestamo.map((d, i) => (
+                    <TableRow key={d.id} hover>
+                      <TableCell>{desplazamientoDet + i + 1}</TableCell>
+                      <TableCell>{formatDate(d.fechaPago)}</TableCell>
+                      <TableCell align="right">{money(d.cuotaNivelada)}</TableCell>
+                      <TableCell align="right">{money(d.amortizacion)}</TableCell>
+                      <TableCell align="right">{money(d.intereses)}</TableCell>
+                      <TableCell align="right">{money(d.saldo)}</TableCell>
+                      <TableCell align="right">{money(d.mora)}</TableCell>
+                      <TableCell align="right">{money(d.seguro || 0)}</TableCell>
+                      <TableCell align="right">
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                          {canEdit(user) && <IconButton size="small" color="primary" onClick={() => openEditDetalle(d)}><EditIcon /></IconButton>}
+                          {canDelete(user) && <IconButton size="small" color="primary" onClick={() => deleteDetalle(d)}><DeleteIcon /></IconButton>}
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {detalle.length === 0 && (
+                    <TableRow><TableCell colSpan={9} align="center">Este préstamo no tiene cuotas registradas.</TableCell></TableRow>
+                  )}
+                </TableBody>
               </Table>
+              {detalle.length > rppDet && (
+                <TablePagination
+                  component="div"
+                  count={detalle.length}
+                  page={paginaDet}
+                  onPageChange={(_, nueva) => setPageDet(nueva)}
+                  rowsPerPage={rppDet}
+                  onRowsPerPageChange={(e) => { setRppDet(Number(e.target.value)); setPageDet(0); }}
+                  rowsPerPageOptions={[15, 30, 60]}
+                  labelRowsPerPage="Registros por página"
+                  labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+                  sx={{ borderTop: "1px solid #dde3ea" }}
+                />
+              )}
             </TableContainer>
           </Stack>
         </DialogContent>

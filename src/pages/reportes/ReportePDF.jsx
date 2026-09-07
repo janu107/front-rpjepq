@@ -4,7 +4,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import {
   Box, Button, Chip, FormControl, InputAdornment, InputLabel, MenuItem,
   Paper, Select, Skeleton, Stack, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, TextField, Typography
+  TableContainer, TableHead, TablePagination, TableRow, TextField, Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 
@@ -40,7 +40,8 @@ const ReportePDF = ({
   columns = [],
   searchKeys = [],
   filterDefs = [],
-  getTotales
+  getTotales,
+  filasPorPagina = 20
 }) => {
   const [busqueda, setBusqueda] = useState("");
   const [filterValues, setFilterValues] = useState({});
@@ -79,6 +80,35 @@ const ReportePDF = ({
   const hasFilter = busqueda || Object.values(filterValues).some(Boolean);
   const showFilters = filterDefs.length > 0 || searchKeys.length > 0;
 
+  // Paginación de pantalla. Sin esto, un reporte con decenas de miles de
+  // registros (el detalle de aportaciones) monta todas las filas en el DOM y
+  // deja el navegador trabado.
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(filasPorPagina);
+  useEffect(() => { setPage(0); }, [busqueda, filterValues, filtered.length]);
+
+  const ultimaPagina = Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1);
+  const paginaActual = Math.min(page, ultimaPagina);
+
+  // Al imprimir sí se necesitan TODAS las filas en el DOM, así que se renderiza
+  // completo sólo durante el diálogo de impresión.
+  const [imprimiendo, setImprimiendo] = useState(false);
+  const visibles = useMemo(
+    () => (imprimiendo ? filtered : filtered.slice(paginaActual * rowsPerPage, paginaActual * rowsPerPage + rowsPerPage)),
+    [filtered, imprimiendo, paginaActual, rowsPerPage]
+  );
+  const desplazamiento = imprimiendo ? 0 : paginaActual * rowsPerPage;
+
+  const imprimir = () => {
+    setImprimiendo(true);
+    // Se deja un ciclo de repintado para que la tabla completa esté en el DOM
+    // antes de abrir el diálogo del navegador.
+    setTimeout(() => {
+      window.print();
+      setImprimiendo(false);
+    }, 150);
+  };
+
   return (
     <Stack spacing={2.5}>
 
@@ -92,7 +122,7 @@ const ReportePDF = ({
           <Button
             variant="contained"
             startIcon={<PrintIcon />}
-            onClick={() => window.print()}
+            onClick={imprimir}
             size="large"
             sx={{ minWidth: 190, fontWeight: 700 }}
           >
@@ -223,9 +253,9 @@ const ReportePDF = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filtered.map((row, i) => (
+                {visibles.map((row, i) => (
                   <TableRow key={row.id ?? i} sx={{ bgcolor: i % 2 === 0 ? "white" : "rgba(31,78,95,0.03)", "&:hover": { bgcolor: "rgba(31,78,95,0.06)" }, "@media print": { bgcolor: i % 2 === 0 ? "white" : "#f5f7f8" } }}>
-                    <TableCell sx={{ fontSize: "0.75rem", "@media print": { fontSize: "8pt" } }}>{i + 1}</TableCell>
+                    <TableCell sx={{ fontSize: "0.75rem", "@media print": { fontSize: "8pt" } }}>{desplazamiento + i + 1}</TableCell>
                     {columns.map((col) => (
                       <TableCell key={col.key} sx={{ fontSize: "0.75rem", fontWeight: col.bold ? 700 : 400, "@media print": { fontSize: "8pt" } }}>
                         {col.render ? col.render(row) : (row[col.key] ?? "—")}
@@ -243,6 +273,22 @@ const ReportePDF = ({
               </TableBody>
             </Table>
           </TableContainer>
+
+          {/* Paginación de pantalla: al imprimir no aparece y se listan todas las filas. */}
+          {filtered.length > rowsPerPage && (
+            <TablePagination
+              className="no-print"
+              component="div"
+              count={filtered.length}
+              page={paginaActual}
+              onPageChange={(_, nueva) => setPage(nueva)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
+              rowsPerPageOptions={[20, 50, 100]}
+              labelRowsPerPage="Registros por página"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+            />
+          )}
 
           {/* Totales */}
           {filtered.length > 0 && (

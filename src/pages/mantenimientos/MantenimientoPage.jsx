@@ -84,7 +84,8 @@ const MantenimientoPage = ({
   uniqueIdMessage,
   customValidate,
   planillaConfig,
-  addMode
+  addMode,
+  filasPorPagina
 }) => {
   const { user } = useAuth();
   const [rows, setRows] = useState([]);
@@ -572,6 +573,7 @@ const MantenimientoPage = ({
       <DataTable
         columns={tableColumns}
         rows={filteredRows}
+        filasPorPagina={filasPorPagina}
         search={search}
         onSearch={setSearch}
         filterKeys={searchFields}

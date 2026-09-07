@@ -42,7 +42,7 @@ const ReporteAportacionesPage = () => {
       rows={rows}
       loading={loading}
       columns={COLUMNS}
-      searchKeys={["nombre", "apellido", "dpi", "gerencia", "estado"]}
+      searchKeys={["aportanteId", "nombre", "apellido", "dpi", "gerencia", "estado"]}
       filterDefs={FILTER_DEFS}
       getTotales={(f) => [
         { label: "Total empleados", value: f.length },
