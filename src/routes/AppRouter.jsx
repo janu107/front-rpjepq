@@ -108,6 +108,9 @@ const AppRouter = () => {
             <Route path="/convenios" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><ConveniosPage /></ProtectedRoute>} />
             <Route path="/suspensiones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><SuspensionesPage /></ProtectedRoute>} />
             <Route path="/reportes-jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><DashboardReportesPage /></ProtectedRoute>} />
+            {/* Sin entrada de menú: la generación de nóminas de jubilados y amparistas
+                se unificó en "Planilla de Jubilados y Amparistas" (módulo de Nóminas).
+                La ruta se conserva para no romper enlaces guardados. */}
             <Route path="/nominas-jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><NominasJubiladosPage /></ProtectedRoute>} />
             <Route path="/auditoria" element={<ProtectedRoute allowedRoles={["ADMIN"]}><AuditoriaPage /></ProtectedRoute>} />
             <Route path="/mantenimiento" element={<ProtectedRoute allowedRoles={["ADMIN"]}><MantenimientoPage /></ProtectedRoute>} />

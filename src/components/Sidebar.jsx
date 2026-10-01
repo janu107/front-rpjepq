@@ -82,7 +82,6 @@ const items = [
       { text: "Suspensiones", path: "/suspensiones", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Estado de Cuenta", path: "/estado-cuenta", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
       { text: "Reportes y Dashboard", path: "/reportes-jubilados", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Nóminas Jubilados", path: "/nominas-jubilados", icon: <CalculateIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Prestaciones Jubilados", path: "/prestaciones-jubilados", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]
   },
@@ -94,7 +93,7 @@ const items = [
       // CAMBIO: "Generaci\u00f3n de Planillas" se omite del men\u00fa (pantalla descontinuada).
       // La ruta permanece en AppRouter para no romper navegaci\u00f3n, pero no es visible.
       { text: "Planilla de Empleados", path: "/planillas-trabajadores", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Planilla de Pensionados", path: "/planillas-pensionados", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Planilla de Jubilados y Amparistas", path: "/planillas-pensionados", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Nómina Tiempo Extra", path: "/nomina-tiempo-extra", icon: <CalculateIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Prestaciones (Bono 14 / Aguinaldo)", path: "/prestaciones", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Otros Descuentos", path: "/otros-descuentos", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },

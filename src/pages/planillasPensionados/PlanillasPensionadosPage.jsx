@@ -4,7 +4,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
   Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
-  Grid, Paper, Stack,
+  FormControl, Grid, InputLabel, MenuItem, Paper, Select, Stack,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Typography
 } from "@mui/material";
@@ -32,7 +32,7 @@ const EstadoBadge = ({ estado }) => {
   return <Chip size="small" color={cfg.color} label={cfg.label} />;
 };
 
-const initialForm = { tipoPlanilla: "", numero: "", fechaInicio: "", fechaFinal: "", fechaPago: "", porcentajePago: "50.00" };
+const initialForm = { tipoPlanilla: 2, numero: "", fechaInicio: "", fechaFinal: "", fechaPago: "", porcentajePago: "50.00" };
 const initialDeudaForm = { periodoFinal: "", porcentaje: "50.00" };
 
 const PlanillasPensionadosPage = () => {
@@ -103,7 +103,7 @@ const PlanillasPensionadosPage = () => {
     <Box sx={{ p: 3 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
-          <Typography variant="h5" fontWeight={700}>Planilla de Pensionados</Typography>
+          <Typography variant="h5" fontWeight={700}>Planilla de Jubilados y Amparistas</Typography>
           <Typography variant="body2" color="text.secondary">Gestión del proceso de nómina mensual de pensionados</Typography>
         </Box>
         <Stack direction="row" spacing={1}>
@@ -170,16 +170,27 @@ const PlanillasPensionadosPage = () => {
 
       {/* Dialog: Nueva Planilla */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Nueva Planilla de Pensionados</DialogTitle>
+        <DialogTitle>Nueva Planilla de Jubilados o Amparistas</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
-              {/* CAMBIO X: tipo de planilla fijo NÓMINA JUBILADOS (no editable) */}
-              <TextField
-                fullWidth size="small" label="Tipo de Planilla"
-                value="NÓMINA JUBILADOS" InputProps={{ readOnly: true }} disabled
-                helperText="Las planillas de pensionados siempre son NÓMINA JUBILADOS"
-              />
+              {/* Un solo lugar para las dos nóminas de jubilados: la normal
+                  (tipo 2) y la de amparistas (tipo 4, siempre al 100%). */}
+              <FormControl fullWidth size="small">
+                <InputLabel>Tipo de Planilla</InputLabel>
+                <Select
+                  label="Tipo de Planilla"
+                  value={form.tipoPlanilla || 2}
+                  onChange={(e) => {
+                    const tipo = Number(e.target.value);
+                    // Los amparistas cobran el 100% por sentencia judicial.
+                    setForm((f) => ({ ...f, tipoPlanilla: tipo, porcentajePago: tipo === 4 ? "100.00" : f.porcentajePago }));
+                  }}
+                >
+                  <MenuItem value={2}>NÓMINA JUBILADOS (normal)</MenuItem>
+                  <MenuItem value={4}>NÓMINA AMPARISTAS (100%)</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField

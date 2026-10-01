@@ -3,14 +3,15 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import PlayCircleIcon from "@mui/icons-material/PlayCircle";
+import PrintIcon from "@mui/icons-material/Print";
 import UndoIcon from "@mui/icons-material/Undo";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
   DialogTitle, Divider, Grid, Paper, Stack, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
+  TableContainer, TableHead, TablePagination, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -205,6 +206,11 @@ const DetallePlanillaPensionadosPage = () => {
   const handleExportExcel = () => download(`/planillas-pensionados/${id}/export/excel`, `nomina_pensionados_${planilla?.numero || id}.xlsx`);
   const handleExportBanco = () => download(`/planillas-pensionados/${id}/export/banco`, `banco_pensionados_${planilla?.numero || id}.txt`);
 
+  // Impresiones formales: el PDF lo arma el servidor (oficio la nómina, carta
+  // el resumen), igual que el resto del módulo de Impresiones.
+  const handleImprimirNomina = () => download(`/impresiones/nomina-jubilados/${id}/pdf`, `nomina_jubilados_${planilla?.numero || id}.pdf`);
+  const handleImprimirResumen = () => download(`/impresiones/resumen-jubilados/${id}/pdf`, `resumen_nomina_jubilados_${planilla?.numero || id}.pdf`);
+
   if (loading) {
     return <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}><CircularProgress /></Box>;
   }
@@ -219,7 +225,19 @@ const DetallePlanillaPensionadosPage = () => {
   const consulta          = esConsulta(estado);
   const aptos = preview?.jubiladosAptos || [];
   const excluidos = preview?.jubiladosExcluidos || [];
-  const listaPreview = [...aptos, ...excluidos];
+  const listaPreview = useMemo(() => [...aptos, ...excluidos], [aptos, excluidos]);
+
+  // Paginación de la vista previa: 10 por página. Con cientos de jubilados la
+  // lista completa obligaba a bajar muchísimo para llegar al botón de generar.
+  const [pagePrev, setPagePrev] = useState(0);
+  const [rppPrev, setRppPrev] = useState(10);
+  useEffect(() => { setPagePrev(0); }, [listaPreview.length]);
+  const ultimaPaginaPrev = Math.max(0, Math.ceil(listaPreview.length / rppPrev) - 1);
+  const paginaPrev = Math.min(pagePrev, ultimaPaginaPrev);
+  const previewPaginado = useMemo(
+    () => listaPreview.slice(paginaPrev * rppPrev, paginaPrev * rppPrev + rppPrev),
+    [listaPreview, paginaPrev, rppPrev]
+  );
 
   const totIngresos    = detalle.reduce((s,r) => s + r.totalIngreso, 0);
   const totDescuentos  = detalle.reduce((s,r) => s + r.totalDescuentos, 0);
@@ -278,7 +296,7 @@ const DetallePlanillaPensionadosPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {listaPreview.map((j) => (
+                {previewPaginado.map((j) => (
                   <TableRow key={j.idJubilado} hover>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>{j.nombreCompleto}</Typography>
@@ -306,6 +324,20 @@ const DetallePlanillaPensionadosPage = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          {listaPreview.length > rppPrev && (
+            <TablePagination
+              component="div"
+              count={listaPreview.length}
+              page={paginaPrev}
+              onPageChange={(_, nueva) => setPagePrev(nueva)}
+              rowsPerPage={rppPrev}
+              onRowsPerPageChange={(e) => { setRppPrev(Number(e.target.value)); setPagePrev(0); }}
+              rowsPerPageOptions={[10, 25, 50]}
+              labelRowsPerPage="Jubilados por página"
+              labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+              sx={{ mb: 2 }}
+            />
+          )}
 
           {excluidos.length > 0 && (
             <Alert severity="warning" sx={{ mb: 2 }}>
@@ -363,6 +395,12 @@ const DetallePlanillaPensionadosPage = () => {
             </Button>
             <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExportBanco}>
               Archivo Banco
+            </Button>
+            <Button variant="outlined" startIcon={<PrintIcon />} onClick={handleImprimirNomina}>
+              Imprimir Nómina (PDF)
+            </Button>
+            <Button variant="outlined" startIcon={<PrintIcon />} onClick={handleImprimirResumen}>
+              Imprimir Resumen (PDF)
             </Button>
           </Stack>
 
