@@ -211,18 +211,10 @@ const DetallePlanillaPensionadosPage = () => {
   const handleImprimirNomina = () => download(`/impresiones/nomina-jubilados/${id}/pdf`, `nomina_jubilados_${planilla?.numero || id}.pdf`);
   const handleImprimirResumen = () => download(`/impresiones/resumen-jubilados/${id}/pdf`, `resumen_nomina_jubilados_${planilla?.numero || id}.pdf`);
 
-  if (loading) {
-    return <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}><CircularProgress /></Box>;
-  }
-
-  if (!planilla) {
-    return <Box sx={{ p: 3 }}><Alert severity="error">Planilla no encontrada</Alert></Box>;
-  }
-
-  const estado = planilla.estadoProceso;
-  const mostrarGeneracion = puedeGenerar(estado);
-  const mostrarDetalle    = tieneDetalle(estado);
-  const consulta          = esConsulta(estado);
+  // OJO: todos los hooks van ANTES de los "return" de carga/error. Si quedan
+  // después, en el primer render (loading = true) no se ejecutan y en el
+  // siguiente sí, React detecta que cambió la cantidad de hooks y revienta el
+  // componente (pantalla en blanco).
   const aptos = preview?.jubiladosAptos || [];
   const excluidos = preview?.jubiladosExcluidos || [];
   const listaPreview = useMemo(() => [...aptos, ...excluidos], [aptos, excluidos]);
@@ -238,6 +230,19 @@ const DetallePlanillaPensionadosPage = () => {
     () => listaPreview.slice(paginaPrev * rppPrev, paginaPrev * rppPrev + rppPrev),
     [listaPreview, paginaPrev, rppPrev]
   );
+
+  if (loading) {
+    return <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}><CircularProgress /></Box>;
+  }
+
+  if (!planilla) {
+    return <Box sx={{ p: 3 }}><Alert severity="error">Planilla no encontrada</Alert></Box>;
+  }
+
+  const estado = planilla.estadoProceso;
+  const mostrarGeneracion = puedeGenerar(estado);
+  const mostrarDetalle    = tieneDetalle(estado);
+  const consulta          = esConsulta(estado);
 
   const totIngresos    = detalle.reduce((s,r) => s + r.totalIngreso, 0);
   const totDescuentos  = detalle.reduce((s,r) => s + r.totalDescuentos, 0);
