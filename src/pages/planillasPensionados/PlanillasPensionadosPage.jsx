@@ -91,7 +91,7 @@ const PlanillasPensionadosPage = () => {
       });
       setDeudaDialogOpen(false);
       setDeudaForm(initialDeudaForm);
-      Swal.fire("Éxito", `Procesados: ${res.data.data?.jubiladosProcesados} jubilados — ${res.data.data?.totalDeudas} registros generados`, "success");
+      Swal.fire("Éxito", `Procesados: ${res.data.data?.jubiladosProcesados} jubilados — ${res.data.data?.totalDeudas} registros generados${res.data.data?.omitidos ? ` — ${res.data.data.omitidos} jubilado(s) omitido(s) por datos incompletos` : ""}`, "success");
     } catch (_) {}
     finally { setSaving(false); }
   };

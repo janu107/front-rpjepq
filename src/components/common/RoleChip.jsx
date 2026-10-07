@@ -2,7 +2,13 @@ import { Chip } from "@mui/material";
 
 const roleColor = {
   ADMIN: "primary",
+  ADMINISTRACION: "primary",
   OPERADOR: "secondary",
+  CATALOGOS: "secondary",
+  EPQ: "secondary",
+  REGIMEN: "secondary",
+  JUBILADOS: "secondary",
+  REPORTES: "info",
   CONSULTA: "default"
 };
 

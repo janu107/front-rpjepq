@@ -1,7 +1,9 @@
 import SaveIcon from "@mui/icons-material/Save";
 import {
+  Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   Paper,
   Stack,
@@ -11,18 +13,22 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import RoleChip from "../../components/common/RoleChip";
+
+const sameSet = (a = [], b = []) => a.length === b.length && a.every((r) => b.includes(r));
 
 const RolesPage = () => {
   const [roles, setRoles] = useState([]);
   const [tipos, setTipos] = useState([]);
   const [selectedRoles, setSelectedRoles] = useState({});
-  const roleTypes = tipos.length ? tipos : ["ADMIN", "OPERADOR", "CONSULTA"];
 
   const loadData = async () => {
     try {
@@ -36,7 +42,7 @@ const RolesPage = () => {
       setTipos(tiposResponse.data.data || []);
       setSelectedRoles(
         roleRows.reduce((acc, item) => {
-          acc[item.usuarioId] = item.rol;
+          acc[item.usuarioId] = item.roles || [];
           return acc;
         }, {})
       );
@@ -49,11 +55,24 @@ const RolesPage = () => {
     loadData();
   }, []);
 
+  const descripcionDe = (rol) => tipos.find((t) => t.rol === rol)?.descripcion || "";
+
+  // El rol heredado (OPERADOR) sólo se ofrece a quien ya lo tiene, para que las cuentas
+  // anteriores sigan siendo editables sin proponerlo como rol nuevo.
+  const opcionesPara = (row) => tipos
+    .filter((t) => !t.heredado || t.rol === "ADMIN" || (row.roles || []).includes(t.rol))
+    .map((t) => t.rol);
+
   const handleSaveRole = async (row) => {
-    const nextRole = selectedRoles[row.usuarioId];
+    const nextRoles = selectedRoles[row.usuarioId] || [];
+    if (!nextRoles.length) {
+      Swal.fire("Validacion", "Debe asignar al menos un rol.", "warning");
+      return;
+    }
+
     const result = await Swal.fire({
-      title: "Cambiar rol",
-      text: `Desea asignar el rol ${nextRole} a ${row.usuario}?`,
+      title: "Cambiar roles",
+      text: `Desea asignar ${nextRoles.length === 1 ? "el rol" : "los roles"} ${nextRoles.join(", ")} a ${row.usuario}?`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Si, guardar",
@@ -64,11 +83,11 @@ const RolesPage = () => {
     if (!result.isConfirmed) return;
 
     try {
-      await axiosClient.put(`/roles/usuario/${row.usuarioId}`, { rol: nextRole });
-      Swal.fire("Listo", "Rol actualizado correctamente.", "success");
+      await axiosClient.put(`/roles/usuario/${row.usuarioId}`, { roles: nextRoles });
+      Swal.fire("Listo", "Roles actualizados correctamente.", "success");
       loadData();
     } catch (error) {
-      Swal.fire("Error", error.response?.data?.message || "No fue posible actualizar el rol.", "error");
+      Swal.fire("Error", error.response?.data?.message || "No fue posible actualizar los roles.", "error");
     }
   };
 
@@ -76,7 +95,9 @@ const RolesPage = () => {
     <Stack spacing={2.5}>
       <Box>
         <Typography variant="h5">Roles</Typography>
-        <Typography color="text.secondary">Asignacion de roles administrativos</Typography>
+        <Typography color="text.secondary">
+          Asignacion de roles administrativos. Un usuario puede tener mas de un rol.
+        </Typography>
       </Box>
 
       <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
@@ -87,66 +108,72 @@ const RolesPage = () => {
               <TableCell>Nombre</TableCell>
               <TableCell>Correo</TableCell>
               <TableCell>Estado</TableCell>
-              <TableCell>Rol actual</TableCell>
-              <TableCell width={220}>Nuevo rol</TableCell>
+              <TableCell>Roles actuales</TableCell>
+              <TableCell width={340}>Nuevos roles</TableCell>
               <TableCell align="right">Accion</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {roles.map((row) => (
-              <TableRow key={row.usuarioId || row.id} hover>
-                <TableCell>{row.usuario}</TableCell>
-                <TableCell>{row.nombre}</TableCell>
-                <TableCell>{row.correo}</TableCell>
-                <TableCell>
-                  <Chip label={row.estado} color={row.estado === "ACTIVO" ? "success" : "default"} size="small" />
-                </TableCell>
-                <TableCell>
-                  <Chip label={row.rol} color="secondary" size="small" />
-                </TableCell>
-                <TableCell>
-                  <Box
-                    component="select"
-                    aria-label={`Nuevo rol para ${row.usuario}`}
-                    title={`Nuevo rol para ${row.usuario}`}
-                      value={selectedRoles[row.usuarioId] || row.rol}
-                      onChange={(event) => setSelectedRoles({ ...selectedRoles, [row.usuarioId]: event.target.value })}
-                    sx={{
-                      width: "100%",
-                      minHeight: 42,
-                      px: 1.5,
-                      borderRadius: 1.5,
-                      border: "1px solid #c8d4da",
-                      bgcolor: "background.paper",
-                      color: "text.primary",
-                      font: "inherit",
-                      cursor: "pointer",
-                      "&:focus": {
-                        outline: "3px solid rgba(31, 93, 107, 0.22)",
-                        borderColor: "primary.main"
-                      }
-                    }}
-                    >
-                      {roleTypes.map((tipo) => (
-                        <option key={tipo} value={tipo}>
-                          {tipo}
-                        </option>
+            {roles.map((row) => {
+              const seleccion = selectedRoles[row.usuarioId] || [];
+              const sinCambios = sameSet(seleccion, row.roles || []);
+              return (
+                <TableRow key={row.usuarioId} hover>
+                  <TableCell>{row.usuario}</TableCell>
+                  <TableCell>{row.nombre}</TableCell>
+                  <TableCell>{row.correo}</TableCell>
+                  <TableCell>
+                    <Chip label={row.estado} color={row.estado === "ACTIVO" ? "success" : "default"} size="small" />
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                      {(row.roles || []).length
+                        ? row.roles.map((r) => <RoleChip key={r} value={r} />)
+                        : <RoleChip value="SIN ROL" />}
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Autocomplete
+                      multiple
+                      disableCloseOnSelect
+                      size="small"
+                      options={opcionesPara(row)}
+                      value={seleccion}
+                      onChange={(_, value) => setSelectedRoles({ ...selectedRoles, [row.usuarioId]: value })}
+                      renderOption={(props, option, { selected }) => (
+                        <li {...props} key={option}>
+                          <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
+                          <Box>
+                            <Typography variant="body2" fontWeight={700}>{option}</Typography>
+                            <Typography variant="caption" color="text.secondary">{descripcionDe(option)}</Typography>
+                          </Box>
+                        </li>
+                      )}
+                      renderTags={(value, getTagProps) => value.map((option, index) => (
+                        <Tooltip key={option} title={descripcionDe(option)}>
+                          <Chip size="small" label={option} {...getTagProps({ index })} />
+                        </Tooltip>
                       ))}
-                  </Box>
-                </TableCell>
-                <TableCell align="right">
-                  <Button
-                    variant="outlined"
-                    startIcon={<SaveIcon />}
-                    onClick={() => handleSaveRole(row)}
-                    disabled={(selectedRoles[row.usuarioId] || row.rol) === row.rol}
-                    title={(selectedRoles[row.usuarioId] || row.rol) === row.rol ? "Seleccione un rol diferente para guardar" : "Guardar nuevo rol"}
-                  >
-                    Guardar
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+                      renderInput={(params) => (
+                        <TextField {...params} placeholder={seleccion.length ? "" : "Seleccione roles"}
+                          inputProps={{ ...params.inputProps, "aria-label": `Nuevos roles para ${row.usuario}` }} />
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button
+                      variant="outlined"
+                      startIcon={<SaveIcon />}
+                      onClick={() => handleSaveRole(row)}
+                      disabled={sinCambios || !seleccion.length}
+                      title={sinCambios ? "Modifique la seleccion de roles para guardar" : "Guardar roles"}
+                    >
+                      Guardar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {roles.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} align="center">

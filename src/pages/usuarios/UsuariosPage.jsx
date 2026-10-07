@@ -36,7 +36,8 @@ const initialForm = {
   rol: "OPERADOR"
 };
 
-const roles = ["ADMIN", "OPERADOR", "CONSULTA"];
+// Aquí se elige un rol inicial; los roles adicionales se asignan en la pantalla Roles.
+const roles = ["CATALOGOS", "EPQ", "REGIMEN", "JUBILADOS", "REPORTES", "ADMINISTRACION", "CONSULTA", "ADMIN", "OPERADOR"];
 const estados = ["ACTIVO", "INACTIVO"];
 
 const formatDate = (value) => {
@@ -76,7 +77,7 @@ const UsuariosPage = () => {
     { key: "nombre", label: "Nombre" },
     { key: "correo", label: "Correo" },
     { key: "estado", label: "Estado", render: (user) => <StatusChip value={user.estado} /> },
-    { key: "rol", label: "Rol", render: (user) => <RoleChip value={user.rol} /> },
+    { key: "rol", label: "Rol", render: (user) => (user.roles?.length ? user.roles.map((r) => <RoleChip key={r} value={r} />) : <RoleChip value={user.rol} />) },
     { key: "fechaInicio", label: "Fecha inicio", render: (user) => formatDate(user.fechaInicio) }
   ];
 

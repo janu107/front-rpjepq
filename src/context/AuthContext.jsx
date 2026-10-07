@@ -25,7 +25,8 @@ const decodeJwtPayload = (token) => {
     return {
       id: decoded.id,
       usuario: decoded.usuario,
-      rol: decoded.rol
+      rol: decoded.rol,
+      roles: decoded.roles || (decoded.rol ? [decoded.rol] : [])
     };
   } catch (error) {
     return null;

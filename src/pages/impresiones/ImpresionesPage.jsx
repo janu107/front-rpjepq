@@ -32,6 +32,8 @@ const FIRMAS_INICIALES = [
 
 const TIPO_EMPLEADOS = 1;
 const TIPO_TIEMPO_EXTRA = 3;
+// Planillas de nómina de jubilados: pensionados (2) y amparistas (4).
+const TIPOS_JUBILADOS = [2, 4];
 
 const ImpresionesPage = () => {
   const [tab, setTab] = useState(0);
@@ -41,8 +43,13 @@ const ImpresionesPage = () => {
 
   const [firmas, setFirmas] = useState(FIRMAS_INICIALES);
 
+  const [opciones, setOpciones] = useState({ areas: [], tiposJubilacion: [] });
   const [idSueldos, setIdSueldos] = useState("");
-  const [porAreaSueldos, setPorAreaSueldos] = useState(true);
+  const [areaSueldos, setAreaSueldos] = useState("");
+  const [idNomJub, setIdNomJub] = useState("");
+  const [tipoNomJub, setTipoNomJub] = useState("");
+  const [idResJub, setIdResJub] = useState("");
+  const [tipoResJub, setTipoResJub] = useState("");
   const [idExtra, setIdExtra] = useState("");
   const [porAreaExtra, setPorAreaExtra] = useState(true);
   const [prestamoSel, setPrestamoSel] = useState(null);
@@ -51,12 +58,14 @@ const ImpresionesPage = () => {
 
   const cargar = useCallback(async () => {
     try {
-      const [{ data: pl }, { data: pr }] = await Promise.all([
+      const [{ data: pl }, { data: pr }, { data: op }] = await Promise.all([
         axiosClient.get("/reportes/nomina/planillas"),
-        axiosClient.get("/prestamos")
+        axiosClient.get("/prestamos"),
+        axiosClient.get("/impresiones/opciones")
       ]);
       setPlanillas(pl.data || []);
       setPrestamos(pr.data || []);
+      setOpciones(op.data || { areas: [], tiposJubilacion: [] });
     } catch (error) {
       Swal.fire("Error", error.response?.data?.message || "No fue posible cargar los catálogos.", "error");
     }
@@ -64,7 +73,7 @@ const ImpresionesPage = () => {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const planillasDe = (tipo) => planillas.filter((p) => Number(p.idTipoPlanilla) === tipo);
+  const planillasDe = (tipo) => planillas.filter((p) => (Array.isArray(tipo) ? tipo : [tipo]).includes(Number(p.idTipoPlanilla)));
   const firmasParam = useMemo(
     () => encodeURIComponent(JSON.stringify(firmas.filter((f) => f.nombre?.trim() || f.cargo?.trim()))),
     [firmas]
@@ -127,10 +136,22 @@ const ImpresionesPage = () => {
       <Select label={etiqueta} value={valor} onChange={(e) => onChange(e.target.value)}>
         {planillasDe(tipo).map((p) => (
           <MenuItem key={p.idPlanilla} value={p.idPlanilla}>
-            {p.numeroPlanilla} — {fecha(p.fechaInicio)} al {fecha(p.fechaFinal)} — pago {fecha(p.fechaPago)}
+            {p.numeroPlanilla} — {p.tipoPlanillaNombre ? `${p.tipoPlanillaNombre} — ` : ""}{fecha(p.fechaInicio)} al {fecha(p.fechaFinal)} — pago {fecha(p.fechaPago)}
           </MenuItem>
         ))}
         {planillasDe(tipo).length === 0 && <MenuItem value="" disabled>No hay planillas de este tipo</MenuItem>}
+      </Select>
+    </FormControl>
+  );
+
+  const selectorTipoJubilacion = (valor, onChange) => (
+    <FormControl fullWidth>
+      <InputLabel>Tipo de jubilación</InputLabel>
+      <Select label="Tipo de jubilación" value={valor} onChange={(e) => onChange(e.target.value)}>
+        <MenuItem value="">Todos (separado por tipo)</MenuItem>
+        {opciones.tiposJubilacion.map((t) => (
+          <MenuItem key={t.id} value={t.nombre}>{t.nombre}</MenuItem>
+        ))}
       </Select>
     </FormControl>
   );
@@ -149,6 +170,8 @@ const ImpresionesPage = () => {
           <Tab label="Estado de cuenta préstamo" />
           <Tab label="Resumen" />
           <Tab label="Nómina de préstamos" />
+          <Tab label="Nómina jubilados" />
+          <Tab label="Resumen jubilados" />
         </Tabs>
       </Paper>
 
@@ -157,7 +180,8 @@ const ImpresionesPage = () => {
         <Stack spacing={2}>
           <Alert severity="info">
             Formato oficio. El área se toma del puesto de cada empleado; quien no tenga puesto o área
-            asignada aparece agrupado como <b>SIN AREA</b>.
+            asignada aparece como <b>SIN AREA</b>. Elija un área para imprimir solo esa (su nombre sale al
+            centro del encabezado) o deje <b>Todas</b> para ver cada área por separado.
           </Alert>
           <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
             <Grid container spacing={2} alignItems="center">
@@ -165,15 +189,18 @@ const ImpresionesPage = () => {
                 {selectorPlanilla(TIPO_EMPLEADOS, idSueldos, setIdSueldos, "Planilla de empleados de régimen")}
               </Grid>
               <Grid item xs={12} md={3}>
-                <FormControlLabel
-                  control={<Switch checked={porAreaSueldos} onChange={(e) => setPorAreaSueldos(e.target.checked)} />}
-                  label="Agrupar por área"
-                />
+                <FormControl fullWidth>
+                  <InputLabel>Área</InputLabel>
+                  <Select label="Área" value={areaSueldos} onChange={(e) => setAreaSueldos(e.target.value)}>
+                    <MenuItem value="">Todas (agrupadas por área)</MenuItem>
+                    {opciones.areas.map((a) => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid item xs={12} md={2}>
                 <Button fullWidth variant="contained" startIcon={<PrintIcon />} disabled={!idSueldos || descargando}
                   onClick={() => descargar(
-                    `/impresiones/nomina-sueldos/${idSueldos}/pdf?porArea=${porAreaSueldos}&firmas=${firmasParam}`,
+                    `/impresiones/nomina-sueldos/${idSueldos}/pdf?area=${encodeURIComponent(areaSueldos)}&firmas=${firmasParam}`,
                     `nomina_sueldos_${idSueldos}.pdf`
                   )}>
                   Imprimir
@@ -325,6 +352,62 @@ const ImpresionesPage = () => {
                     `nomina_prestamos_${rangoPrestamos.desde}.pdf`
                   )}>
                   Imprimir
+                </Button>
+              </Grid>
+            </Grid>
+          </Paper>
+          {editorFirmas}
+        </Stack>
+      )}
+
+      {/* Nómina de jubilados */}
+      {tab === 5 && (
+        <Stack spacing={2}>
+          <Alert severity="info">
+            Formato oficio. Sin elegir tipo, la nómina sale separada por tipo de jubilación (retiro voluntario,
+            vejez, viudez…) con su subtotal; al elegir uno, sale solo ese tipo.
+          </Alert>
+          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={5}>
+                {selectorPlanilla(TIPOS_JUBILADOS, idNomJub, setIdNomJub, "Planilla de jubilados")}
+              </Grid>
+              <Grid item xs={12} md={4}>{selectorTipoJubilacion(tipoNomJub, setTipoNomJub)}</Grid>
+              <Grid item xs={12} md={3}>
+                <Button fullWidth variant="contained" startIcon={<PrintIcon />} disabled={!idNomJub || descargando}
+                  onClick={() => descargar(
+                    `/impresiones/nomina-jubilados/${idNomJub}/pdf?tipoJubilacion=${encodeURIComponent(tipoNomJub)}&firmas=${firmasParam}`,
+                    `nomina_jubilados_${idNomJub}.pdf`
+                  )}>
+                  Imprimir nómina
+                </Button>
+              </Grid>
+            </Grid>
+          </Paper>
+          {editorFirmas}
+        </Stack>
+      )}
+
+      {/* Resumen de nómina de jubilados */}
+      {tab === 6 && (
+        <Stack spacing={2}>
+          <Alert severity="info">
+            Tamaño carta. Pensiones por tipo de jubilación y remesas por destino (bancos, judicial, asociación…).
+            Con un tipo elegido, el resumen cubre solo esos jubilados.
+          </Alert>
+          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={5}>
+                {selectorPlanilla(TIPOS_JUBILADOS, idResJub, setIdResJub, "Planilla de jubilados")}
+              </Grid>
+              <Grid item xs={12} md={4}>{selectorTipoJubilacion(tipoResJub, setTipoResJub)}</Grid>
+              <Grid item xs={12} md={3}>
+                <Button fullWidth variant="contained" startIcon={<PrintIcon />} disabled={!idResJub || descargando}
+                  onClick={() => descargar(
+                    `/impresiones/resumen-jubilados/${idResJub}/pdf?tipoJubilacion=${encodeURIComponent(tipoResJub)}&firmas=${firmasParam}`,
+                    `resumen_jubilados_${idResJub}.pdf`
+                  )}>
+                  Imprimir resumen
                 </Button>
               </Grid>
             </Grid>

@@ -164,7 +164,7 @@ const ReportesNominaPage = () => {
             <Select label="Planilla" value={idPlanilla} onChange={(event) => setIdPlanilla(event.target.value)}>
               {planillas.map((planilla) => (
                 <MenuItem key={planilla.idPlanilla} value={planilla.idPlanilla}>
-                  Planilla {planilla.numeroPlanilla} - {planilla.tipoPlanilla} - {money(planilla.liquido)}
+                  Planilla {planilla.numeroPlanilla} - {planilla.pertenece} ({planilla.tipoPlanillaNombre}) - {money(planilla.liquido)}
                 </MenuItem>
               ))}
             </Select>

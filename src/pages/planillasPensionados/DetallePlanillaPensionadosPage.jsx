@@ -16,6 +16,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import ParametrosImpresionDialog from "./ParametrosImpresionDialog";
 import {
   ESTADO_COLORS, puedeGenerar, puedeReversar, puedeCerrar, puedeEditarMontos,
   esConsulta, tieneDetalle, textoBotonGenerar
@@ -52,6 +53,10 @@ const DetallePlanillaPensionadosPage = () => {
 
   const [reversarDialog, setReversarDialog] = useState({ open: false, tipo: null, idJubilado: null, nombre: "" });
   const [motivo, setMotivo] = useState("");
+  // Diálogo de parámetros de impresión (tipo de jubilación y firmas). Va con los demás
+  // hooks, antes de los return de carga.
+  const [impresion, setImpresion] = useState({ open: false, clase: null, imprimiendo: false });
+  const [tiposJubilacion, setTiposJubilacion] = useState([]);
   const [estadoCuentaDialog, setEstadoCuentaDialog] = useState({ open: false, data: null });
   const [montosDialog, setMontosDialog] = useState({ open: false, idJubilado: null, nombre: "", ingresos: [], descuentos: [], loading: false, saving: false });
 
@@ -208,8 +213,45 @@ const DetallePlanillaPensionadosPage = () => {
 
   // Impresiones formales: el PDF lo arma el servidor (oficio la nómina, carta
   // el resumen), igual que el resto del módulo de Impresiones.
-  const handleImprimirNomina = () => download(`/impresiones/nomina-jubilados/${id}/pdf`, `nomina_jubilados_${planilla?.numero || id}.pdf`);
-  const handleImprimirResumen = () => download(`/impresiones/resumen-jubilados/${id}/pdf`, `resumen_nomina_jubilados_${planilla?.numero || id}.pdf`);
+  const abrirImpresion = async (clase) => {
+    setImpresion({ open: true, clase, imprimiendo: false });
+    if (!tiposJubilacion.length) {
+      try {
+        const { data } = await axiosClient.get("/impresiones/opciones");
+        setTiposJubilacion(data.data?.tiposJubilacion || []);
+      } catch (_) { /* sin la lista se imprime "todos" */ }
+    }
+  };
+
+  const ejecutarImpresion = async ({ tipoJubilacion, firmas }) => {
+    const esNomina = impresion.clase === "nomina";
+    const query = `tipoJubilacion=${encodeURIComponent(tipoJubilacion)}&firmas=${encodeURIComponent(JSON.stringify(firmas))}`;
+    const base = esNomina ? "nomina-jubilados" : "resumen-jubilados";
+    setImpresion((p) => ({ ...p, imprimiendo: true }));
+    try {
+      const response = await axiosClient.get(`/impresiones/${base}/${id}/pdf?${query}`, { responseType: "blob" });
+      const blobUrl = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.setAttribute("download", `${esNomina ? "nomina_jubilados" : "resumen_nomina_jubilados"}_${planilla?.numero || id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      setImpresion({ open: false, clase: null, imprimiendo: false });
+    } catch (error) {
+      // Los errores del backend llegan como JSON; al pedir blob hay que leerlos.
+      let mensaje = "No fue posible generar la impresión.";
+      try {
+        const texto = await error.response?.data?.text?.();
+        if (texto) mensaje = JSON.parse(texto).message || mensaje;
+      } catch (_) { /* se queda el mensaje genérico */ }
+      setImpresion((p) => ({ ...p, imprimiendo: false }));
+      Swal.fire("Error", mensaje, "error");
+    }
+  };
+  const handleImprimirNomina = () => abrirImpresion("nomina");
+  const handleImprimirResumen = () => abrirImpresion("resumen");
 
   // OJO: todos los hooks van ANTES de los "return" de carga/error. Si quedan
   // después, en el primer render (loading = true) no se ejecutan y en el
@@ -482,6 +524,15 @@ const DetallePlanillaPensionadosPage = () => {
           </TableContainer>
         </Box>
       )}
+
+      <ParametrosImpresionDialog
+        open={impresion.open}
+        titulo={impresion.clase === "nomina" ? "Imprimir nómina de jubilados" : "Imprimir resumen de nómina"}
+        tipos={tiposJubilacion}
+        imprimiendo={impresion.imprimiendo}
+        onClose={() => setImpresion({ open: false, clase: null, imprimiendo: false })}
+        onImprimir={ejecutarImpresion}
+      />
 
       {/* Dialog: Reverso */}
       <Dialog open={reversarDialog.open} onClose={() => setReversarDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>

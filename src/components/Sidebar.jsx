@@ -22,7 +22,7 @@ import { useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
-import { hasRole } from "../utils/permissions";
+import { puedeEntrar } from "../utils/permissions";
 
 const items = [
   { text: "Dashboard", path: "/dashboard", icon: <DashboardIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
@@ -130,7 +130,7 @@ const items = [
 ];
 
 const filterByRole = (entries, user) => entries
-  .filter((item) => !item.roles || hasRole(user, item.roles))
+  .filter((item) => !item.roles || puedeEntrar(user, item.path, item.roles))
   .map((item) => ({
     ...item,
     children: item.children ? filterByRole(item.children, user) : undefined
