@@ -468,7 +468,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
             <TableRow>
-              <TableCell>ID</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell><TableCell>Gerencia</TableCell><TableCell>Sexo</TableCell><TableCell>Estado</TableCell><TableCell>Prestamo</TableCell><TableCell>Manejo</TableCell><TableCell align="right">Acciones</TableCell>
+              <TableCell>ID</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell><TableCell>Gerencia</TableCell><TableCell>Sexo</TableCell><TableCell>Estado</TableCell><TableCell>Prestamo</TableCell><TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -481,7 +481,6 @@ const AportacionesPage = ({ detailOnly = false }) => {
                 <TableCell>{sexoLabel(item.sexo)}</TableCell>
                 <TableCell><Chip label={item.estado} color={item.estado === "ACTIVO" ? "success" : "default"} size="small" /></TableCell>
                 <TableCell><Chip label={item.tienePrestamo ? "SI" : "NO"} color={item.tienePrestamo ? "warning" : "default"} size="small" /></TableCell>
-                <TableCell>{item.manejoDescripcion}</TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                     {canEdit(user) && <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>}
@@ -492,7 +491,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
                 </TableCell>
               </TableRow>
             ))}
-            {filtered.length === 0 && <TableRow><TableCell colSpan={9} align="center">No hay aportaciones para mostrar.</TableCell></TableRow>}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={8} align="center">No hay aportaciones para mostrar.</TableCell></TableRow>}
           </TableBody>
         </Table>
         {filtered.length > 0 && (

@@ -16,6 +16,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import RenglonesNuevos, { renglonesValidos } from "../../components/common/RenglonesNuevos";
 import ParametrosImpresionDialog from "./ParametrosImpresionDialog";
 import {
   ESTADO_COLORS, puedeGenerar, puedeReversar, puedeCerrar, puedeEditarMontos,
@@ -58,6 +59,8 @@ const DetallePlanillaPensionadosPage = () => {
   const [impresion, setImpresion] = useState({ open: false, clase: null, imprimiendo: false });
   const [tiposJubilacion, setTiposJubilacion] = useState([]);
   const [estadoCuentaDialog, setEstadoCuentaDialog] = useState({ open: false, data: null });
+  const [nuevosRenglones, setNuevosRenglones] = useState([]);
+  const [tiposMonto, setTiposMonto] = useState({ ingresos: [], descuentos: [] });
   const [montosDialog, setMontosDialog] = useState({ open: false, idJubilado: null, nombre: "", ingresos: [], descuentos: [], loading: false, saving: false });
 
   const loadAll = async () => {
@@ -155,6 +158,12 @@ const DetallePlanillaPensionadosPage = () => {
   // ---- Edición de montos ----
   const openMontosDialog = async (idJubilado, nombre) => {
     setMontosDialog({ open: true, idJubilado, nombre, ingresos: [], descuentos: [], loading: true, saving: false });
+    setNuevosRenglones([]);
+    if (!tiposMonto.ingresos.length) {
+      axiosClient.get("/planillas-pensionados/tipos-monto")
+        .then((res) => setTiposMonto(res.data.data || { ingresos: [], descuentos: [] }))
+        .catch(() => {});
+    }
     try {
       const r = await axiosClient.get(`/planillas-pensionados/${id}/jubilados/${idJubilado}/montos`);
       const lineas = r.data.data || [];
@@ -177,12 +186,15 @@ const DetallePlanillaPensionadosPage = () => {
     const { idJubilado, ingresos, descuentos } = montosDialog;
     const invalida = [...ingresos, ...descuentos].some((l) => l.valor === "" || Number.isNaN(Number(l.valor)) || Number(l.valor) < 0);
     if (invalida) { Swal.fire("Atención", "Los montos deben ser números mayores o iguales a 0", "warning"); return; }
+    if (!renglonesValidos(nuevosRenglones)) { Swal.fire("Atención", "En los renglones nuevos elija el tipo y un monto mayor a 0", "warning"); return; }
     setMontosDialog((p) => ({ ...p, saving: true }));
     try {
       const r = await axiosClient.put(`/planillas-pensionados/${id}/jubilados/${idJubilado}/montos`, {
         ingresos: ingresos.map((l) => ({ id: l.id, valor: Number(l.valor) })),
-        descuentos: descuentos.map((l) => ({ id: l.id, valor: Number(l.valor) }))
+        descuentos: descuentos.map((l) => ({ id: l.id, valor: Number(l.valor) })),
+        nuevos: nuevosRenglones.map((n) => ({ clase: n.clase, tipo: Number(n.tipo), valor: Number(n.valor) }))
       });
+      setNuevosRenglones([]);
       setDetalle(r.data.data || []);
       setMontosDialog({ open: false, idJubilado: null, nombre: "", ingresos: [], descuentos: [], loading: false, saving: false });
       Swal.fire("Éxito", "MONTOS ACTUALIZADOS CORRECTAMENTE", "success");
@@ -589,6 +601,8 @@ const DetallePlanillaPensionadosPage = () => {
                 </Stack>
               ))}
               {!montosDialog.descuentos.length && <Typography variant="caption" color="text.secondary">Sin descuentos.</Typography>}
+
+              <RenglonesNuevos tipos={tiposMonto} nuevos={nuevosRenglones} onChange={setNuevosRenglones} />
             </Box>
           )}
         </DialogContent>

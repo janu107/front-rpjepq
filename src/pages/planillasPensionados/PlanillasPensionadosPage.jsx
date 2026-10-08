@@ -91,7 +91,7 @@ const PlanillasPensionadosPage = () => {
       });
       setDeudaDialogOpen(false);
       setDeudaForm(initialDeudaForm);
-      Swal.fire("Éxito", `Procesados: ${res.data.data?.jubiladosProcesados} jubilados — ${res.data.data?.totalDeudas} registros generados${res.data.data?.omitidos ? ` — ${res.data.data.omitidos} jubilado(s) omitido(s) por datos incompletos` : ""}`, "success");
+      Swal.fire("Éxito", `Procesados: ${res.data.data?.jubiladosProcesados} jubilados — ${res.data.data?.totalDeudas} registros generados${res.data.data?.omitidos ? ` — ${res.data.data.omitidos} jubilado(s) omitido(s) por datos incompletos` : ""}${res.data.data?.sinPension ? ` — ${res.data.data.sinPension} jubilado(s) activos sin pensión configurada (no generan deuda)` : ""}. Si ya se había cargado antes, los períodos existentes no se duplican.`, "success");
     } catch (_) {}
     finally { setSaving(false); }
   };

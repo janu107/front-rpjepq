@@ -46,7 +46,6 @@ const EmpleadosPage = ({
       { key: "dpi", label: "DPI" },
       { key: "tipoPuesto", label: "Tipo puesto", render: (row) => (row.tipoPuesto === "FIJO" ? "PLANILLA" : row.tipoPuesto) },
       { key: "puestoNombre", label: "Puesto" },
-      { key: "manejoDescripcion", label: "Manejo" },
       { key: "estado", label: "Estado", chip: true }
     ]}
     fields={[

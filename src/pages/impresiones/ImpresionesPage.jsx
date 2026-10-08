@@ -1,7 +1,7 @@
 import PrintIcon from "@mui/icons-material/Print";
 import {
-  Alert, Autocomplete, Box, Button, Divider, FormControl, FormControlLabel, Grid, InputLabel,
-  MenuItem, Paper, Select, Stack, Switch, Tab, Tabs, TextField, Typography
+  Alert, Autocomplete, Box, Button, Divider, FormControl, Grid, InputLabel,
+  MenuItem, Paper, Select, Stack, Tab, Tabs, TextField, Typography
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
@@ -51,7 +51,7 @@ const ImpresionesPage = () => {
   const [idResJub, setIdResJub] = useState("");
   const [tipoResJub, setTipoResJub] = useState("");
   const [idExtra, setIdExtra] = useState("");
-  const [porAreaExtra, setPorAreaExtra] = useState(true);
+  const [areaExtra, setAreaExtra] = useState("");
   const [prestamoSel, setPrestamoSel] = useState(null);
   const [resumen, setResumen] = useState({ tipoManejo: 1, desde: primerDiaAnio, hasta: ultimoDiaMes });
   const [rangoPrestamos, setRangoPrestamos] = useState({ desde: primerDiaMes, hasta: ultimoDiaMes });
@@ -130,16 +130,31 @@ const ImpresionesPage = () => {
     </Paper>
   );
 
-  const selectorPlanilla = (tipo, valor, onChange, etiqueta) => (
+  // Selector de planilla editable: se puede escribir (número, tipo o fecha) y la
+  // lista se va filtrando, además de desplegarla como antes.
+  const etiquetaPlanilla = (p) => `${p.numeroPlanilla} — ${p.tipoPlanillaNombre ? `${p.tipoPlanillaNombre} — ` : ""}${fecha(p.fechaInicio)} al ${fecha(p.fechaFinal)} — pago ${fecha(p.fechaPago)}`;
+  const selectorPlanilla = (tipo, valor, onChange, etiqueta) => {
+    const opcionesPlanilla = planillasDe(tipo);
+    return (
+      <Autocomplete
+        options={opcionesPlanilla}
+        value={opcionesPlanilla.find((p) => p.idPlanilla === valor) || null}
+        onChange={(_, v) => onChange(v ? v.idPlanilla : "")}
+        isOptionEqualToValue={(o, v) => o.idPlanilla === v?.idPlanilla}
+        getOptionLabel={(o) => (o ? etiquetaPlanilla(o) : "")}
+        noOptionsText="No hay planillas de este tipo"
+        renderOption={(props, o) => <li {...props} key={o.idPlanilla}>{etiquetaPlanilla(o)}</li>}
+        renderInput={(params) => <TextField {...params} label={etiqueta} placeholder="Escriba el número o la fecha" />}
+      />
+    );
+  };
+
+  const selectorArea = (valor, onChange) => (
     <FormControl fullWidth>
-      <InputLabel>{etiqueta}</InputLabel>
-      <Select label={etiqueta} value={valor} onChange={(e) => onChange(e.target.value)}>
-        {planillasDe(tipo).map((p) => (
-          <MenuItem key={p.idPlanilla} value={p.idPlanilla}>
-            {p.numeroPlanilla} — {p.tipoPlanillaNombre ? `${p.tipoPlanillaNombre} — ` : ""}{fecha(p.fechaInicio)} al {fecha(p.fechaFinal)} — pago {fecha(p.fechaPago)}
-          </MenuItem>
-        ))}
-        {planillasDe(tipo).length === 0 && <MenuItem value="" disabled>No hay planillas de este tipo</MenuItem>}
+      <InputLabel>Área</InputLabel>
+      <Select label="Área" value={valor} onChange={(e) => onChange(e.target.value)}>
+        <MenuItem value="">Todas (agrupadas por área)</MenuItem>
+        {opciones.areas.map((a) => <MenuItem key={a} value={a}>{a}</MenuItem>)}
       </Select>
     </FormControl>
   );
@@ -215,22 +230,19 @@ const ImpresionesPage = () => {
       {/* 15. Nómina de tiempo extra */}
       {tab === 1 && (
         <Stack spacing={2}>
-          <Alert severity="info">Formato oficio, agrupado por área, con horas normales y dobles.</Alert>
+          <Alert severity="info">Formato oficio, con horas normales y dobles. Elija un área para imprimir solo esa, o Todas para verlas agrupadas.</Alert>
           <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={7}>
                 {selectorPlanilla(TIPO_TIEMPO_EXTRA, idExtra, setIdExtra, "Planilla de tiempo extraordinario")}
               </Grid>
               <Grid item xs={12} md={3}>
-                <FormControlLabel
-                  control={<Switch checked={porAreaExtra} onChange={(e) => setPorAreaExtra(e.target.checked)} />}
-                  label="Agrupar por área"
-                />
+                {selectorArea(areaExtra, setAreaExtra)}
               </Grid>
               <Grid item xs={12} md={2}>
                 <Button fullWidth variant="contained" startIcon={<PrintIcon />} disabled={!idExtra || descargando}
                   onClick={() => descargar(
-                    `/impresiones/nomina-tiempo-extra/${idExtra}/pdf?porArea=${porAreaExtra}&firmas=${firmasParam}`,
+                    `/impresiones/nomina-tiempo-extra/${idExtra}/pdf?area=${encodeURIComponent(areaExtra)}&firmas=${firmasParam}`,
                     `nomina_tiempo_extra_${idExtra}.pdf`
                   )}>
                   Imprimir

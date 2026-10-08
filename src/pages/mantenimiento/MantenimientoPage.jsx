@@ -13,6 +13,7 @@ import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
 import PageHeader from "../../components/common/PageHeader";
+import LogoRegimenUploader from "./LogoRegimenUploader";
 
 const StatCard = ({ label, value }) => (
   <Grid item xs={12} sm={6} md={4}>
@@ -142,6 +143,7 @@ const MantenimientoPage = () => {
   return (
     <Stack spacing={2.5}>
       <PageHeader title="Mantenimiento" subtitle="Backups, restauracion, monitoreo y logs del sistema" />
+      <LogoRegimenUploader />
       <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}>
         <Tabs value={tab} onChange={(event, value) => setTab(value)} variant="scrollable" scrollButtons="auto">
           <Tab label="Estado del sistema" />

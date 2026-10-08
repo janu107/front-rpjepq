@@ -4,7 +4,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import {
   Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
   IconButton, InputAdornment, Paper, Stack, Tab, Table, TableBody,
-  TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, Tooltip, Typography
+  TableCell, TableContainer, TableHead, TablePagination, TableRow, Tabs, TextField, Tooltip, Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +23,13 @@ const ReportTable = ({ columns, rows, search, searchKeys }) => {
     return rows.filter((r) => searchKeys.some((k) => String(r[k] || "").toLowerCase().includes(term)));
   }, [rows, search, searchKeys]);
 
+  // Paginado de 15 registros por página.
+  const [page, setPage] = useState(0);
+  useEffect(() => { setPage(0); }, [search, rows]);
+  const POR_PAGINA = 15;
+  const pagina = Math.min(page, Math.max(0, Math.ceil(filtered.length / POR_PAGINA) - 1));
+  const visibles = filtered.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
+
   return (
     <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
       <Table size="small">
@@ -32,7 +39,7 @@ const ReportTable = ({ columns, rows, search, searchKeys }) => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filtered.map((row, i) => (
+          {visibles.map((row, i) => (
             <TableRow key={i} hover>
               {columns.map((c) => <TableCell key={c.key}>{c.render ? c.render(row) : row[c.key] ?? ""}</TableCell>)}
             </TableRow>
@@ -42,6 +49,17 @@ const ReportTable = ({ columns, rows, search, searchKeys }) => {
           )}
         </TableBody>
       </Table>
+      {filtered.length > POR_PAGINA && (
+        <TablePagination
+          component="div"
+          count={filtered.length}
+          page={pagina}
+          onPageChange={(_, p) => setPage(p)}
+          rowsPerPage={POR_PAGINA}
+          rowsPerPageOptions={[POR_PAGINA]}
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+        />
+      )}
     </TableContainer>
   );
 };
@@ -120,7 +138,6 @@ const ReportesRegimenPage = () => {
         { key: "estado", label: "Estado" },
         { key: "fechaInicio", label: "Inicio", render: (r) => formatDate(r.fechaInicio) },
         { key: "fechaFinal", label: "Final", render: (r) => formatDate(r.fechaFinal) },
-        { key: "manejoDescripcion", label: "Manejo" }
       ]
     },
     {
@@ -131,7 +148,6 @@ const ReportesRegimenPage = () => {
         { key: "miembroNombre", label: "Miembro" },
         { key: "puesto", label: "Puesto" },
         { key: "tipoJunta", label: "Tipo junta" },
-        { key: "manejoDescripcion", label: "Manejo" },
         { key: "acta", label: "Acta" },
         { key: "sesionesMes", label: "Sesiones" },
         { key: "valor", label: "Valor", render: (r) => money(r.valor) },
@@ -154,7 +170,6 @@ const ReportesRegimenPage = () => {
         { key: "estadoCivil", label: "Est. civil" },
         { key: "puestoNombre", label: "Puesto" },
         { key: "areaDescripcion", label: "Area" },
-        { key: "manejoDescripcion", label: "Manejo" }
       ]
     },
     {
@@ -172,7 +187,6 @@ const ReportesRegimenPage = () => {
         { key: "tienePrestamo", label: "Préstamo", render: (r) => <Chip label={r.tienePrestamo ? "SI" : "NO"} size="small" color={r.tienePrestamo ? "warning" : "default"} /> },
         { key: "fechaInicio", label: "F. inicio", render: (r) => formatDate(r.fechaInicio) },
         { key: "fechaFin", label: "F. fin", render: (r) => formatDate(r.fechaFin) },
-        { key: "manejoDescripcion", label: "Manejo" },
         { key: "totalAportado", label: "Total aportado", render: (r) => money(r.totalAportado) },
         { key: "cantidadAportes", label: "Cantidad aportes" },
         {

@@ -168,6 +168,7 @@ const ReporteDetalleAportacionesPage = () => {
           columns={COLUMNS}
           orientacion="vertical"
           encabezado={ficha}
+          anchoTabla={560}
           onImprimir={descargarPdf}
           getTotales={(f) => [
             { label: "Cantidad de aportes", value: f.length },

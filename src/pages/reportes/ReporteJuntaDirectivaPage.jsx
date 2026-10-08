@@ -14,7 +14,6 @@ const COLUMNS = [
   { key: "estado", label: "Estado", width: 80 },
   { key: "fechaInicio", label: "F. Inicio", width: 90, render: (r) => fmt(r.fechaInicio) },
   { key: "fechaFinal", label: "F. Final", width: 90, render: (r) => fmt(r.fechaFinal) },
-  { key: "manejoDescripcion", label: "Manejo", width: 110 }
 ];
 
 const FILTER_DEFS = [

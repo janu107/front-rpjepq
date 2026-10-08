@@ -34,7 +34,6 @@ const JubiladosPage = ({ showPlanilla = false }) => (
       { key: "dpi", label: "DPI" },
       { key: "estado", label: "Estado", chip: true },
       { key: "tipoJubilacionDescripcion", label: "Tipo jubilacion" },
-      { key: "manejoDescripcion", label: "Manejo" }
     ]}
     fields={[
       { key: "tipoManejo", label: "Manejo administracion", required: true, type: "select", source: "manejos", getValue: (item) => item.id, getLabel: (item) => item.descripcion, disabled: true },

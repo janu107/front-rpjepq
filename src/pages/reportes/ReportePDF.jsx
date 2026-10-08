@@ -9,6 +9,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import axiosClient from "../../api/axiosClient";
+import LogoRegimen from "../../components/common/LogoRegimen";
 
 const today = () =>
   new Date().toLocaleDateString("es-GT", { day: "2-digit", month: "long", year: "numeric" });
@@ -36,6 +37,7 @@ const FIRMA_ROLES = [
  *  encabezado  node          — Bloque libre que se dibuja arriba de la tabla (ej. ficha del empleado)
  *  onImprimir  fn            — Si viene, el botón la llama en vez de abrir el diálogo del navegador
  *                               (para reportes cuyo PDF lo genera el backend)
+ *  anchoTabla  number        — Ancho máximo de la tabla; si viene, la tabla se centra en la hoja
  */
 const ReportePDF = ({
   titulo = "Reporte",
@@ -45,10 +47,11 @@ const ReportePDF = ({
   searchKeys = [],
   filterDefs = [],
   getTotales,
-  filasPorPagina = 20,
+  filasPorPagina = 15,
   orientacion = "horizontal",
   encabezado = null,
-  onImprimir = null
+  onImprimir = null,
+  anchoTabla = null
 }) => {
   const [busqueda, setBusqueda] = useState("");
   const [filterValues, setFilterValues] = useState({});
@@ -235,7 +238,8 @@ const ReportePDF = ({
           }}
         >
           {/* Encabezado institucional */}
-          <Box sx={{ textAlign: "center", mb: 3, pb: 2, borderBottom: "2px solid #1f4e5f", "@media print": { mb: 2, pb: 1 } }}>
+          <Box sx={{ position: "relative", textAlign: "center", mb: 3, pb: 2, borderBottom: "2px solid #1f4e5f", "@media print": { mb: 2, pb: 1 } }}>
+            <LogoRegimen sx={{ position: "absolute", left: 0, top: 0, height: { xs: 44, md: 64 } }} />
             <Typography sx={{ fontWeight: 900, fontSize: { xs: "0.82rem", md: "0.95rem" }, color: "#1f4e5f", letterSpacing: 0.5, textTransform: "uppercase" }}>
               Régimen de Pensiones y Jubilaciones
             </Typography>
@@ -264,7 +268,7 @@ const ReportePDF = ({
           {encabezado && <Box sx={{ mb: 2 }}>{encabezado}</Box>}
 
           {/* Tabla de datos */}
-          <TableContainer sx={{ "@media print": { overflow: "visible" } }}>
+          <TableContainer sx={{ maxWidth: anchoTabla || "none", mx: anchoTabla ? "auto" : 0, "@media print": { overflow: "visible" } }}>
             <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: "#1f4e5f", "@media print": { bgcolor: "#e8ecef" } }}>
@@ -310,7 +314,7 @@ const ReportePDF = ({
               onPageChange={(_, nueva) => setPage(nueva)}
               rowsPerPage={rowsPerPage}
               onRowsPerPageChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(0); }}
-              rowsPerPageOptions={[20, 50, 100]}
+              rowsPerPageOptions={[15, 50, 100]}
               labelRowsPerPage="Registros por página"
               labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
             />

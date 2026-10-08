@@ -15,14 +15,12 @@ const COLUMNS = [
   { key: "tipoPuesto", label: "Tipo puesto", width: 90 },
   { key: "puestoNombre", label: "Puesto", width: 160 },
   { key: "areaDescripcion", label: "Area", width: 120 },
-  { key: "manejoDescripcion", label: "Manejo", width: 110 }
 ];
 
 const FILTER_DEFS = [
   { key: "tipoPuesto", label: "Tipo puesto", options: ["FIJO", "CONTRATO", "TEMPORAL"] },
   { key: "sexo", label: "Sexo", options: ["M", "F"] },
   { key: "areaDescripcion", label: "Area", dynamic: true },
-  { key: "manejoDescripcion", label: "Manejo", dynamic: true }
 ];
 
 const ReporteEmpleadosRegimenPage = () => {
