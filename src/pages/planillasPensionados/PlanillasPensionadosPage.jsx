@@ -75,8 +75,8 @@ const PlanillasPensionadosPage = () => {
 
   const handleDeudaHistorica = async () => {
     const confirm = await Swal.fire({
-      title: "Generar deuda histórica masiva",
-      text: `¿Confirma generar la deuda histórica hasta el período ${formatPeriodo(deudaForm.periodoFinal)} con ${deudaForm.porcentaje}% pagado?`,
+      title: "Carga histórica de jubilados",
+      text: `Se crearán las planillas mensuales desde la jubilación más antigua hasta el mes anterior. Antes de ${formatPeriodo(deudaForm.periodoFinal)} se paga completo; desde ${formatPeriodo(deudaForm.periodoFinal)} se paga el ${deudaForm.porcentaje}% y el resto queda como deuda. ¿Continuar?`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Sí, generar",
@@ -86,12 +86,25 @@ const PlanillasPensionadosPage = () => {
     setSaving(true);
     try {
       const res = await axiosClient.post("/planillas-pensionados/deuda-historica/masivo", {
-        periodoFinal: deudaForm.periodoFinal,
+        periodoDeuda: deudaForm.periodoFinal,
         porcentaje: deudaForm.porcentaje
       });
+      const r = res.data.data || {};
       setDeudaDialogOpen(false);
       setDeudaForm(initialDeudaForm);
-      Swal.fire("Éxito", `Procesados: ${res.data.data?.jubiladosProcesados} jubilados — ${res.data.data?.totalDeudas} registros generados${res.data.data?.omitidos ? ` — ${res.data.data.omitidos} jubilado(s) omitido(s) por datos incompletos` : ""}${res.data.data?.sinPension ? ` — ${res.data.data.sinPension} jubilado(s) activos sin pensión configurada (no generan deuda)` : ""}. Si ya se había cargado antes, los períodos existentes no se duplican.`, "success");
+      Swal.fire({
+        title: "Carga histórica completada",
+        icon: "success",
+        html: `<div style="text-align:left;font-size:14px;line-height:1.7">
+          <b>Rango:</b> ${r.periodoInicio ? formatPeriodo(String(r.periodoInicio)) : "—"} a ${r.periodoFin ? formatPeriodo(String(r.periodoFin)) : "—"}<br/>
+          <b>Jubilados con pensión:</b> ${r.jubiladosProcesados ?? 0}<br/>
+          <b>Planillas creadas:</b> ${r.planillasCreadas ?? 0}<br/>
+          <b>Pagos registrados:</b> ${r.renglones ?? 0}<br/>
+          <b>Deudas nuevas:</b> ${r.totalDeudas ?? 0}${r.deudasAjustadas ? ` &nbsp;·&nbsp; ajustadas: ${r.deudasAjustadas}` : ""}${r.deudasEliminadas ? ` &nbsp;·&nbsp; quitadas (meses pagados completos): ${r.deudasEliminadas}` : ""}<br/>
+          ${r.sinPension ? `<b>Omitidos sin pensión:</b> ${r.sinPension} (entrarán cuando tengan valor)<br/>` : ""}
+          <span style="color:#666">Lo que ya existía con pagos no se modificó. Puede volver a ejecutarse sin duplicar.</span>
+        </div>`
+      });
     } catch (_) {}
     finally { setSaving(false); }
   };
@@ -231,20 +244,25 @@ const PlanillasPensionadosPage = () => {
       </Dialog>
 
       {/* Dialog: Carga deuda histórica */}
-      <Dialog open={deudaDialogOpen} onClose={() => setDeudaDialogOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Carga Masiva de Deuda Histórica</DialogTitle>
+      <Dialog open={deudaDialogOpen} onClose={() => setDeudaDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Carga Histórica de Jubilados</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" mb={2}>
-            Genera registros de deuda histórica para todos los pensionados activos desde su fecha de jubilación hasta el período indicado.
-            Solo ejecutar UNA VEZ al poner el sistema en producción.
+            Crea las planillas de jubilados mes a mes, desde la fecha de jubilación más antigua hasta el mes anterior
+            al actual (pago el último día de cada mes). Cada jubilado entra desde su propia fecha de jubilación y solo
+            si tiene pensión configurada.
+            <br /><br />
+            <b>Antes del período</b> indicado se registra el pago completo. <b>Desde ese período</b> se paga el
+            porcentaje y la diferencia queda como deuda, que las nóminas siguientes van completando mes a mes.
+            Se puede volver a ejecutar: lo que ya existe no se duplica.
           </Typography>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
               <TextField
-                fullWidth size="small" label="Período Final (YYYYMM)" value={deudaForm.periodoFinal}
+                fullWidth size="small" label="Período desde el que se paga el porcentaje (YYYYMM)" value={deudaForm.periodoFinal}
                 onChange={(e) => setDF("periodoFinal", e.target.value)}
                 inputProps={{ maxLength: 6 }}
-                helperText="Ej: 202605 para mayo 2026"
+                helperText="Ej: 202303 para marzo 2023"
               />
             </Grid>
             <Grid item xs={12}>
@@ -252,7 +270,7 @@ const PlanillasPensionadosPage = () => {
                 fullWidth size="small" label="Porcentaje pagado (%)" type="number"
                 value={deudaForm.porcentaje} onChange={(e) => setDF("porcentaje", e.target.value)}
                 inputProps={{ min: 1, max: 100, step: 0.01 }}
-                helperText="Porcentaje que se ha estado pagando (ej: 50.00)"
+                helperText="Porcentaje pagado desde ese período (ej: 50.00)"
               />
             </Grid>
           </Grid>
