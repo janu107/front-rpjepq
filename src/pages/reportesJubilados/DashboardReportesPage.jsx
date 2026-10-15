@@ -40,15 +40,19 @@ const DashboardReportesPage = () => {
       label: "Saldos", endpoint: "/jubilados-reportes/saldos", onRowClick: irEstadoCuenta,
       columns: [
         { key: "nombre", label: "Jubilado" }, { key: "dpi", label: "DPI" }, { key: "tipoPago", label: "Tipo" },
-        { key: "estadoPago", label: "Estado" }, { key: "saldo", label: "Saldo", align: "right", render: (r) => fmtQ(r.saldo), csv: (r) => r.saldo }
+        { key: "estadoPago", label: "Estado" }, { key: "mesesAdeudados", label: "Meses adeudados", align: "right" }, { key: "saldo", label: "Saldo", align: "right", render: (r) => fmtQ(r.saldo), csv: (r) => r.saldo }
       ]
     },
     {
       label: "Pagos", endpoint: "/jubilados-reportes/pagos",
-      filtros: [{ key: "desde", label: "Desde" }, { key: "hasta", label: "Hasta" }],
+      filtros: [{ key: "idJubilado", label: "Jubilado (código, nombre o DPI)", type: "jubilado" }, { key: "desde", label: "Desde" }, { key: "hasta", label: "Hasta" }],
       columns: [
         { key: "periodo", label: "Período" }, { key: "fechaPago", label: "Fecha pago", render: (r) => (r.fechaPago ? String(r.fechaPago).slice(0, 10) : "") },
-        { key: "beneficiario", label: "Beneficiario/Jubilado" }, { key: "total", label: "Total", align: "right", render: (r) => fmtQ(r.total), csv: (r) => r.total }
+        { key: "beneficiario", label: "Beneficiario/Jubilado" },
+        { key: "porcentaje", label: "% pagado", align: "right", render: (r) => `${Number(r.porcentaje || 0)}%` },
+        { key: "pagoCorriente", label: "Pago del mes", align: "right", render: (r) => fmtQ(r.pagoCorriente), csv: (r) => r.pagoCorriente },
+        { key: "abono", label: "Abono a deuda", align: "right", render: (r) => fmtQ(r.abono), csv: (r) => r.abono },
+        { key: "total", label: "Total", align: "right", render: (r) => fmtQ(r.total), csv: (r) => r.total }
       ]
     },
     {

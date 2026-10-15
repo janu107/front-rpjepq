@@ -6,10 +6,11 @@ import {
 import { useEffect, useState } from "react";
 
 import axiosClient from "../../api/axiosClient";
+import BuscadorPersona from "./BuscadorPersona";
 
 // Componente genérico de reporte: título, endpoint, columnas y filtros.
 // columns: [{ key, label, align?, render?(row) }]
-// filtros: [{ key, label, type='date' }]
+// filtros: [{ key, label, type='date' }]  — type 'jubilado' muestra un buscador de jubilados
 // onRowClick?(row)
 const PRIMARIO = "#1F4E79";
 
@@ -58,9 +59,23 @@ const ReporteTabla = ({ title, endpoint, columns, filtros = [], onRowClick }) =>
       {filtros.length > 0 && (
         <Grid container spacing={2} sx={{ mb: 2 }} alignItems="center">
           {filtros.map((f) => (
-            <Grid item xs={12} sm={4} md={3} key={f.key}>
-              <TextField label={f.label} type={f.type || "date"} value={filtroVals[f.key]} onChange={(e) => setFiltroVals({ ...filtroVals, [f.key]: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth size="small" />
-            </Grid>
+            f.type === "jubilado" ? (
+              <Grid item xs={12} md={5} key={f.key}>
+                <BuscadorPersona
+                  label={f.label}
+                  endpoint="/jubilados/buscar"
+                  value={null}
+                  size="small"
+                  getOptionLabel={(o) => (o ? `${o.idJubilado} - ${o.nombreCompleto}` : "")}
+                  renderOption={(props, o) => <li {...props} key={o.id}>{o.idJubilado} - {o.nombreCompleto} — {o.dpi}</li>}
+                  onSelect={(o) => setFiltroVals({ ...filtroVals, [f.key]: o ? o.id : "" })}
+                />
+              </Grid>
+            ) : (
+              <Grid item xs={12} sm={4} md={3} key={f.key}>
+                <TextField label={f.label} type={f.type || "date"} value={filtroVals[f.key]} onChange={(e) => setFiltroVals({ ...filtroVals, [f.key]: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth size="small" />
+              </Grid>
+            )
           ))}
           <Grid item><Button variant="contained" onClick={cargar}>Aplicar</Button></Grid>
         </Grid>
