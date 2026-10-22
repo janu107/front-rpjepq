@@ -61,10 +61,20 @@ const PlanillasPensionadosPage = () => {
 
   useEffect(() => { load(); }, []);
 
-  const handleCreate = async () => {
+  const handleCreate = async (event) => {
+    event.preventDefault();
+    // Leer las fechas del formulario también cubre el autocompletado del navegador,
+    // que puede mostrar un valor sin haber actualizado el estado de React.
+    const fields = new FormData(event.currentTarget);
+    const payload = {
+      ...form,
+      fechaInicio: fields.get("fechaInicio"),
+      fechaFinal: fields.get("fechaFinal"),
+      fechaPago: fields.get("fechaPago")
+    };
     setSaving(true);
     try {
-      await axiosClient.post("/planillas-pensionados", form);
+      await axiosClient.post("/planillas-pensionados", payload);
       setDialogOpen(false);
       setForm(initialForm);
       Swal.fire("Éxito", "Planilla creada correctamente", "success");
@@ -182,7 +192,8 @@ const PlanillasPensionadosPage = () => {
       </TableContainer>
 
       {/* Dialog: Nueva Planilla */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth
+        PaperProps={{ component: "form", onSubmit: handleCreate }}>
         <DialogTitle>Nueva Planilla de Jubilados o Amparistas</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
@@ -222,22 +233,22 @@ const PlanillasPensionadosPage = () => {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField fullWidth size="small" label="Fecha Inicio" type="date" value={form.fechaInicio}
+              <TextField fullWidth size="small" label="Fecha Inicio" name="fechaInicio" type="date" required value={form.fechaInicio}
                 onChange={(e) => setF("fechaInicio", e.target.value)} InputLabelProps={{ shrink: true }} />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField fullWidth size="small" label="Fecha Final" type="date" value={form.fechaFinal}
+              <TextField fullWidth size="small" label="Fecha Final" name="fechaFinal" type="date" required value={form.fechaFinal}
                 onChange={(e) => setF("fechaFinal", e.target.value)} InputLabelProps={{ shrink: true }} />
             </Grid>
             <Grid item xs={12}>
-              <TextField fullWidth size="small" label="Fecha de Pago" type="date" value={form.fechaPago}
+              <TextField fullWidth size="small" label="Fecha de Pago" name="fechaPago" type="date" required value={form.fechaPago}
                 onChange={(e) => setF("fechaPago", e.target.value)} InputLabelProps={{ shrink: true }} />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={saving}>
+          <Button variant="contained" type="submit" disabled={saving}>
             {saving ? "Guardando..." : "Crear Planilla"}
           </Button>
         </DialogActions>
