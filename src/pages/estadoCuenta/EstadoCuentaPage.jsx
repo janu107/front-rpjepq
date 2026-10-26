@@ -178,8 +178,13 @@ const EstadoCuentaPage = () => {
 
       <Dialog open={historiaOpen} onClose={() => setHistoriaOpen(false)} fullWidth maxWidth="lg">
         <DialogTitle>Historia completa</DialogTitle>
-        <DialogContent dividers>
-          <Table size="small" stickyHeader>
+        <DialogContent dividers sx={{ pt: 0 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
+            <b>Monto generado</b>: lo que vale el mes (pensión − descuentos). <b>Recibido en el mes</b>: lo pagado en la
+            planilla de ese mes, que se abona a la deuda más antigua. <b>Abonado al mes</b>: cuánto se ha pagado de ese
+            mes. Por eso un mes puede quedar PAGADO aunque en su planilla se haya recibido solo una parte.
+          </Typography>
+          <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
             <TableHead>
               <TableRow>
                 <TableCell>Período</TableCell><TableCell align="right">Pensión completa</TableCell><TableCell align="right">Monto generado</TableCell>
