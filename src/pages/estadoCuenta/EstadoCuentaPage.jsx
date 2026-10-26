@@ -158,7 +158,7 @@ const EstadoCuentaPage = () => {
             <Typography variant="h6" sx={{ mb: 1.5, color: PRIMARIO }}>Últimos pagos</Typography>
             {pagos.length === 0 ? <Typography color="text.secondary">Sin pagos registrados.</Typography> : (
               <Table size="small">
-                <TableHead><TableRow><TableCell>Período</TableCell><TableCell>Fecha pago</TableCell><TableCell align="right">Total</TableCell><TableCell align="right">Corriente</TableCell><TableCell align="right">Abono</TableCell></TableRow></TableHead>
+                <TableHead><TableRow><TableCell>Período</TableCell><TableCell>Fecha pago</TableCell><TableCell align="right">Recibido</TableCell><TableCell align="right">Al mes actual</TableCell><TableCell align="right">A meses anteriores</TableCell></TableRow></TableHead>
                 <TableBody>
                   {pagos.map((p) => (
                     <TableRow key={p.id}>
@@ -183,18 +183,18 @@ const EstadoCuentaPage = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Período</TableCell><TableCell align="right">Pensión completa</TableCell><TableCell align="right">Monto generado</TableCell>
-                <TableCell align="right">Pagado</TableCell><TableCell align="right">Saldo</TableCell><TableCell>Estado</TableCell><TableCell>Tipo</TableCell>
+                <TableCell align="right">Recibido en el mes</TableCell><TableCell align="right">Abonado al mes</TableCell><TableCell align="right">Saldo</TableCell><TableCell>Estado</TableCell><TableCell>Tipo</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {historia.map((d) => {
                 const color = colorEstadoDeuda(d);
-                const generado = Number(d.montoPagado || 0) + Number(d.saldo || 0);
                 return (
                   <TableRow key={d.id} sx={{ bgcolor: `${color}14` }}>
                     <TableCell>{fmtPeriodo(d.periodo)}</TableCell>
                     <TableCell align="right">{fmtQ(d.pensionCompleta)}</TableCell>
-                    <TableCell align="right">{fmtQ(generado)}</TableCell>
+                    <TableCell align="right">{fmtQ(d.montoGenerado)}</TableCell>
+                    <TableCell align="right">{fmtQ(d.recibidoMes)}</TableCell>
                     <TableCell align="right">{fmtQ(d.montoPagado)}</TableCell>
                     <TableCell align="right">{fmtQ(d.saldo)}</TableCell>
                     <TableCell><Chip size="small" label={d.esDeuda ? d.estado : "HISTORIA"} sx={{ bgcolor: color, color: "#fff" }} /></TableCell>
