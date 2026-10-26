@@ -263,9 +263,12 @@ const PlanillasPensionadosPage = () => {
             al actual (pago el último día de cada mes). Cada jubilado entra desde su propia fecha de jubilación y solo
             si tiene pensión configurada.
             <br /><br />
-            <b>Antes del período</b> indicado se registra el pago completo. <b>Desde ese período</b> se paga el
-            porcentaje y la diferencia queda como deuda, que las nóminas siguientes van completando mes a mes.
-            Se puede volver a ejecutar: lo que ya existe no se duplica.
+            <b>Antes del período</b> indicado se registra el pago completo. <b>Desde ese período</b> cada mes
+            queda como deuda por su líquido (pensión − descuentos del mes, incluidos los préstamos vigentes) y se
+            paga el porcentaje del líquido, que se aplica al mes adeudado más antiguo.
+            <br /><br />
+            Se puede volver a ejecutar (por ejemplo, al registrar la pensión de más jubilados): la deuda de todos se
+            rehace con lo pagado hasta la fecha. No se puede ejecutar con una planilla en estado GENERADA.
           </Typography>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
