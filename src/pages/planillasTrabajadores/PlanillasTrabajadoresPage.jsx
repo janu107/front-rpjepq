@@ -1,13 +1,14 @@
 import AddIcon from "@mui/icons-material/Add";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import SearchIcon from "@mui/icons-material/Search";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
   Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
-  Grid, Paper, Stack,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Grid, InputAdornment, Paper, Stack,
+  Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow,
   TextField, Typography
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -40,6 +41,19 @@ const PlanillasTrabajadoresPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
+  const [buscar, setBuscar] = useState("");
+  const [pagina, setPagina] = useState(0);
+  const [porPagina, setPorPagina] = useState(20);
+
+  // Más reciente primero (por período YYYYMM) y filtro por período: "202609",
+  // "2026" o el nombre del mes ("septiembre").
+  const filtradas = useMemo(() => {
+    const t = buscar.trim().toLowerCase();
+    return [...planillas]
+      .sort((a, b) => Number(b.numero || 0) - Number(a.numero || 0) || Number(b.id) - Number(a.id))
+      .filter((p) => !t || String(p.numero || "").includes(t) || formatPeriodo(p.numero).toLowerCase().includes(t));
+  }, [planillas, buscar]);
+  const visibles = filtradas.slice(pagina * porPagina, pagina * porPagina + porPagina);
 
   const load = async () => {
     setLoading(true);
@@ -78,6 +92,14 @@ const PlanillasTrabajadoresPage = () => {
         </Button>
       </Stack>
 
+      <TextField
+        size="small" sx={{ mb: 2, width: { xs: "100%", sm: 340 } }}
+        placeholder="Buscar planilla (ej. 202609, 2026 o septiembre)"
+        value={buscar}
+        onChange={(e) => { setBuscar(e.target.value); setPagina(0); }}
+        InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+      />
+
       <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
         <Table size="small">
           <TableHead>
@@ -94,9 +116,9 @@ const PlanillasTrabajadoresPage = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {planillas.map((p) => (
+            {visibles.map((p) => (
               <TableRow key={p.id} hover>
-                <TableCell>{formatPeriodo(p.numero)}</TableCell>
+                <TableCell>{formatPeriodo(p.numero)} <Typography component="span" variant="caption" color="text.secondary">({p.numero})</Typography></TableCell>
                 <TableCell>{fmtDate(p.fechaInicio)}</TableCell>
                 <TableCell>{fmtDate(p.fechaFinal)}</TableCell>
                 <TableCell>{fmtDate(p.fechaPago)}</TableCell>
@@ -114,16 +136,29 @@ const PlanillasTrabajadoresPage = () => {
                 </TableCell>
               </TableRow>
             ))}
-            {!loading && !planillas.length && (
+            {!loading && !filtradas.length && (
               <TableRow>
                 <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                   <AssignmentIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1, display: "block", mx: "auto" }} />
-                  <Typography color="text.secondary">No hay planillas de empleados registradas</Typography>
+                  <Typography color="text.secondary">
+                    {planillas.length ? "Ninguna planilla coincide con la búsqueda" : "No hay planillas de empleados registradas"}
+                  </Typography>
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+        <TablePagination
+          component="div"
+          count={filtradas.length}
+          page={Math.min(pagina, Math.max(Math.ceil(filtradas.length / porPagina) - 1, 0))}
+          onPageChange={(_, p) => setPagina(p)}
+          rowsPerPage={porPagina}
+          onRowsPerPageChange={(e) => { setPorPagina(Number(e.target.value)); setPagina(0); }}
+          rowsPerPageOptions={[5, 10, 15, 20]}
+          labelRowsPerPage="Filas por página"
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+        />
       </TableContainer>
 
       {/* Dialog: Nueva Planilla */}

@@ -1,3 +1,6 @@
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import PrintIcon from "@mui/icons-material/Print";
+import SearchIcon from "@mui/icons-material/Search";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -6,10 +9,10 @@ import PlayCircleIcon from "@mui/icons-material/PlayCircle";
 import UndoIcon from "@mui/icons-material/Undo";
 import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
-  DialogTitle, Grid, Paper, Stack, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, TextField, Tooltip, Typography
+  DialogTitle, Grid, InputAdornment, Paper, Stack, Table, TableBody, TableCell,
+  TableContainer, TableHead, TablePagination, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -170,8 +173,23 @@ const DetallePlanillaTrabajadoresPage = () => {
     }));
   };
 
+  // Marca/desmarca un renglón para borrarlo al guardar.
+  const toggleEliminar = (clase, lid) => {
+    setMontosDialog((p) => ({ ...p, [clase]: p[clase].map((l) => (l.id === lid ? { ...l, eliminar: !l.eliminar } : l)) }));
+  };
+
   const handleGuardarMontos = async () => {
-    const { idEmpleado, ingresos, descuentos } = montosDialog;
+    const { idEmpleado } = montosDialog;
+    const ingresos = montosDialog.ingresos.filter((l) => !l.eliminar);
+    const descuentos = montosDialog.descuentos.filter((l) => !l.eliminar);
+    const eliminar = [
+      ...montosDialog.ingresos.filter((l) => l.eliminar).map((l) => ({ clase: "INGRESO", id: l.id })),
+      ...montosDialog.descuentos.filter((l) => l.eliminar).map((l) => ({ clase: "DESCUENTO", id: l.id }))
+    ];
+    if (montosDialog.ingresos.length && !ingresos.length && !nuevosRenglones.some((n) => n.clase === "INGRESO")) {
+      Swal.fire("Atención", "No puede borrar todos los ingresos. Para quitar a la persona de la planilla use \"Reversar pago\".", "warning");
+      return;
+    }
     const invalida = [...ingresos, ...descuentos].some((l) => l.valor === "" || Number.isNaN(Number(l.valor)) || Number(l.valor) < 0);
     if (invalida) { Swal.fire("Atención", "Los montos deben ser números mayores o iguales a 0", "warning"); return; }
     if (!renglonesValidos(nuevosRenglones)) { Swal.fire("Atención", "En los renglones nuevos elija el tipo y un monto mayor a 0", "warning"); return; }
@@ -180,6 +198,7 @@ const DetallePlanillaTrabajadoresPage = () => {
       const r = await axiosClient.put(`/planillas-trabajadores/${id}/empleados/${idEmpleado}/montos`, {
         ingresos: ingresos.map((l) => ({ id: l.id, valor: Number(l.valor) })),
         descuentos: descuentos.map((l) => ({ id: l.id, valor: Number(l.valor) })),
+        eliminar,
         nuevos: nuevosRenglones.map((n) => ({ clase: n.clase, tipo: Number(n.tipo), valor: Number(n.valor) }))
       });
       setNuevosRenglones([]);
@@ -210,6 +229,60 @@ const DetallePlanillaTrabajadoresPage = () => {
 
   const handleExportExcel = () => download(`/planillas-trabajadores/${id}/export/excel`, `nomina_empleados_${planilla?.numero || id}.xlsx`);
   const handleExportBanco = () => download(`/planillas-trabajadores/${id}/export/banco`, `banco_empleados_${planilla?.numero || id}.txt`);
+  // Mismo PDF de nómina de sueldos del módulo de Impresiones.
+  const handleImprimirNomina = async () => {
+    try {
+      const response = await axiosClient.get(`/impresiones/nomina-sueldos/${id}/pdf`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+      window.open(url, "_blank");
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (_) {
+      Swal.fire("Error", "No fue posible generar el PDF de la nómina.", "error");
+    }
+  };
+
+  // Vista previa y detalle: buscador (código, nombre o DPI) y paginado. Los hooks
+  // van antes de los return condicionales para no romper el componente.
+  const [buscarEmp, setBuscarEmp] = useState("");
+  const [pageEmp, setPageEmp] = useState(0);
+  const [rppEmp, setRppEmp] = useState(20);
+  const coincide = (r) => {
+    const t = buscarEmp.trim().toLowerCase();
+    return !t || String(r.codigo ?? "").toLowerCase().includes(t)
+      || String(r.nombreCompleto || "").toLowerCase().includes(t)
+      || String(r.dpi || "").toLowerCase().includes(t);
+  };
+  const listaPreviewTodos = useMemo(
+    () => [...(preview?.empleadosAptos || []), ...(preview?.empleadosExcluidos || [])],
+    [preview]
+  );
+  const previewFiltrado = useMemo(() => listaPreviewTodos.filter(coincide), [listaPreviewTodos, buscarEmp]); // eslint-disable-line react-hooks/exhaustive-deps
+  const detalleFiltrado = useMemo(() => detalle.filter(coincide), [detalle, buscarEmp]); // eslint-disable-line react-hooks/exhaustive-deps
+  const paginar = (lista) => {
+    const ultima = Math.max(0, Math.ceil(lista.length / rppEmp) - 1);
+    const pag = Math.min(pageEmp, ultima);
+    return { pag, filas: lista.slice(pag * rppEmp, pag * rppEmp + rppEmp) };
+  };
+  const buscadorEmp = (
+    <TextField
+      size="small" sx={{ mb: 2, width: { xs: "100%", sm: 380 } }}
+      placeholder="Buscar empleado por código, nombre o DPI"
+      value={buscarEmp}
+      onChange={(e) => { setBuscarEmp(e.target.value); setPageEmp(0); }}
+      InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+    />
+  );
+  const paginador = (total, pag) => (
+    <TablePagination
+      component="div" count={total} page={pag}
+      onPageChange={(_, p) => setPageEmp(p)}
+      rowsPerPage={rppEmp}
+      onRowsPerPageChange={(e) => { setRppEmp(Number(e.target.value)); setPageEmp(0); }}
+      rowsPerPageOptions={[10, 20, 50, 100]}
+      labelRowsPerPage="Filas por página"
+      labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+    />
+  );
 
   if (loading) {
     return <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}><CircularProgress /></Box>;
@@ -226,6 +299,8 @@ const DetallePlanillaTrabajadoresPage = () => {
   const aptos = preview?.empleadosAptos || [];
   const excluidos = preview?.empleadosExcluidos || [];
   const listaPreview = [...aptos, ...excluidos];
+  const previewPagina = paginar(previewFiltrado);
+  const detallePagina = paginar(detalleFiltrado);
 
   const totIngresos    = detalle.reduce((s,r) => s + r.totalIngresos, 0);
   const totDescuentos  = detalle.reduce((s,r) => s + r.totalDescuentos, 0);
@@ -271,6 +346,7 @@ const DetallePlanillaTrabajadoresPage = () => {
           </Grid>
 
           {/* Tabla de empleados candidatos */}
+          {buscadorEmp}
           <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", mb: 3 }}>
             <Table size="small">
               <TableHead>
@@ -282,11 +358,11 @@ const DetallePlanillaTrabajadoresPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {listaPreview.map((e) => (
+                {previewPagina.filas.map((e) => (
                   <TableRow key={e.idEmpleado} hover>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>{e.nombreCompleto}</Typography>
-                      <Typography variant="caption" color="text.secondary">DPI: {e.dpi}</Typography>
+                      <Typography variant="caption" color="text.secondary">Cód: {e.codigo ?? "-"} &nbsp;|&nbsp; DPI: {e.dpi}</Typography>
                     </TableCell>
                     <TableCell>{e.puesto || "-"}</TableCell>
                     <TableCell align="right">{money(e.salarioBase)}</TableCell>
@@ -298,17 +374,20 @@ const DetallePlanillaTrabajadoresPage = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!listaPreview.length && (
+                {!previewFiltrado.length && (
                   <TableRow>
                     <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">
-                        No hay empleados régimen activos. Verifique que existan empleados ACTIVOS con datos de planilla.
+                        {listaPreview.length
+                          ? "Ningún empleado coincide con la búsqueda"
+                          : "No hay empleados régimen activos. Verifique que existan empleados ACTIVOS con datos de planilla."}
                       </Typography>
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+            {paginador(previewFiltrado.length, previewPagina.pag)}
           </TableContainer>
 
           {excluidos.length > 0 && (
@@ -366,7 +445,12 @@ const DetallePlanillaTrabajadoresPage = () => {
             <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleExportBanco}>
               Archivo Banco
             </Button>
+            <Button variant="outlined" startIcon={<PrintIcon />} onClick={handleImprimirNomina}>
+              Imprimir Nómina (PDF)
+            </Button>
           </Stack>
+
+          {buscadorEmp}
 
           <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
             <Table size="small">
@@ -382,12 +466,12 @@ const DetallePlanillaTrabajadoresPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {detalle.map((r) => (
+                {detallePagina.filas.map((r) => (
                   <TableRow key={r.idEmpleado} hover>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>{r.nombreCompleto}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        DPI: {r.dpi} &nbsp;|&nbsp; Ingreso: {fmtDate(r.fechaIngreso)}
+                        Cód: {r.codigo ?? "-"} &nbsp;|&nbsp; DPI: {r.dpi} &nbsp;|&nbsp; Ingreso: {fmtDate(r.fechaIngreso)}
                       </Typography>
                     </TableCell>
                     <TableCell>{r.puesto || "-"}</TableCell>
@@ -417,15 +501,18 @@ const DetallePlanillaTrabajadoresPage = () => {
                     )}
                   </TableRow>
                 ))}
-                {!detalle.length && (
+                {!detalleFiltrado.length && (
                   <TableRow>
                     <TableCell colSpan={consulta ? 6 : 7} align="center" sx={{ py: 4 }}>
-                      <Typography color="text.secondary">No hay registros de nómina para esta planilla</Typography>
+                      <Typography color="text.secondary">
+                        {detalle.length ? "Ningún empleado coincide con la búsqueda" : "No hay registros de nómina para esta planilla"}
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+            {paginador(detalleFiltrado.length, detallePagina.pag)}
           </TableContainer>
         </Box>
       )}
@@ -466,22 +553,40 @@ const DetallePlanillaTrabajadoresPage = () => {
             <Box>
               <Typography variant="subtitle2" sx={{ mt: 1, mb: 1 }}>Ingresos</Typography>
               {montosDialog.ingresos.map((l) => (
-                <Stack key={l.id} direction="row" spacing={2} alignItems="center" mb={1}>
-                  <Typography sx={{ flex: 1 }}>{l.concepto}</Typography>
-                  <TextField size="small" type="number" value={l.valor}
+                <Stack key={l.id} direction="row" spacing={1} alignItems="center" mb={1}>
+                  <Typography sx={{ flex: 1, textDecoration: l.eliminar ? "line-through" : "none", color: l.eliminar ? "text.disabled" : "inherit" }}>
+                    {l.concepto}
+                  </Typography>
+                  <TextField size="small" type="number" value={l.valor} disabled={l.eliminar}
                     onChange={(e) => setLineaValor("ingresos", l.id, e.target.value)}
                     inputProps={{ min: 0, step: 0.01 }} sx={{ width: 140 }} />
+                  {l.eliminar ? (
+                    <Button size="small" onClick={() => toggleEliminar("ingresos", l.id)}>Deshacer</Button>
+                  ) : (
+                    <Tooltip title="Borrar renglón al guardar">
+                      <Button size="small" color="error" onClick={() => toggleEliminar("ingresos", l.id)}><DeleteOutlineIcon fontSize="small" /></Button>
+                    </Tooltip>
+                  )}
                 </Stack>
               ))}
               {!montosDialog.ingresos.length && <Typography variant="caption" color="text.secondary">Sin ingresos.</Typography>}
 
               <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, color: "error.main" }}>Descuentos</Typography>
               {montosDialog.descuentos.map((l) => (
-                <Stack key={l.id} direction="row" spacing={2} alignItems="center" mb={1}>
-                  <Typography sx={{ flex: 1 }}>{l.concepto}</Typography>
-                  <TextField size="small" type="number" value={l.valor}
+                <Stack key={l.id} direction="row" spacing={1} alignItems="center" mb={1}>
+                  <Typography sx={{ flex: 1, textDecoration: l.eliminar ? "line-through" : "none", color: l.eliminar ? "text.disabled" : "inherit" }}>
+                    {l.concepto}
+                  </Typography>
+                  <TextField size="small" type="number" value={l.valor} disabled={l.eliminar}
                     onChange={(e) => setLineaValor("descuentos", l.id, e.target.value)}
                     inputProps={{ min: 0, step: 0.01 }} sx={{ width: 140 }} />
+                  {l.eliminar ? (
+                    <Button size="small" onClick={() => toggleEliminar("descuentos", l.id)}>Deshacer</Button>
+                  ) : (
+                    <Tooltip title="Borrar renglón al guardar">
+                      <Button size="small" color="error" onClick={() => toggleEliminar("descuentos", l.id)}><DeleteOutlineIcon fontSize="small" /></Button>
+                    </Tooltip>
+                  )}
                 </Stack>
               ))}
               {!montosDialog.descuentos.length && <Typography variant="caption" color="text.secondary">Sin descuentos.</Typography>}
