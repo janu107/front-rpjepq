@@ -110,7 +110,7 @@ const DetallePlanillaPensionadosPage = () => {
   const handleCerrar = async () => {
     const confirmResult = await Swal.fire({
       title: "Cerrar planilla",
-      html: `<b>Total ingresos:</b> ${money(planilla?.totalIngresos)}<br><b>Total descuentos:</b> ${money(planilla?.totalDescuentos)}<br><b>Neto a pagar:</b> ${money(planilla?.netoPagar)}<br><br>Una vez cerrada, la planilla sólo podrá consultarse.<br>¿Confirma el cierre definitivo?`,
+      html: `<b>Total ingresos:</b> ${money(planilla?.totalIngresos)}<br><b>Total descuentos:</b> ${money(planilla?.totalDescuentos)}<br><b>Neto a pagar:</b> ${money(planilla?.netoPagar)}<br><br>Al cerrar, el mes se registra en el historial de cada jubilado y lo pagado se abona a sus meses pendientes más antiguos.<br>Una vez cerrada, la planilla sólo podrá consultarse.<br>¿Confirma el cierre definitivo?`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Sí, cerrar",

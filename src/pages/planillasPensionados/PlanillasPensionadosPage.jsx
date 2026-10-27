@@ -268,7 +268,7 @@ const PlanillasPensionadosPage = () => {
             paga el porcentaje del líquido, que se aplica al mes adeudado más antiguo.
             <br /><br />
             Se puede volver a ejecutar (por ejemplo, al registrar la pensión de más jubilados): la deuda de todos se
-            rehace con lo pagado hasta la fecha. No se puede ejecutar con una planilla en estado GENERADA.
+            rehace con lo pagado hasta la fecha. Lo pagado en cada nómina se abona a la deuda al <b>cerrar</b> la planilla.
           </Typography>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
