@@ -75,8 +75,18 @@ const PlanillasPensionadosPage = () => {
 
   useEffect(() => { load(); }, []);
 
+  // Solo se crea una planilla cuando las anteriores del mismo tipo están CERRADAS.
+  const pendienteDeTipo = (tipo) => planillas
+    .filter((p) => Number(p.tipoPlanilla) === Number(tipo) && p.estadoProceso !== "CERRADA")
+    .sort((a, b) => Number(a.numero) - Number(b.numero))[0];
+
   const handleCreate = async (event) => {
     event.preventDefault();
+    const pend = pendienteDeTipo(form.tipoPlanilla || 2);
+    if (pend) {
+      Swal.fire("No se puede crear", `La planilla de ${formatPeriodo(pend.numero)} está ${pend.estadoProceso}. Ciérrela antes de crear otra.`, "warning");
+      return;
+    }
     // Leer las fechas del formulario también cubre el autocompletado del navegador,
     // que puede mostrar un valor sin haber actualizado el estado de React.
     const fields = new FormData(event.currentTarget);

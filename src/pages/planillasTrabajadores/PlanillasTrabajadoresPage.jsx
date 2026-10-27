@@ -66,6 +66,18 @@ const PlanillasTrabajadoresPage = () => {
 
   useEffect(() => { load(); }, []);
 
+  // Solo se crea una planilla cuando las anteriores están CERRADAS.
+  const pendiente = [...planillas].filter((p) => p.estadoProceso !== "CERRADA")
+    .sort((a, b) => Number(a.numero) - Number(b.numero))[0];
+
+  const abrirNueva = () => {
+    if (pendiente) {
+      Swal.fire("No se puede crear", `La planilla de ${formatPeriodo(pendiente.numero)} está ${pendiente.estadoProceso}. Ciérrela antes de crear otra.`, "warning");
+      return;
+    }
+    setForm(initialForm); setDialogOpen(true);
+  };
+
   const handleCreate = async () => {
     setSaving(true);
     try {
@@ -87,7 +99,7 @@ const PlanillasTrabajadoresPage = () => {
           <Typography variant="h5" fontWeight={700}>Planilla de Empleados Régimen</Typography>
           <Typography variant="body2" color="text.secondary">Gestión del proceso de nómina mensual de empleados régimen</Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setForm(initialForm); setDialogOpen(true); }}>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={abrirNueva}>
           Nueva Planilla
         </Button>
       </Stack>
