@@ -46,6 +46,7 @@ const ultimoDia = (form) => {
 const TiempoExtraPage = () => (
   <MantenimientoPage
     addMode
+    keepOnAdd={["fechaPago", "tipoHora"]}
     title="Tiempo extraordinario"
     subtitle="Registro de horas extra de empleados"
     endpoint="/tiempo-extra"

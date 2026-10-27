@@ -73,6 +73,8 @@ const buildPlanillaForm = () => ({
 });
 
 const MantenimientoPage = ({
+  // Campos que se conservan al presionar "Agregar" (captura en lote), p. ej. la fecha de pago.
+  keepOnAdd = [],
   title,
   subtitle,
   endpoint,
@@ -469,8 +471,14 @@ const MantenimientoPage = ({
         await axiosClient.post("/salarios/bulk", { salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...entityParams, ...row })) });
       }
       const fixedManejo = findFixedManejo(options.manejos, fixedManejoId, fixedManejoDescription);
-      setForm({ ...buildInitialForm(fields), tipoManejo: fixedManejo?.id || fixedManejoId || "" });
+      const conservados = Object.fromEntries(keepOnAdd.map((k) => [k, form[k]]));
+      setForm({ ...buildInitialForm(fields), tipoManejo: fixedManejo?.id || fixedManejoId || "", ...conservados });
       setSalaryRows([]);
+      // Listo para el siguiente: el cursor vuelve al primer campo.
+      setTimeout(() => {
+        const primero = formRef.current?.querySelector("input:not([disabled]):not([readonly]):not([tabindex='-1'])");
+        if (primero) primero.focus();
+      }, 50);
       setEditingSalaryIndex(null);
       loadRows();
     } catch (error) {
