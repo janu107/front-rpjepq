@@ -18,7 +18,8 @@ import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 const MANEJO_EMPLEADOS = 1;
 const MANEJO_JUBILADOS = 2;
 const TIPO_PERSONA_OPTS = ["EMPLEADO", "JUBILADO"];
-const ESTADO_OPTS = ["ACTIVO", "INACTIVO", "CANCELADO"];
+// ANULADO = creado por error (no cuenta en ningún cálculo); OPERADA la pone el sistema al terminar.
+const ESTADO_OPTS = ["ACTIVO", "INACTIVO", "CANCELADO", "OPERADA", "ANULADO"];
 
 const buildForm = () => ({
   tipoPersona: "", idPersona: "", idBanco: "",

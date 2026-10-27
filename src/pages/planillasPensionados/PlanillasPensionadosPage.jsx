@@ -127,7 +127,12 @@ const PlanillasPensionadosPage = () => {
           <b>Pagos registrados:</b> ${r.renglones ?? 0}<br/>
           <b>Deudas nuevas:</b> ${r.totalDeudas ?? 0}${r.deudasAjustadas ? ` &nbsp;·&nbsp; ajustadas: ${r.deudasAjustadas}` : ""}${r.deudasEliminadas ? ` &nbsp;·&nbsp; quitadas (meses pagados completos): ${r.deudasEliminadas}` : ""}<br/>
           ${r.sinPension ? `<b>Omitidos sin pensión:</b> ${r.sinPension} (entrarán cuando tengan valor)<br/>` : ""}
-          <span style="color:#666">Lo que ya existía con pagos no se modificó. Puede volver a ejecutarse sin duplicar.</span>
+          ${(r.prestamosTraslapados || []).length ? `<div style="margin-top:8px;padding:8px;border-radius:6px;background:#FFF4E5;color:#7A4100">
+            <b>Revisar préstamos que se cruzan</b> (en esos meses se restan las dos cuotas; si es una renovación,
+            ajuste la fecha fin del préstamo anterior o anúlelo y vuelva a correr la carga):<br/>
+            ${r.prestamosTraslapados.map((t) => `${t.codigo} - ${t.nombre}: ref. ${t.refA} y ${t.refB} (${String(t.desde).slice(0,10)} a ${String(t.hasta).slice(0,10)})`).join("<br/>")}
+          </div>` : ""}
+          <span style="color:#666">La deuda se rehízo con lo pagado hasta la fecha. Puede volver a ejecutarse cuando registre más pensiones o préstamos.</span>
         </div>`
       });
     } catch (_) {}
