@@ -58,7 +58,9 @@ const shrinkLabelTypes = ["date", "datetime-local", "time", "month"];
 
 const buildInitialForm = (fields) =>
   fields.reduce((acc, field) => {
-    acc[field.key] = field.defaultValue || "";
+    // defaultValue puede ser una función (p. ej. la fecha de hoy al abrir el formulario).
+    const def = typeof field.defaultValue === "function" ? field.defaultValue() : field.defaultValue;
+    acc[field.key] = def ?? "";
     return acc;
   }, {});
 

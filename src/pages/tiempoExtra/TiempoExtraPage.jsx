@@ -4,6 +4,12 @@ import MantenimientoPage from "../mantenimientos/MantenimientoPage";
 //   FECHA PAGO determina el periodo. El backend deriva inicio/fin del mes
 //   (primer y último día) y los persiste en tex_fecha_hora_inicio/final.
 //   tex_tipo_hora: 1=NORMAL, 2=DOBLE.
+// Fecha de hoy en "AAAA-MM-DD" (hora local, sin desfase de zona horaria).
+const hoyIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 const tipoHoraOptions = [
   { value: 1, label: "NORMAL" },
   { value: 2, label: "DOBLE" }
@@ -56,8 +62,9 @@ const TiempoExtraPage = () => (
     ]}
     fields={[
       { key: "idEmpleado", label: "Empleado", required: true, type: "autocomplete", source: "empleados", placeholder: "Escriba el código o el nombre", getValue: (item) => item.id, getCode: (item) => item.idEmpleado, getLabel: (item) => `${item.idEmpleado} - ${item.nombres} ${item.apellidos}` },
-      { key: "fechaPago", label: "Fecha pago", required: true, type: "date" },
-      { key: "tipoHora", label: "Tipo hora", required: true, type: "select", options: tipoHoraOptions },
+      // Por defecto: fecha de pago = hoy y tipo de hora = NORMAL.
+      { key: "fechaPago", label: "Fecha pago", required: true, type: "date", defaultValue: hoyIso },
+      { key: "tipoHora", label: "Tipo hora", required: true, type: "select", options: tipoHoraOptions, defaultValue: 1 },
       { key: "cantidadHoras", label: "Cantidad horas al mes", required: true, type: "number" },
       // Calculados de solo lectura (el backend persiste estos valores).
       { key: "inicioAuto", label: "Período trabajado: inicio (mes anterior)", compute: (form) => primerDia(form) },
