@@ -1,3 +1,4 @@
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SearchIcon from "@mui/icons-material/Search";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -183,8 +184,23 @@ const DetallePlanillaPensionadosPage = () => {
     setMontosDialog((p) => ({ ...p, [clase]: p[clase].map((l) => (l.id === lid ? { ...l, valor } : l)) }));
   };
 
+  // Marca/desmarca un renglón para borrarlo al guardar.
+  const toggleEliminar = (clase, lid) => {
+    setMontosDialog((p) => ({ ...p, [clase]: p[clase].map((l) => (l.id === lid ? { ...l, eliminar: !l.eliminar } : l)) }));
+  };
+
   const handleGuardarMontos = async () => {
-    const { idJubilado, ingresos, descuentos } = montosDialog;
+    const { idJubilado } = montosDialog;
+    const ingresos = montosDialog.ingresos.filter((l) => !l.eliminar);
+    const descuentos = montosDialog.descuentos.filter((l) => !l.eliminar);
+    const eliminar = [
+      ...montosDialog.ingresos.filter((l) => l.eliminar).map((l) => ({ clase: "INGRESO", id: l.id })),
+      ...montosDialog.descuentos.filter((l) => l.eliminar).map((l) => ({ clase: "DESCUENTO", id: l.id }))
+    ];
+    if (montosDialog.ingresos.length && !ingresos.length && !nuevosRenglones.some((n) => n.clase === "INGRESO")) {
+      Swal.fire("Atención", "No puede borrar todos los ingresos. Para quitar a la persona de la planilla use \"Reversar pago\".", "warning");
+      return;
+    }
     const invalida = [...ingresos, ...descuentos].some((l) => l.valor === "" || Number.isNaN(Number(l.valor)) || Number(l.valor) < 0);
     if (invalida) { Swal.fire("Atención", "Los montos deben ser números mayores o iguales a 0", "warning"); return; }
     if (!renglonesValidos(nuevosRenglones)) { Swal.fire("Atención", "En los renglones nuevos elija el tipo y un monto mayor a 0", "warning"); return; }
@@ -193,6 +209,7 @@ const DetallePlanillaPensionadosPage = () => {
       const r = await axiosClient.put(`/planillas-pensionados/${id}/jubilados/${idJubilado}/montos`, {
         ingresos: ingresos.map((l) => ({ id: l.id, valor: Number(l.valor) })),
         descuentos: descuentos.map((l) => ({ id: l.id, valor: Number(l.valor) })),
+        eliminar,
         nuevos: nuevosRenglones.map((n) => ({ clase: n.clase, tipo: Number(n.tipo), valor: Number(n.valor) }))
       });
       setNuevosRenglones([]);
@@ -623,22 +640,40 @@ const DetallePlanillaPensionadosPage = () => {
             <Box>
               <Typography variant="subtitle2" sx={{ mt: 1, mb: 1 }}>Ingresos</Typography>
               {montosDialog.ingresos.map((l) => (
-                <Stack key={l.id} direction="row" spacing={2} alignItems="center" mb={1}>
-                  <Typography sx={{ flex: 1 }}>{l.concepto}</Typography>
-                  <TextField size="small" type="number" value={l.valor}
+                <Stack key={l.id} direction="row" spacing={1} alignItems="center" mb={1}>
+                  <Typography sx={{ flex: 1, textDecoration: l.eliminar ? "line-through" : "none", color: l.eliminar ? "text.disabled" : "inherit" }}>
+                    {l.concepto}
+                  </Typography>
+                  <TextField size="small" type="number" value={l.valor} disabled={l.eliminar}
                     onChange={(e) => setLineaValor("ingresos", l.id, e.target.value)}
                     inputProps={{ min: 0, step: 0.01 }} sx={{ width: 140 }} />
+                  {l.eliminar ? (
+                    <Button size="small" onClick={() => toggleEliminar("ingresos", l.id)}>Deshacer</Button>
+                  ) : (
+                    <Tooltip title="Borrar renglón al guardar">
+                      <Button size="small" color="error" onClick={() => toggleEliminar("ingresos", l.id)}><DeleteOutlineIcon fontSize="small" /></Button>
+                    </Tooltip>
+                  )}
                 </Stack>
               ))}
               {!montosDialog.ingresos.length && <Typography variant="caption" color="text.secondary">Sin ingresos.</Typography>}
 
               <Typography variant="subtitle2" sx={{ mt: 2, mb: 1, color: "error.main" }}>Descuentos</Typography>
               {montosDialog.descuentos.map((l) => (
-                <Stack key={l.id} direction="row" spacing={2} alignItems="center" mb={1}>
-                  <Typography sx={{ flex: 1 }}>{l.concepto}</Typography>
-                  <TextField size="small" type="number" value={l.valor}
+                <Stack key={l.id} direction="row" spacing={1} alignItems="center" mb={1}>
+                  <Typography sx={{ flex: 1, textDecoration: l.eliminar ? "line-through" : "none", color: l.eliminar ? "text.disabled" : "inherit" }}>
+                    {l.concepto}
+                  </Typography>
+                  <TextField size="small" type="number" value={l.valor} disabled={l.eliminar}
                     onChange={(e) => setLineaValor("descuentos", l.id, e.target.value)}
                     inputProps={{ min: 0, step: 0.01 }} sx={{ width: 140 }} />
+                  {l.eliminar ? (
+                    <Button size="small" onClick={() => toggleEliminar("descuentos", l.id)}>Deshacer</Button>
+                  ) : (
+                    <Tooltip title="Borrar renglón al guardar">
+                      <Button size="small" color="error" onClick={() => toggleEliminar("descuentos", l.id)}><DeleteOutlineIcon fontSize="small" /></Button>
+                    </Tooltip>
+                  )}
                 </Stack>
               ))}
               {!montosDialog.descuentos.length && <Typography variant="caption" color="text.secondary">Sin descuentos.</Typography>}
