@@ -38,17 +38,19 @@ const DashboardReportesPage = () => {
   const reportes = useMemo(() => [
     {
       label: "Saldos", endpoint: "/jubilados-reportes/saldos", onRowClick: irEstadoCuenta,
+      buscador: "Buscar jubilado por código, nombre, apellido o DPI",
       columns: [
-        { key: "nombre", label: "Jubilado" }, { key: "dpi", label: "DPI" }, { key: "tipoPago", label: "Tipo" },
+        { key: "codigo", label: "Código" }, { key: "nombre", label: "Jubilado" }, { key: "dpi", label: "DPI" }, { key: "tipoPago", label: "Tipo" },
         { key: "estadoPago", label: "Estado" }, { key: "mesesAdeudados", label: "Meses adeudados", align: "right" }, { key: "saldo", label: "Saldo", align: "right", render: (r) => fmtQ(r.saldo), csv: (r) => r.saldo }
       ]
     },
     {
       label: "Pagos", endpoint: "/jubilados-reportes/pagos",
-      filtros: [{ key: "idJubilado", label: "Jubilado (código, nombre o DPI)", type: "jubilado" }, { key: "desde", label: "Desde" }, { key: "hasta", label: "Hasta" }],
+      buscador: "Buscar jubilado por código, nombre, apellido o DPI",
+      filtros: [{ key: "desde", label: "Desde" }, { key: "hasta", label: "Hasta" }],
       columns: [
         { key: "periodo", label: "Período" }, { key: "fechaPago", label: "Fecha pago", render: (r) => (r.fechaPago ? String(r.fechaPago).slice(0, 10) : "") },
-        { key: "beneficiario", label: "Beneficiario/Jubilado" },
+        { key: "codigo", label: "Código" }, { key: "beneficiario", label: "Beneficiario/Jubilado" },
         { key: "porcentaje", label: "% pagado", align: "right", render: (r) => `${Number(r.porcentaje || 0)}%` },
         { key: "pagoCorriente", label: "Pago del mes", align: "right", render: (r) => fmtQ(r.pagoCorriente), csv: (r) => r.pagoCorriente },
         { key: "abono", label: "Abono a deuda", align: "right", render: (r) => fmtQ(r.abono), csv: (r) => r.abono },
@@ -109,7 +111,7 @@ const DashboardReportesPage = () => {
         <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 1.5 }}>
           {reportes.map((r) => <Tab key={r.label} label={r.label} />)}
         </Tabs>
-        <ReporteTabla key={rep.endpoint} title={rep.label} endpoint={rep.endpoint} columns={rep.columns} filtros={rep.filtros} onRowClick={rep.onRowClick} />
+        <ReporteTabla key={rep.endpoint} title={rep.label} endpoint={rep.endpoint} columns={rep.columns} filtros={rep.filtros} onRowClick={rep.onRowClick} buscador={rep.buscador} />
       </Box>
     </Stack>
   );
