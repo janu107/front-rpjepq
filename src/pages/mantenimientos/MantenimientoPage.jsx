@@ -28,7 +28,7 @@ import {
   Tooltip,
   Typography
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
@@ -497,6 +497,28 @@ const MantenimientoPage = ({
     }
   };
 
+  // ---- Captura rápida con teclado: Enter pasa al siguiente campo del formulario ----
+  const formRef = useRef(null);
+  const focusNext = (desde) => {
+    setTimeout(() => {
+      const root = formRef.current;
+      if (!root || !desde) return;
+      const visibles = [...root.querySelectorAll("input, textarea, [role='combobox']")].filter((el) =>
+        !el.disabled && !el.readOnly && el.tabIndex !== -1 && el.getAttribute("aria-hidden") !== "true"
+        && el.type !== "hidden" && el.offsetParent !== null);
+      const unicos = visibles.filter((el, i) => visibles.indexOf(el) === i);
+      const i = unicos.findIndex((el) => el === desde || el.contains(desde) || desde.contains(el));
+      if (i >= 0 && unicos[i + 1]) unicos[i + 1].focus();
+    }, 0);
+  };
+  const enterAlSiguiente = (event) => {
+    if (event.key === "Enter" && !event.shiftKey && event.target.tagName !== "TEXTAREA") {
+      event.preventDefault();
+      focusNext(event.target);
+    }
+  };
+  const faltanObligatorios = fields.some((field) => field.required && String(form[field.key] ?? "").trim() === "");
+
   const renderField = (field) => {
     // Version IV: campo calculado de solo lectura (ej. horas de tiempo extra, montos de dieta).
     if (typeof field.compute === "function") {
@@ -540,23 +562,43 @@ const MantenimientoPage = ({
     if (field.type === "autocomplete") {
       const items = resolverItems();
       const seleccionado = items.find((item) => String(valorDe(item)) === String(form[field.key] ?? "")) || null;
+      // Código de la persona: field.getCode o lo que va antes de " - " en la etiqueta.
+      const codigoDe = (item) => String(field.getCode ? field.getCode(item) : String(etiquetaDe(item) ?? "").split(" - ")[0]).trim();
       return (
         <Autocomplete
           key={field.key}
           options={items}
           value={seleccionado}
-          onChange={(_, item) => setForm({ ...form, [field.key]: item ? valorDe(item) : "" })}
+          // Enter o Tab toman la opción resaltada (la de código exacto va primero):
+          // escribir "77" + Enter elige al empleado 77 y no se borra lo escrito.
+          autoHighlight
+          autoSelect
+          onChange={(_, item, reason) => {
+            setForm({ ...form, [field.key]: item ? valorDe(item) : "" });
+            // Enter o clic: pasa al siguiente campo. Con Tab (reason "blur") el
+            // navegador ya movió el cursor; no se avanza otra vez.
+            if (item && reason === "selectOption") focusNext(document.activeElement);
+          }}
           getOptionLabel={(item) => String(etiquetaDe(item) ?? "")}
           isOptionEqualToValue={(o, v) => String(valorDe(o)) === String(valorDe(v))}
           // Todas las palabras escritas, en cualquier orden: "perez juan" encuentra
           // "1234 - Juan Perez", y escribir el código también sirve.
           filterOptions={(opciones, { inputValue }) => {
-            const terminos = String(inputValue || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+            const entrada = String(inputValue || "").trim().toLowerCase();
+            const terminos = entrada.split(/\s+/).filter(Boolean);
             if (!terminos.length) return opciones;
-            return opciones.filter((item) => {
+            const filtradas = opciones.filter((item) => {
               const texto = String(etiquetaDe(item) ?? "").toLowerCase();
               return terminos.every((t) => texto.includes(t));
             });
+            // Si se escribió un código, el que coincide exacto va primero (77 antes que 177).
+            if (/^\d+$/.test(entrada)) {
+              const exacto = filtradas.filter((item) => codigoDe(item) === entrada);
+              const empieza = filtradas.filter((item) => codigoDe(item) !== entrada && codigoDe(item).startsWith(entrada));
+              const resto = filtradas.filter((item) => !codigoDe(item).startsWith(entrada));
+              return [...exacto, ...empieza, ...resto];
+            }
+            return filtradas;
           }}
           disabled={field.disabled || viewOnly}
           noOptionsText="Sin coincidencias"
@@ -576,7 +618,13 @@ const MantenimientoPage = ({
       return (
         <FormControl key={field.key} fullWidth>
           <InputLabel>{field.label}</InputLabel>
-          <Select label={field.label} value={form[field.key] ?? ""} onChange={(event) => setForm({ ...form, [field.key]: event.target.value })} disabled={field.disabled || viewOnly}>
+          <Select label={field.label} value={form[field.key] ?? ""}
+            SelectDisplayProps={{ id: `campo-${field.key}` }}
+            onChange={(event) => {
+              setForm({ ...form, [field.key]: event.target.value });
+              setTimeout(() => focusNext(document.getElementById(`campo-${field.key}`)), 50);
+            }}
+            disabled={field.disabled || viewOnly}>
             {items.map((item) => (
               <MenuItem key={field.getValue ? field.getValue(item) : item.value} value={field.getValue ? field.getValue(item) : item.value}>
                 {field.getLabel ? field.getLabel(item) : item.label}
@@ -603,6 +651,7 @@ const MantenimientoPage = ({
         onChange={handleChange}
         InputLabelProps={shrinkLabelTypes.includes(field.type) ? { shrink: true } : undefined}
         disabled={field.disabled || viewOnly}
+        onKeyDown={enterAlSiguiente}
         fullWidth
       />
     );
@@ -639,7 +688,7 @@ const MantenimientoPage = ({
         PaperProps={{ sx: { width: "min(1120px, calc(100% - 24px))" } }}
       >
         <DialogTitle>{viewOnly ? "Ver registro" : editingRow ? "Editar registro" : "Nuevo registro"}</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers ref={formRef}>
           {formSections.length > 0 ? (
             <Stack spacing={2.5} sx={{ mt: 0.5 }}>
               {formSections.map((section) => (
@@ -687,8 +736,11 @@ const MantenimientoPage = ({
             </Button>
           )}
           <Button onClick={() => { setDialogOpen(false); setViewOnly(false); setPendingPlanillaForm(null); }}>{viewOnly ? "Cerrar" : "Cancelar"}</Button>
-          {!viewOnly && addMode && !editingRow && <Button variant="outlined" onClick={handleAgregar}>Agregar</Button>}
-          {!viewOnly && <Button variant="contained" onClick={handleSave}>Guardar</Button>}
+          {!viewOnly && faltanObligatorios && (
+            <Typography variant="caption" color="text.secondary" sx={{ mr: "auto", pl: 1 }}>Complete los campos obligatorios para guardar</Typography>
+          )}
+          {!viewOnly && addMode && !editingRow && <Button variant="outlined" onClick={handleAgregar} disabled={faltanObligatorios}>Agregar</Button>}
+          {!viewOnly && <Button variant="contained" onClick={handleSave} disabled={faltanObligatorios}>Guardar</Button>}
         </DialogActions>
       </Dialog>
 

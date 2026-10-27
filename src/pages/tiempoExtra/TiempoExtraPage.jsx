@@ -55,7 +55,7 @@ const TiempoExtraPage = () => (
       { key: "motivo", label: "Motivo" }
     ]}
     fields={[
-      { key: "idEmpleado", label: "Empleado", required: true, type: "autocomplete", source: "empleados", placeholder: "Escriba el código o el nombre", getValue: (item) => item.id, getLabel: (item) => `${item.idEmpleado} - ${item.nombres} ${item.apellidos}` },
+      { key: "idEmpleado", label: "Empleado", required: true, type: "autocomplete", source: "empleados", placeholder: "Escriba el código o el nombre", getValue: (item) => item.id, getCode: (item) => item.idEmpleado, getLabel: (item) => `${item.idEmpleado} - ${item.nombres} ${item.apellidos}` },
       { key: "fechaPago", label: "Fecha pago", required: true, type: "date" },
       { key: "tipoHora", label: "Tipo hora", required: true, type: "select", options: tipoHoraOptions },
       { key: "cantidadHoras", label: "Cantidad horas al mes", required: true, type: "number" },
