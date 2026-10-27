@@ -13,22 +13,28 @@ const lastDayOfMonth = (year, month) => {
   const dias = [31, (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   return dias[month - 1];
 };
-const primerDia = (form) => {
-  const f = form.fechaPago;
-  if (!f) return "";
-  return `${String(f).slice(0, 7)}-01`;
-};
-const ultimoDia = (form) => {
-  const f = form.fechaPago;
-  if (!f) return "";
-  const [y, m] = String(f).slice(0, 7).split("-").map(Number);
-  return `${String(f).slice(0, 7)}-${String(lastDayOfMonth(y, m)).padStart(2, "0")}`;
-};
 // Muestra una fecha "YYYY-MM-DD" como "DD/MM/YYYY".
 const ddmmyyyy = (v) => {
   if (!v) return "";
   const [y, m, d] = String(v).slice(0, 10).split("-");
   return d && m && y ? `${d}/${m}/${y}` : String(v);
+};
+// El pago es quincenal y el período trabajado es el MES ANTERIOR completo:
+// pago 15/10/2026 -> del 01/09/2026 al 30/09/2026 (igual que lo guarda el servidor).
+const mesAnterior = (fechaPago) => {
+  if (!fechaPago) return null;
+  let [y, m] = String(fechaPago).slice(0, 7).split("-").map(Number);
+  m -= 1;
+  if (m === 0) { m = 12; y -= 1; }
+  return { y, m };
+};
+const primerDia = (form) => {
+  const p = mesAnterior(form.fechaPago);
+  return p ? `01/${String(p.m).padStart(2, "0")}/${p.y}` : "";
+};
+const ultimoDia = (form) => {
+  const p = mesAnterior(form.fechaPago);
+  return p ? `${String(lastDayOfMonth(p.y, p.m)).padStart(2, "0")}/${String(p.m).padStart(2, "0")}/${p.y}` : "";
 };
 
 const TiempoExtraPage = () => (
@@ -43,6 +49,7 @@ const TiempoExtraPage = () => (
       { key: "empleadoCodigo", label: "Codigo" },
       { key: "empleadoNombre", label: "Empleado" },
       { key: "fechaPago", label: "Fecha pago", render: (row) => ddmmyyyy(row.fechaPago) },
+      { key: "fechaInicio", label: "Período trabajado", render: (row) => (row.fechaInicio ? `${ddmmyyyy(row.fechaInicio)} al ${ddmmyyyy(row.fechaFinal)}` : "") },
       { key: "tipoHoraNombre", label: "Tipo hora" },
       { key: "cantidadHoras", label: "Horas al mes" },
       { key: "motivo", label: "Motivo" }
@@ -53,8 +60,8 @@ const TiempoExtraPage = () => (
       { key: "tipoHora", label: "Tipo hora", required: true, type: "select", options: tipoHoraOptions },
       { key: "cantidadHoras", label: "Cantidad horas al mes", required: true, type: "number" },
       // Calculados de solo lectura (el backend persiste estos valores).
-      { key: "inicioAuto", label: "Inicio (auto)", compute: (form) => primerDia(form) },
-      { key: "finAuto", label: "Fin (auto)", compute: (form) => ultimoDia(form) },
+      { key: "inicioAuto", label: "Período trabajado: inicio (mes anterior)", compute: (form) => primerDia(form) },
+      { key: "finAuto", label: "Período trabajado: fin (mes anterior)", compute: (form) => ultimoDia(form) },
       { key: "motivo", label: "Motivo", fullWidth: true }
     ]}
     formSections={[
