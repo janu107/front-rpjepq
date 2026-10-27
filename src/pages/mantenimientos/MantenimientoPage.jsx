@@ -204,6 +204,10 @@ const MantenimientoPage = ({
   const savePlanilla = async () => {
     if (!planillaForm.formaPago) { Swal.fire("Validacion", "El campo Forma de pago es obligatorio.", "warning"); return; }
     if (!planillaForm.idBanco) { Swal.fire("Validacion", "El campo Banco es obligatorio.", "warning"); return; }
+    if (planillaForm.formaPago === "ABONO CUENTA") {
+      if (!planillaForm.tipoCuenta) { Swal.fire("Validacion", "Seleccione el Tipo de cuenta (AHORRO o MONETARIA).", "warning"); return; }
+      if (!String(planillaForm.cuenta || "").trim()) { Swal.fire("Validacion", "Ingrese el No. de cuenta.", "warning"); return; }
+    }
     const row = planillaTargetRow;
     const idPersona = row ? row[planillaConfig.idPersonaField || "id"] : null;
     if (!idPersona) {
@@ -407,6 +411,19 @@ const MantenimientoPage = ({
     }
   };
 
+  // El registro principal se creó pero falló un paso posterior (salarios o datos
+  // de planilla): se cierra el formulario, se refresca la lista y se explica qué falta.
+  const avisarIncompleto = (paso, error, cerrar = true) => {
+    const motivo = error?.response?.data?.message || "Error desconocido";
+    if (cerrar) { setDialogOpen(false); setPendingPlanillaForm(null); }
+    loadRows();
+    Swal.fire({
+      icon: "warning",
+      title: "Registro creado, pero incompleto",
+      html: `El registro <b>sí se guardó</b>, pero no se pudieron guardar ${paso}:<br><i>${String(motivo).replace(/</g, "&lt;")}</i><br><br>Búsquelo en la lista y use <b>Editar</b> para completarlo. No lo vuelva a crear.`
+    });
+  };
+
   const handleSave = async () => {
     const validation = validateForm();
     if (validation) {
@@ -427,6 +444,10 @@ const MantenimientoPage = ({
         Swal.fire("Listo", "Registro actualizado correctamente.", "success");
       } else {
         const createResponse = await axiosClient.post(endpoint, form);
+        // Desde aquí el registro ya existe: si falla un paso siguiente no se debe
+        // volver a crear (daría "el ID ya existe"); se avisa y se completa con Editar.
+        let paso = "los salarios";
+        try {
         if (salaryConfig && salaryRows.length > 0) {
           const newId = createResponse.data?.data?.id;
           const entityParams = newId && salaryConfig.idPersonaField ? (() => {
@@ -437,6 +458,7 @@ const MantenimientoPage = ({
             salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...entityParams, ...row }))
           });
         }
+        paso = "los datos de planilla";
         if (planillaConfig && pendingPlanillaForm) {
           const newId = createResponse.data?.data?.id;
           if (newId) {
@@ -447,6 +469,10 @@ const MantenimientoPage = ({
             });
             setPendingPlanillaForm(null);
           }
+        }
+        } catch (errorPaso) {
+          avisarIncompleto(paso, errorPaso);
+          return;
         }
         Swal.fire("Listo", "Registro creado correctamente.", "success");
       }
@@ -462,14 +488,18 @@ const MantenimientoPage = ({
     if (validation) { Swal.fire("Validacion", validation, "warning"); return; }
     try {
       const createRes = await axiosClient.post(endpoint, form);
+      let incompleto = null;
       if (salaryConfig && salaryRows.length > 0) {
         const newId = createRes.data?.data?.id;
         const entityParams = newId && salaryConfig.idPersonaField ? (() => {
           const fakeRow = { [salaryConfig.idPersonaField]: newId };
           return getSalaryEntityParams(fakeRow);
         })() : {};
-        await axiosClient.post("/salarios/bulk", { salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...entityParams, ...row })) });
+        try {
+          await axiosClient.post("/salarios/bulk", { salarios: salaryRows.map((row) => ({ tipoManejo: form.tipoManejo, ...entityParams, ...row })) });
+        } catch (errorPaso) { incompleto = errorPaso; }
       }
+      if (incompleto) avisarIncompleto("los salarios", incompleto, false);
       const fixedManejo = findFixedManejo(options.manejos, fixedManejoId, fixedManejoDescription);
       const conservados = Object.fromEntries(keepOnAdd.map((k) => [k, form[k]]));
       setForm({ ...buildInitialForm(fields), tipoManejo: fixedManejo?.id || fixedManejoId || "", ...conservados });
@@ -872,14 +902,14 @@ const MantenimientoPage = ({
               </Grid>
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
-                  <InputLabel>Tipo de cuenta</InputLabel>
-                  <Select label="Tipo de cuenta" value={planillaForm.tipoCuenta} onChange={(e) => setPlanillaForm({ ...planillaForm, tipoCuenta: e.target.value })}>
+                  <InputLabel>{planillaForm.formaPago === "ABONO CUENTA" ? "Tipo de cuenta *" : "Tipo de cuenta"}</InputLabel>
+                  <Select label={planillaForm.formaPago === "ABONO CUENTA" ? "Tipo de cuenta *" : "Tipo de cuenta"} value={planillaForm.tipoCuenta} onChange={(e) => setPlanillaForm({ ...planillaForm, tipoCuenta: e.target.value })}>
                     {TIPOS_CUENTA_PLANILLA.map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
                   </Select>
                 </FormControl>
               </Grid>
               <Grid item xs={12}>
-                <TextField label="No. de cuenta" value={planillaForm.cuenta} onChange={(e) => setPlanillaForm({ ...planillaForm, cuenta: e.target.value.toUpperCase() })} fullWidth />
+                <TextField label={planillaForm.formaPago === "ABONO CUENTA" ? "No. de cuenta *" : "No. de cuenta"} value={planillaForm.cuenta} onChange={(e) => setPlanillaForm({ ...planillaForm, cuenta: e.target.value.toUpperCase() })} fullWidth />
               </Grid>
               <Grid item xs={12} md={4}>
                 <FormControl fullWidth>
