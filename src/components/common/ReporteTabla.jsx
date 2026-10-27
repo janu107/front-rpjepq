@@ -54,6 +54,21 @@ const ReporteTabla = ({ title, endpoint, columns, filtros = [], onRowClick, busc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint, texto, filtroVals]);
 
+  // PDF formal generado en el servidor con los mismos filtros de la pantalla.
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  const imprimirPdf = async () => {
+    try {
+      setGenerandoPdf(true);
+      const params = {};
+      Object.entries(filtroVals).forEach(([k, v]) => { if (v) params[k] = v; });
+      if (texto.trim()) params.q = texto.trim();
+      const { data } = await axiosClient.get(`${endpoint}/pdf`, { params, responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+      window.open(url, "_blank");
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch { /* el interceptor ya muestra el error */ } finally { setGenerandoPdf(false); }
+  };
+
   const limpiar = () => { setTexto(""); setFiltroVals(Object.fromEntries(filtros.map((f) => [f.key, ""]))); };
   const hayFiltros = texto.trim() || Object.values(filtroVals).some(Boolean);
 
@@ -71,7 +86,7 @@ const ReporteTabla = ({ title, endpoint, columns, filtros = [], onRowClick, busc
         <Typography variant="h6" sx={{ color: PRIMARIO }}>{title}</Typography>
         <Stack direction="row" spacing={1}>
           <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={exportarCSV} disabled={!rows.length}>Excel (CSV)</Button>
-          <Button size="small" variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()} disabled={!rows.length}>PDF (imprimir)</Button>
+          <Button size="small" variant="outlined" startIcon={<PrintIcon />} onClick={imprimirPdf} disabled={!rows.length || generandoPdf}>{generandoPdf ? "Generando..." : "PDF"}</Button>
         </Stack>
       </Stack>
 
