@@ -1,4 +1,4 @@
-import { Box, Card, CardActionArea, CircularProgress, Grid, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Box, Card, CardActionArea, CircularProgress, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -11,11 +11,28 @@ const ROJO = "#F44336";
 const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtPeriodo = (p) => { const s = String(p || ""); return s.length === 6 ? `${s.slice(4, 6)}/${s.slice(0, 4)}` : s; };
 
-const KpiCard = ({ label, valor, onClick, big }) => (
-  <Card sx={{ height: "100%", bgcolor: big ? "rgba(244,67,54,0.06)" : undefined }}>
+const KpiCard = ({ label, valor, onClick }) => (
+  <Card sx={{ height: "100%" }}>
     <CardActionArea onClick={onClick} sx={{ p: 2, height: "100%" }}>
       <Typography variant="caption" color="text.secondary">{label}</Typography>
-      <Typography sx={{ fontWeight: 800, fontSize: big ? 30 : 26, color: big ? ROJO : PRIMARIO }}>{valor}</Typography>
+      <Typography sx={{ fontWeight: 800, fontSize: 26, color: PRIMARIO }}>{valor}</Typography>
+    </CardActionArea>
+  </Card>
+);
+
+// Deuda total: franja ancha para que el monto se lea completo.
+const DeudaTotalCard = ({ valor, onClick }) => (
+  <Card sx={{ bgcolor: "rgba(244,67,54,0.06)", borderLeft: `6px solid ${ROJO}` }}>
+    <CardActionArea onClick={onClick} sx={{ px: 3, py: 2 }}>
+      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} justifyContent="space-between" spacing={1}>
+        <Box>
+          <Typography variant="overline" sx={{ color: "text.secondary", fontWeight: 700, letterSpacing: 1.2 }}>Deuda total con los jubilados</Typography>
+          <Typography sx={{ fontWeight: 800, fontSize: { xs: 30, md: 40 }, lineHeight: 1.15, color: ROJO, fontVariantNumeric: "tabular-nums", wordBreak: "break-word" }}>
+            {valor}
+          </Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary">Ver deuda por tipo →</Typography>
+      </Stack>
     </CardActionArea>
   </Card>
 );
@@ -97,14 +114,16 @@ const DashboardReportesPage = () => {
       <PageHeader title="Dashboard de Reportes" subtitle="Indicadores y reportes del módulo de jubilados" />
 
       {loading ? <Paper sx={{ p: 3 }}><CircularProgress size={26} /></Paper> : kpi && (
-        <Grid container spacing={2}>
-          <Grid item xs={6} md={4} lg={2}><KpiCard label="Jubilados NORMAL activos" valor={kpi.jubiladosNormalActivos} onClick={() => setTab(0)} /></Grid>
-          <Grid item xs={6} md={4} lg={2}><KpiCard label="Amparistas" valor={kpi.amparistas} onClick={() => setTab(5)} /></Grid>
-          <Grid item xs={6} md={4} lg={2}><KpiCard label="Fallecidos c/ beneficiarios" valor={kpi.fallecidosConBeneficiarios} onClick={() => setTab(2)} /></Grid>
-          <Grid item xs={6} md={4} lg={2}><KpiCard label="Beneficiarios activos" valor={kpi.beneficiariosActivos} onClick={() => setTab(2)} /></Grid>
-          <Grid item xs={6} md={4} lg={2}><KpiCard label="Beneficiarios suspendidos" valor={kpi.beneficiariosSuspendidos} onClick={() => setTab(2)} /></Grid>
-          <Grid item xs={6} md={4} lg={2}><KpiCard label="DEUDA TOTAL" valor={fmtQ(kpi.deudaTotal)} onClick={() => setTab(4)} big /></Grid>
-        </Grid>
+        <Stack spacing={2}>
+          <DeudaTotalCard valor={fmtQ(kpi.deudaTotal)} onClick={() => setTab(4)} />
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(5, 1fr)" } }}>
+            <KpiCard label="Jubilados NORMAL activos" valor={kpi.jubiladosNormalActivos} onClick={() => setTab(0)} />
+            <KpiCard label="Amparistas" valor={kpi.amparistas} onClick={() => setTab(5)} />
+            <KpiCard label="Fallecidos c/ beneficiarios" valor={kpi.fallecidosConBeneficiarios} onClick={() => setTab(2)} />
+            <KpiCard label="Beneficiarios activos" valor={kpi.beneficiariosActivos} onClick={() => setTab(2)} />
+            <KpiCard label="Beneficiarios suspendidos" valor={kpi.beneficiariosSuspendidos} onClick={() => setTab(2)} />
+          </Box>
+        </Stack>
       )}
 
       <Box>

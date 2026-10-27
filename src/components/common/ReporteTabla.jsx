@@ -2,7 +2,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import PrintIcon from "@mui/icons-material/Print";
 import SearchIcon from "@mui/icons-material/Search";
 import {
-  Button, CircularProgress, Grid, InputAdornment, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography
+  Button, CircularProgress, Grid, InputAdornment, Paper, Stack, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, TextField, Typography
 } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 
@@ -31,6 +31,11 @@ const ReporteTabla = ({ title, endpoint, columns, filtros = [], onRowClick, busc
   const [texto, setTexto] = useState("");
   const timer = useRef(null);
   const ultimaPeticion = useRef(0);
+  // Paginado en pantalla (el CSV y el PDF llevan todas las filas).
+  const POR_PAGINA = 20;
+  const [pagina, setPagina] = useState(0);
+  useEffect(() => { setPagina(0); }, [rows]);
+  const filasPagina = rows.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
 
   // Texto y fechas filtran solos al cambiar (con una pequeña espera mientras se
   // escribe). Siempre se envían los dos juntos y solo se muestra la respuesta de
@@ -136,13 +141,20 @@ const ReporteTabla = ({ title, endpoint, columns, filtros = [], onRowClick, busc
             <TableRow>{columns.map((c) => <TableCell key={c.key} align={c.align}>{c.label}</TableCell>)}</TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((r, i) => (
+            {filasPagina.map((r, i) => (
               <TableRow key={r.id ?? r.idJubilado ?? i} hover={!!onRowClick} sx={onRowClick ? { cursor: "pointer" } : undefined} onClick={onRowClick ? () => onRowClick(r) : undefined}>
                 {columns.map((c) => <TableCell key={c.key} align={c.align}>{c.render ? c.render(r) : r[c.key]}</TableCell>)}
               </TableRow>
             ))}
           </TableBody>
         </Table>
+      )}
+      {!loading && rows.length > POR_PAGINA && (
+        <TablePagination
+          component="div" count={rows.length} page={pagina} onPageChange={(_, p) => setPagina(p)}
+          rowsPerPage={POR_PAGINA} rowsPerPageOptions={[POR_PAGINA]}
+          labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+        />
       )}
     </Paper>
   );
