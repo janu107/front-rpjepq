@@ -1,3 +1,4 @@
+import SearchIcon from "@mui/icons-material/Search";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -9,7 +10,7 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent,
   DialogTitle, Divider, Grid, Paper, Stack, Table, TableBody, TableCell,
-  TableContainer, TableHead, TablePagination, TableRow, TextField, Tooltip, Typography
+  InputAdornment, TableContainer, TableHead, TablePagination, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -285,6 +286,25 @@ const DetallePlanillaPensionadosPage = () => {
     [listaPreview, paginaPrev, rppPrev]
   );
 
+  // Detalle de la planilla generada: buscador (código, nombre o DPI) y paginado.
+  // Los hooks van antes de los return condicionales (ver nota de arriba).
+  const [buscarDet, setBuscarDet] = useState("");
+  const [pageDet, setPageDet] = useState(0);
+  const [rppDet, setRppDet] = useState(20);
+  const detalleFiltrado = useMemo(() => {
+    const t = buscarDet.trim().toLowerCase();
+    if (!t) return detalle;
+    return detalle.filter((r) => String(r.codigo ?? "").toLowerCase().includes(t)
+      || String(r.nombreCompleto || "").toLowerCase().includes(t)
+      || String(r.dpi || "").toLowerCase().includes(t));
+  }, [detalle, buscarDet]);
+  const ultimaPaginaDet = Math.max(0, Math.ceil(detalleFiltrado.length / rppDet) - 1);
+  const paginaDet = Math.min(pageDet, ultimaPaginaDet);
+  const detallePaginado = useMemo(
+    () => detalleFiltrado.slice(paginaDet * rppDet, paginaDet * rppDet + rppDet),
+    [detalleFiltrado, paginaDet, rppDet]
+  );
+
   if (loading) {
     return <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}><CircularProgress /></Box>;
   }
@@ -463,6 +483,14 @@ const DetallePlanillaPensionadosPage = () => {
             </Button>
           </Stack>
 
+          <TextField
+            size="small" sx={{ mb: 2, width: { xs: "100%", sm: 380 } }}
+            placeholder="Buscar jubilado por código, nombre o DPI"
+            value={buscarDet}
+            onChange={(e) => { setBuscarDet(e.target.value); setPageDet(0); }}
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+          />
+
           <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
             <Table size="small">
               <TableHead>
@@ -479,12 +507,12 @@ const DetallePlanillaPensionadosPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {detalle.map((r) => (
+                {detallePaginado.map((r) => (
                   <TableRow key={r.idJubilado} hover>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>{r.nombreCompleto}</Typography>
                       <Typography variant="caption" color="text.secondary">
-                        DPI: {r.dpi} &nbsp;|&nbsp; Jub: {fmtDate(r.fechaJubilacion)}
+                        Cód: {r.codigo ?? "-"} &nbsp;|&nbsp; DPI: {r.dpi} &nbsp;|&nbsp; Jub: {fmtDate(r.fechaJubilacion)}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">{money(r.pensionTeorica)}</TableCell>
@@ -524,15 +552,28 @@ const DetallePlanillaPensionadosPage = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!detalle.length && (
+                {!detalleFiltrado.length && (
                   <TableRow>
                     <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      <Typography color="text.secondary">No hay registros de nómina para esta planilla</Typography>
+                      <Typography color="text.secondary">
+                        {detalle.length ? "Ningún jubilado coincide con la búsqueda" : "No hay registros de nómina para esta planilla"}
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+            <TablePagination
+              component="div"
+              count={detalleFiltrado.length}
+              page={paginaDet}
+              onPageChange={(_, p) => setPageDet(p)}
+              rowsPerPage={rppDet}
+              onRowsPerPageChange={(e) => { setRppDet(Number(e.target.value)); setPageDet(0); }}
+              rowsPerPageOptions={[10, 20, 50, 100]}
+              labelRowsPerPage="Filas por página"
+              labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+            />
           </TableContainer>
         </Box>
       )}
