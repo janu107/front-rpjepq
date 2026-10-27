@@ -30,25 +30,32 @@ const ReporteTabla = ({ title, endpoint, columns, filtros = [], onRowClick, busc
   const [filtroVals, setFiltroVals] = useState(() => Object.fromEntries(filtros.map((f) => [f.key, ""])));
   const [texto, setTexto] = useState("");
   const timer = useRef(null);
+  const ultimaPeticion = useRef(0);
 
-  const cargar = async (q = texto) => {
+  // Texto y fechas filtran solos al cambiar (con una pequeña espera mientras se
+  // escribe). Siempre se envían los dos juntos y solo se muestra la respuesta de
+  // la última petición, para que una búsqueda vieja no pise a una nueva.
+  const cargar = async (q, vals) => {
+    const n = ++ultimaPeticion.current;
     try {
       setLoading(true);
       const params = {};
-      Object.entries(filtroVals).forEach(([k, v]) => { if (v) params[k] = v; });
+      Object.entries(vals).forEach(([k, v]) => { if (v) params[k] = v; });
       if (q.trim()) params.q = q.trim();
       const { data } = await axiosClient.get(endpoint, { params });
-      setRows(data.data || []);
-    } catch { setRows([]); } finally { setLoading(false); }
+      if (n === ultimaPeticion.current) setRows(data.data || []);
+    } catch { if (n === ultimaPeticion.current) setRows([]); } finally { if (n === ultimaPeticion.current) setLoading(false); }
   };
 
-  useEffect(() => { cargar(); /* eslint-disable-next-line */ }, [endpoint]);
-
-  const onBuscar = (valor) => {
-    setTexto(valor);
+  useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => cargar(valor), 400);
-  };
+    timer.current = setTimeout(() => cargar(texto, filtroVals), 400);
+    return () => timer.current && clearTimeout(timer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint, texto, filtroVals]);
+
+  const limpiar = () => { setTexto(""); setFiltroVals(Object.fromEntries(filtros.map((f) => [f.key, ""]))); };
+  const hayFiltros = texto.trim() || Object.values(filtroVals).some(Boolean);
 
   const exportarCSV = () => {
     const csv = toCSV(columns, rows);
@@ -68,18 +75,19 @@ const ReporteTabla = ({ title, endpoint, columns, filtros = [], onRowClick, busc
         </Stack>
       </Stack>
 
-      {buscador && (
-        <TextField
-          size="small" sx={{ mb: 2, width: { xs: "100%", sm: 420 } }}
-          placeholder={buscador}
-          value={texto}
-          onChange={(e) => onBuscar(e.target.value)}
-          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
-        />
-      )}
-
-      {filtros.length > 0 && (
+      {(buscador || filtros.length > 0) && (
         <Grid container spacing={2} sx={{ mb: 2 }} alignItems="center">
+          {buscador && (
+            <Grid item xs={12} md={5}>
+              <TextField
+                size="small" fullWidth
+                placeholder={buscador}
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+              />
+            </Grid>
+          )}
           {filtros.map((f) => (
             f.type === "jubilado" ? (
               <Grid item xs={12} md={5} key={f.key}>
@@ -90,16 +98,18 @@ const ReporteTabla = ({ title, endpoint, columns, filtros = [], onRowClick, busc
                   size="small"
                   getOptionLabel={(o) => (o ? `${o.idJubilado} - ${o.nombreCompleto}` : "")}
                   renderOption={(props, o) => <li {...props} key={o.id}>{o.idJubilado} - {o.nombreCompleto} — {o.dpi}</li>}
-                  onSelect={(o) => setFiltroVals({ ...filtroVals, [f.key]: o ? o.id : "" })}
+                  onSelect={(o) => setFiltroVals((v) => ({ ...v, [f.key]: o ? o.id : "" }))}
                 />
               </Grid>
             ) : (
-              <Grid item xs={12} sm={4} md={3} key={f.key}>
-                <TextField label={f.label} type={f.type || "date"} value={filtroVals[f.key]} onChange={(e) => setFiltroVals({ ...filtroVals, [f.key]: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth size="small" />
+              <Grid item xs={6} sm={4} md={2.5} key={f.key}>
+                <TextField label={f.label} type={f.type || "date"} value={filtroVals[f.key]}
+                  onChange={(e) => { const val = e.target.value; setFiltroVals((v) => ({ ...v, [f.key]: val })); }}
+                  InputLabelProps={{ shrink: true }} fullWidth size="small" />
               </Grid>
             )
           ))}
-          <Grid item><Button variant="contained" onClick={() => cargar()}>Aplicar</Button></Grid>
+          {hayFiltros && <Grid item><Button onClick={limpiar}>Limpiar</Button></Grid>}
         </Grid>
       )}
 
