@@ -22,6 +22,16 @@ const fmtPeriodo = (p) => { const s = String(p); return s.length === 6 ? `${s.sl
 
 const AZUL = "#1976D2";
 
+// Grupos de descuento (los mismos de la nómina impresa).
+const GRUPOS_DESC = [
+  { campo: "asociacion", titulo: "Asociación" },
+  { campo: "prestamos", titulo: "Préstamo Régimen" },
+  { campo: "banrural", titulo: "Banrural" },
+  { campo: "bantrab", titulo: "Bantrab" },
+  { campo: "judicial", titulo: "Judicial" },
+  { campo: "otros", titulo: "IGSS / Otros" }
+];
+
 const colorEstadoDeuda = (d) => {
   if (d.enProceso) return AZUL;                // planilla generada, aún sin cerrar
   if (!d.esDeuda) return VERDE;               // historia (pagado 100%)
@@ -47,6 +57,8 @@ const EstadoCuentaPage = () => {
   const [historia, setHistoria] = useState([]);
   const [idSel, setIdSel] = useState(null);
   const location = useLocation();
+  // Solo se muestran las columnas de descuento que el jubilado tiene en algún mes.
+  const gruposUsados = GRUPOS_DESC.filter((g) => historia.some((d) => Number(d.desglose?.[g.campo] || 0) > 0));
 
   const seleccionar = async (opt) => {
     if (!opt) { setJub(null); setResumen(null); setBeneficiarios([]); setPagos([]); setIdSel(null); return; }
@@ -179,11 +191,12 @@ const EstadoCuentaPage = () => {
         </>
       )}
 
-      <Dialog open={historiaOpen} onClose={() => setHistoriaOpen(false)} fullWidth maxWidth="lg">
+      <Dialog open={historiaOpen} onClose={() => setHistoriaOpen(false)} fullWidth maxWidth={gruposUsados.length > 2 ? "xl" : "lg"}>
         <DialogTitle>Historia completa</DialogTitle>
         <DialogContent dividers sx={{ pt: 0 }}>
           <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
-            <b>Monto generado</b>: lo que vale el mes (pensión − descuentos; pase el mouse sobre los descuentos para ver el detalle).
+            <b>Descuentos</b>: se muestran por tipo (solo los que tiene el jubilado); pase el mouse sobre el total para ver el detalle exacto.
+            <b> Monto generado</b>: lo que vale el mes (pensión − descuentos).
             <b> Recibido en el mes</b>: lo que se le pagó en la planilla de ese mes (desde enero 2023, la mitad).
             <b> Abonado a la deuda</b>: lo pagado de la mitad pendiente de ese mes; las nóminas nuevas abonan al mes pendiente más antiguo.
             <b> Saldo</b>: lo que todavía se le debe de ese mes. Lo que se paga en cada nómina nueva se abona al mes
@@ -193,8 +206,17 @@ const EstadoCuentaPage = () => {
           <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
             <TableHead>
               <TableRow>
-                <TableCell>Período</TableCell><TableCell align="right">Pensión completa</TableCell><TableCell align="right">Descuentos</TableCell><TableCell align="right">Monto generado</TableCell>
-                <TableCell align="right">Recibido en el mes</TableCell><TableCell align="right">Abonado a la deuda</TableCell><TableCell align="right">Saldo</TableCell><TableCell>Estado</TableCell><TableCell>Tipo</TableCell>
+                <TableCell rowSpan={2}>Período</TableCell>
+                <TableCell rowSpan={2} align="right">Pensión completa</TableCell>
+                <TableCell colSpan={gruposUsados.length + 1} align="center" sx={{ borderLeft: "1px solid #DDE3EA", borderRight: "1px solid #DDE3EA" }}>Descuentos</TableCell>
+                <TableCell rowSpan={2} align="right">Monto generado</TableCell>
+                <TableCell rowSpan={2} align="right">Recibido en el mes</TableCell><TableCell rowSpan={2} align="right">Abonado a la deuda</TableCell><TableCell rowSpan={2} align="right">Saldo</TableCell><TableCell rowSpan={2}>Estado</TableCell><TableCell rowSpan={2}>Tipo</TableCell>
+              </TableRow>
+              <TableRow sx={{ "& th": { top: 37, fontSize: 12, color: "text.secondary", py: 0.5 } }}>
+                {gruposUsados.map((g, k) => (
+                  <TableCell key={g.campo} align="right" sx={k === 0 ? { borderLeft: "1px solid #DDE3EA" } : undefined}>{g.titulo}</TableCell>
+                ))}
+                <TableCell align="right" sx={{ fontWeight: 700, borderRight: "1px solid #DDE3EA", ...(gruposUsados.length === 0 ? { borderLeft: "1px solid #DDE3EA" } : {}) }}>Total</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -204,9 +226,17 @@ const EstadoCuentaPage = () => {
                   <TableRow key={d.id} sx={{ bgcolor: `${color}14` }}>
                     <TableCell>{fmtPeriodo(d.periodo)}</TableCell>
                     <TableCell align="right">{fmtQ(d.pensionCompleta)}</TableCell>
-                    <TableCell align="right">
+                    {gruposUsados.map((g, k) => {
+                      const v = Number(d.desglose?.[g.campo] || 0);
+                      return (
+                        <TableCell key={g.campo} align="right" sx={{ color: v > 0 ? "inherit" : "text.disabled", ...(k === 0 ? { borderLeft: "1px solid #DDE3EA" } : {}) }}>
+                          {v > 0 ? fmtQ(v) : "—"}
+                        </TableCell>
+                      );
+                    })}
+                    <TableCell align="right" sx={{ fontWeight: 600, borderRight: "1px solid #DDE3EA", ...(gruposUsados.length === 0 ? { borderLeft: "1px solid #DDE3EA" } : {}) }}>
                       {d.descuentos > 0 ? (
-                        <Tooltip title={d.detalleDescuentos || "Pensión − monto generado"} arrow>
+                        <Tooltip title={(d.detalleDescuentos || "Pensión − monto generado").split(" | ").map((t) => <div key={t}>{t}</div>)} arrow>
                           <span style={{ borderBottom: "1px dotted #999", cursor: "help" }}>{fmtQ(d.descuentos)}</span>
                         </Tooltip>
                       ) : fmtQ(0)}
