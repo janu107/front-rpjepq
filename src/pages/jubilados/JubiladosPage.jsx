@@ -26,7 +26,9 @@ const JubiladosPage = ({ showPlanilla = false }) => (
       ]
     }}
     filasPorPagina={15}
-    searchFields={["nombres", "apellidos", "dpi", "estado", "manejoDescripcion", "tipoJubilacionDescripcion"]}
+    searchFields={["idJubilado", "nombres", "apellidos", "dpi", "estado", "manejoDescripcion", "tipoJubilacionDescripcion"]}
+    codeKey="idJubilado"
+    searchPlaceholder="Buscar por código, nombre, apellido o DPI"
     columns={[
       { key: "idJubilado", label: "ID" },
       { key: "nombres", label: "Nombres" },

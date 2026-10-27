@@ -81,6 +81,8 @@ const MantenimientoPage = ({
   columns,
   fields,
   searchFields,
+  codeKey,
+  searchPlaceholder,
   dependencies = [],
   salaryConfig,
   formSections = [],
@@ -256,11 +258,9 @@ const MantenimientoPage = ({
   }, [endpoint]);
 
   const filteredRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    const scopedRows = fixedManejoId ? rows.filter((row) => Number(row.tipoManejo) === Number(fixedManejoId)) : rows;
-    if (!term) return scopedRows;
-    return scopedRows.filter((row) => searchFields.some((field) => String(row[field] || "").toLowerCase().includes(term)));
-  }, [rows, search, searchFields, fixedManejoId]);
+    // El texto lo filtra DataTable (por palabras y con el código exacto primero).
+    return fixedManejoId ? rows.filter((row) => Number(row.tipoManejo) === Number(fixedManejoId)) : rows;
+  }, [rows, fixedManejoId]);
 
   const tableColumns = columns.map((column) => ({
     ...column,
@@ -727,6 +727,8 @@ const MantenimientoPage = ({
         search={search}
         onSearch={setSearch}
         filterKeys={searchFields}
+        codeKey={codeKey}
+        searchPlaceholder={searchPlaceholder}
         actions={[
           { label: "Ver", icon: <VisibilityIcon />, onClick: openViewDialog, visible: () => true },
           { label: "Planilla", icon: <AssignmentIcon />, onClick: openPlanillaDialog, visible: () => !!planillaConfig && canEdit(user) },

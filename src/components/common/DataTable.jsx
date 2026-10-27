@@ -10,14 +10,20 @@ import EmptyState from "./EmptyState";
 const DataTable = ({
   loading, columns, rows, search, onSearch, actions,
   emptyMessage = "No hay registros para mostrar.", filterKeys,
-  paginado = true, filasPorPagina = 20
+  paginado = true, filasPorPagina = 20, codeKey, searchPlaceholder = "Buscar"
 }) => {
+  // Cada palabra debe aparecer en algún campo ("jose jimenez" encuentra nombre + apellido).
+  // Si se indica codeKey, el registro con ese código exacto sale primero.
   const filteredRows = useMemo(() => {
-    if (!search) return rows;
-    const term = search.trim().toLowerCase();
+    const term = String(search || "").trim().toLowerCase();
+    if (!term) return rows;
+    const palabras = term.split(/\s+/);
     const keys = filterKeys?.length ? filterKeys : columns.map((column) => column.key);
-    return rows.filter((row) => keys.some((key) => String(row[key] || "").toLowerCase().includes(term)));
-  }, [columns, filterKeys, rows, search]);
+    const encontrados = rows.filter((row) => palabras.every((p) => keys.some((key) => String(row[key] ?? "").toLowerCase().includes(p))));
+    if (!codeKey) return encontrados;
+    const exacto = (row) => String(row[codeKey] ?? "").toLowerCase() === term;
+    return [...encontrados.filter(exacto), ...encontrados.filter((row) => !exacto(row))];
+  }, [columns, filterKeys, rows, search, codeKey]);
 
   // Paginación: 20 registros por página por defecto.
   const [page, setPage] = useState(0);
@@ -43,7 +49,7 @@ const DataTable = ({
     <Stack spacing={2}>
       {onSearch && (
         <TextField
-          placeholder="Buscar"
+          placeholder={searchPlaceholder}
           value={search}
           onChange={(event) => onSearch(event.target.value)}
           sx={{ maxWidth: { md: 460 } }}
