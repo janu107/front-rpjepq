@@ -186,7 +186,9 @@ const EstadoCuentaPage = () => {
             <b>Monto generado</b>: lo que vale el mes (pensión − descuentos; pase el mouse sobre los descuentos para ver el detalle).
             <b> Recibido en el mes</b>: lo que se le pagó en la planilla de ese mes (desde enero 2023, la mitad).
             <b> Abonado a la deuda</b>: lo pagado de la mitad pendiente de ese mes; las nóminas nuevas abonan al mes pendiente más antiguo.
-            <b> Saldo</b>: lo que todavía se le debe de ese mes. <b>EN PROCESO</b>: planilla generada que aún no se cierra.
+            <b> Saldo</b>: lo que todavía se le debe de ese mes. Lo que se paga en cada nómina nueva se abona al mes
+            pendiente más antiguo; por eso el mes de la nómina queda con su pensión completa pendiente.
+            <b> EN PROCESO</b>: planilla generada que aún no se cierra.
           </Typography>
           <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
             <TableHead>
@@ -211,7 +213,13 @@ const EstadoCuentaPage = () => {
                     </TableCell>
                     <TableCell align="right">{fmtQ(d.montoGenerado)}</TableCell>
                     <TableCell align="right">{fmtQ(d.recibidoMes)}</TableCell>
-                    <TableCell align="right">{fmtQ(d.montoPagado)}</TableCell>
+                    <TableCell align="right">
+                      {d.sinDeuda ? "—" : d.pagadoCon?.length ? (
+                        <Tooltip arrow title={`Pagado con la planilla de ${d.pagadoCon.map(fmtPeriodo).join(", ")}`}>
+                          <span style={{ borderBottom: "1px dotted #999", cursor: "help" }}>{fmtQ(d.montoPagado)}</span>
+                        </Tooltip>
+                      ) : fmtQ(d.montoPagado)}
+                    </TableCell>
                     <TableCell align="right">{fmtQ(d.saldo)}</TableCell>
                     <TableCell><Chip size="small" label={d.enProceso ? "EN PROCESO" : d.esDeuda ? d.estado : "HISTORIA"} sx={{ bgcolor: color, color: "#fff" }} /></TableCell>
                     <TableCell>{d.tipoPago}</TableCell>
