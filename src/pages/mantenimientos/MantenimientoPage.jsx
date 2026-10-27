@@ -32,6 +32,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import CampoFecha from "../../components/common/CampoFecha";
 import DataTable from "../../components/common/DataTable";
 import PageHeader from "../../components/common/PageHeader";
 import StatusChip from "../../components/common/StatusChip";
@@ -632,6 +633,20 @@ const MantenimientoPage = ({
             ))}
           </Select>
         </FormControl>
+      );
+    }
+
+    // Fechas: se pueden escribir (DD/MM/AAAA) o elegir en el calendario.
+    if (field.type === "date") {
+      return (
+        <CampoFecha
+          key={field.key}
+          label={field.label}
+          value={form[field.key] ?? ""}
+          onChange={(iso) => setForm((f) => ({ ...f, [field.key]: iso }))}
+          onKeyDown={enterAlSiguiente}
+          disabled={field.disabled || viewOnly}
+        />
       );
     }
 
