@@ -183,16 +183,16 @@ const EstadoCuentaPage = () => {
         <DialogTitle>Historia completa</DialogTitle>
         <DialogContent dividers sx={{ pt: 0 }}>
           <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
-            <b>Monto generado</b>: lo que vale el mes (pensión − descuentos; pase el mouse sobre los descuentos para ver el detalle). <b>Recibido en el mes</b>: lo pagado en la
-            planilla de ese mes, que se abona a la deuda más antigua. <b>Abonado al mes</b>: cuánto se ha pagado de ese
-            mes. Por eso un mes puede quedar PAGADO aunque en su planilla se haya recibido solo una parte.
-            <b> EN PROCESO</b>: planilla generada que aún no se cierra; al cerrarla, lo recibido se abona a la deuda.
+            <b>Monto generado</b>: lo que vale el mes (pensión − descuentos; pase el mouse sobre los descuentos para ver el detalle).
+            <b> Recibido en el mes</b>: lo que se le pagó en la planilla de ese mes (desde enero 2023, la mitad).
+            <b> Abonado a la deuda</b>: lo pagado de la mitad pendiente de ese mes; las nóminas nuevas abonan al mes pendiente más antiguo.
+            <b> Saldo</b>: lo que todavía se le debe de ese mes. <b>EN PROCESO</b>: planilla generada que aún no se cierra.
           </Typography>
           <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
             <TableHead>
               <TableRow>
                 <TableCell>Período</TableCell><TableCell align="right">Pensión completa</TableCell><TableCell align="right">Descuentos</TableCell><TableCell align="right">Monto generado</TableCell>
-                <TableCell align="right">Recibido en el mes</TableCell><TableCell align="right">Abonado al mes</TableCell><TableCell align="right">Saldo</TableCell><TableCell>Estado</TableCell><TableCell>Tipo</TableCell>
+                <TableCell align="right">Recibido en el mes</TableCell><TableCell align="right">Abonado a la deuda</TableCell><TableCell align="right">Saldo</TableCell><TableCell>Estado</TableCell><TableCell>Tipo</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
