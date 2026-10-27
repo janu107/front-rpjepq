@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import axiosClient from "../../api/axiosClient";
 import PageHeader from "../../components/common/PageHeader";
 import ReporteTabla from "../../components/common/ReporteTabla";
+import DeudaPorTipoReporte from "./DeudaPorTipoReporte";
 
 const PRIMARIO = "#1F4E79";
 const ROJO = "#F44336";
@@ -90,11 +91,7 @@ const DashboardReportesPage = () => {
       ]
     },
     {
-      label: "Deuda por tipo", endpoint: "/jubilados-reportes/deuda-por-tipo",
-      columns: [
-        { key: "tipoPago", label: "Tipo de pago" }, { key: "periodosDeuda", label: "Períodos", align: "right" },
-        { key: "saldo", label: "Saldo", align: "right", render: (r) => fmtQ(r.saldo), csv: (r) => r.saldo }
-      ]
+      label: "Deuda por tipo", endpoint: "/jubilados-reportes/deuda-por-tipo", propio: true
     },
     {
       label: "Amparistas", endpoint: "/jubilados-reportes/amparistas",
@@ -130,7 +127,7 @@ const DashboardReportesPage = () => {
         <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 1.5 }}>
           {reportes.map((r) => <Tab key={r.label} label={r.label} />)}
         </Tabs>
-        <ReporteTabla key={rep.endpoint} title={rep.label} endpoint={rep.endpoint} columns={rep.columns} filtros={rep.filtros} onRowClick={rep.onRowClick} buscador={rep.buscador} />
+        {rep.propio ? <DeudaPorTipoReporte onJubilado={irEstadoCuenta} /> : <ReporteTabla key={rep.endpoint} title={rep.label} endpoint={rep.endpoint} columns={rep.columns} filtros={rep.filtros} onRowClick={rep.onRowClick} buscador={rep.buscador} />}
       </Box>
     </Stack>
   );
