@@ -2,7 +2,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import HistoryIcon from "@mui/icons-material/History";
 import {
   Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Skeleton,
-  Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography
+  Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -20,7 +20,10 @@ const AMARILLO = "#FF9800";
 const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtPeriodo = (p) => { const s = String(p); return s.length === 6 ? `${s.slice(4, 6)}/${s.slice(0, 4)}` : s; };
 
+const AZUL = "#1976D2";
+
 const colorEstadoDeuda = (d) => {
+  if (d.enProceso) return AZUL;                // planilla generada, aún sin cerrar
   if (!d.esDeuda) return VERDE;               // historia (pagado 100%)
   if (d.estado === "PAGADA") return VERDE;
   if (d.estado === "PARCIAL") return AMARILLO;
@@ -180,14 +183,15 @@ const EstadoCuentaPage = () => {
         <DialogTitle>Historia completa</DialogTitle>
         <DialogContent dividers sx={{ pt: 0 }}>
           <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
-            <b>Monto generado</b>: lo que vale el mes (pensión − descuentos). <b>Recibido en el mes</b>: lo pagado en la
+            <b>Monto generado</b>: lo que vale el mes (pensión − descuentos; pase el mouse sobre los descuentos para ver el detalle). <b>Recibido en el mes</b>: lo pagado en la
             planilla de ese mes, que se abona a la deuda más antigua. <b>Abonado al mes</b>: cuánto se ha pagado de ese
             mes. Por eso un mes puede quedar PAGADO aunque en su planilla se haya recibido solo una parte.
+            <b> EN PROCESO</b>: planilla generada que aún no se cierra; al cerrarla, lo recibido se abona a la deuda.
           </Typography>
           <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
             <TableHead>
               <TableRow>
-                <TableCell>Período</TableCell><TableCell align="right">Pensión completa</TableCell><TableCell align="right">Monto generado</TableCell>
+                <TableCell>Período</TableCell><TableCell align="right">Pensión completa</TableCell><TableCell align="right">Descuentos</TableCell><TableCell align="right">Monto generado</TableCell>
                 <TableCell align="right">Recibido en el mes</TableCell><TableCell align="right">Abonado al mes</TableCell><TableCell align="right">Saldo</TableCell><TableCell>Estado</TableCell><TableCell>Tipo</TableCell>
               </TableRow>
             </TableHead>
@@ -198,11 +202,18 @@ const EstadoCuentaPage = () => {
                   <TableRow key={d.id} sx={{ bgcolor: `${color}14` }}>
                     <TableCell>{fmtPeriodo(d.periodo)}</TableCell>
                     <TableCell align="right">{fmtQ(d.pensionCompleta)}</TableCell>
+                    <TableCell align="right">
+                      {d.descuentos > 0 ? (
+                        <Tooltip title={d.detalleDescuentos || "Pensión − monto generado"} arrow>
+                          <span style={{ borderBottom: "1px dotted #999", cursor: "help" }}>{fmtQ(d.descuentos)}</span>
+                        </Tooltip>
+                      ) : fmtQ(0)}
+                    </TableCell>
                     <TableCell align="right">{fmtQ(d.montoGenerado)}</TableCell>
                     <TableCell align="right">{fmtQ(d.recibidoMes)}</TableCell>
                     <TableCell align="right">{fmtQ(d.montoPagado)}</TableCell>
                     <TableCell align="right">{fmtQ(d.saldo)}</TableCell>
-                    <TableCell><Chip size="small" label={d.esDeuda ? d.estado : "HISTORIA"} sx={{ bgcolor: color, color: "#fff" }} /></TableCell>
+                    <TableCell><Chip size="small" label={d.enProceso ? "EN PROCESO" : d.esDeuda ? d.estado : "HISTORIA"} sx={{ bgcolor: color, color: "#fff" }} /></TableCell>
                     <TableCell>{d.tipoPago}</TableCell>
                   </TableRow>
                 );
