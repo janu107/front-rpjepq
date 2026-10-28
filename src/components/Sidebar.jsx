@@ -53,7 +53,8 @@ const items = [
       { text: "Empleados EPQ", path: "/aportaciones", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Aportaciones", path: "/aportaciones/detalle", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Prestamos", path: "/prestamos", icon: <AccountBalanceWalletIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
-      { text: "Detalle Prestamos", path: "/prestamos/detalle", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+      { text: "Detalle Prestamos", path: "/prestamos/detalle", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Dashboard Aportaciones", path: "/aportaciones-dashboard", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]
   },
   {

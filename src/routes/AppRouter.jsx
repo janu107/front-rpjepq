@@ -4,6 +4,7 @@ import DashboardLayout from "../layouts/DashboardLayout";
 import AuditoriaPage from "../pages/auditoria/AuditoriaPage";
 import CatalogosPage from "../pages/catalogos/CatalogosPage";
 import AportacionesPage from "../pages/aportaciones/AportacionesPage";
+import DashboardAportacionesPage from "../pages/aportaciones/DashboardAportacionesPage";
 import Dashboard from "../pages/Dashboard";
 import EmpleadosPage from "../pages/empleados/EmpleadosPage";
 import JubiladosPage from "../pages/jubilados/JubiladosPage";
@@ -71,6 +72,7 @@ const AppRouter = () => {
             <Route path="/catalogos/:catalogo" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><CatalogosPage /></ProtectedRoute>} />
             <Route path="/aportaciones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><AportacionesPage /></ProtectedRoute>} />
             <Route path="/aportaciones/detalle" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><AportacionesPage detailOnly /></ProtectedRoute>} />
+            <Route path="/aportaciones-dashboard" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DashboardAportacionesPage /></ProtectedRoute>} />
             <Route path="/empleados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><EmpleadosPage /></ProtectedRoute>} />
             <Route path="/empleados-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><EmpleadosPage title="Control de Empleados" subtitle="Mantenimiento de empleados regimen" fixedManejoId={1} onlyOccupiedPuestos showPlanilla /></ProtectedRoute>} />
             <Route path="/jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><JubiladosPage showPlanilla /></ProtectedRoute>} />

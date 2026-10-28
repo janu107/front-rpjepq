@@ -16,6 +16,7 @@ const MODULOS_NEGOCIO = ["EPQ", "REGIMEN", "JUBILADOS"];
 const MODULOS_PATH = [
   ["/catalogos", ["CATALOGOS"]],
   ["/aportaciones", ["EPQ"]],
+  ["/aportaciones-dashboard", ["EPQ"]],
   ["/prestamos-regimen", ["REGIMEN"]],
   ["/prestamos", ["EPQ"]],
   ["/empleados", ["REGIMEN"]],
