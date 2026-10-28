@@ -29,9 +29,14 @@ const money = (v) => `Q ${Number(v || 0).toLocaleString("es-GT", { minimumFracti
 const hoy = new Date();
 const periodoHoy = hoy.getFullYear() * 100 + hoy.getMonth() + 1;
 const vacio = () => ({
-  tipoManejo: 2, idPersona: null, anio: String(Math.floor(periodoHoy / 100)), mes: String(periodoHoy % 100).padStart(2, "0"),
-  tipoDescuento: "", valor: "", motivo: "", estado: "ACTIVO"
+  tipoManejo: 2, idPersona: null, periodo: String(periodoHoy), tipoDescuento: "", valor: "", motivo: "", estado: "ACTIVO"
 });
+// "202610" -> "Octubre 2026" ("" si no es un período válido).
+const nombrePeriodo = (p) => {
+  const s = String(p || "");
+  const mes = Number(s.slice(4, 6));
+  return /^\d{6}$/.test(s) && mes >= 1 && mes <= 12 ? `${MESES[mes - 1]} ${s.slice(0, 4)}` : "";
+};
 
 const OtrosDescuentosPage = () => {
   const { user } = useAuth();
@@ -72,10 +77,6 @@ const OtrosDescuentosPage = () => {
   const personas = form.tipoManejo === 1 ? empleados : jubilados;
   const personaSel = personas.find((p) => Number(p.id) === Number(form.idPersona)) || null;
   const tipoOtros = tipos.find((t) => /OTROS/i.test(t.descripcion || ""));
-  const anios = useMemo(() => {
-    const a = hoy.getFullYear();
-    return [a - 1, a, a + 1].map(String);
-  }, []);
 
   const abrirNuevo = () => {
     setEditando(null);
@@ -85,16 +86,16 @@ const OtrosDescuentosPage = () => {
   const abrirEditar = (row) => {
     setEditando(row);
     setForm({
-      tipoManejo: Number(row.tipoManejo), idPersona: row.idPersona, anio: String(row.periodo).slice(0, 4), mes: String(row.periodo).slice(4, 6),
+      tipoManejo: Number(row.tipoManejo), idPersona: row.idPersona, periodo: String(row.periodo),
       tipoDescuento: row.tipoDescuento, valor: String(row.valor), motivo: row.motivo || "", estado: row.estado || "ACTIVO"
     });
     setDialogo(true);
   };
 
-  const faltan = !form.idPersona || !form.tipoDescuento || !(Number(form.valor) > 0) || !String(form.motivo).trim();
+  const faltan = !form.idPersona || !nombrePeriodo(form.periodo) || !form.tipoDescuento || !(Number(form.valor) > 0) || !String(form.motivo).trim();
 
   const guardar = async () => {
-    const payload = { ...form, periodo: `${form.anio}${form.mes}` };
+    const payload = { ...form };
     try {
       setGuardando(true);
       const { data } = editando
@@ -193,6 +194,7 @@ const OtrosDescuentosPage = () => {
                 getOptionLabel={(o) => `${o.codigo} — ${o.nombre}`}
                 isOptionEqualToValue={(o, v) => o.id === v.id}
                 autoHighlight
+                autoSelect
                 filterOptions={(opts, { inputValue }) => {
                   const t = inputValue.trim().toLowerCase();
                   if (!t) return opts.slice(0, 50);
@@ -204,21 +206,14 @@ const OtrosDescuentosPage = () => {
                 noOptionsText="Sin resultados"
               />
             </Grid>
-            <Grid item xs={6} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Año de la planilla *</InputLabel>
-                <Select label="Año de la planilla *" value={form.anio} onChange={(e) => setForm((f) => ({ ...f, anio: e.target.value }))}>
-                  {anios.map((a) => <MenuItem key={a} value={a}>{a}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={6} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Mes de la planilla *</InputLabel>
-                <Select label="Mes de la planilla *" value={form.mes} onChange={(e) => setForm((f) => ({ ...f, mes: e.target.value }))}>
-                  {MESES.map((m, i) => <MenuItem key={m} value={String(i + 1).padStart(2, "0")}>{m}</MenuItem>)}
-                </Select>
-              </FormControl>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Planilla a aplicar *" placeholder="AAAAMM" value={form.periodo} fullWidth
+                inputProps={{ inputMode: "numeric", maxLength: 6 }}
+                onChange={(e) => setForm((f) => ({ ...f, periodo: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+                error={form.periodo.length === 6 && !nombrePeriodo(form.periodo)}
+                helperText={nombrePeriodo(form.periodo) || (form.periodo.length === 6 ? "Período no válido" : "Ej. 202610")}
+              />
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
@@ -250,7 +245,7 @@ const OtrosDescuentosPage = () => {
               <Box sx={{ p: 1.5, bgcolor: "#F4F6F8", borderRadius: 1 }}>
                 <Typography variant="body2">
                   Se descontará <b>{money(form.valor)}</b> a <b>{personaSel ? `${personaSel.codigo} — ${personaSel.nombre}` : "—"}</b> en la
-                  <b> {APLICA.find((a) => a.valor === form.tipoManejo)?.planilla} de {MESES[Number(form.mes) - 1]} {form.anio}</b>.
+                  <b> {APLICA.find((a) => a.valor === form.tipoManejo)?.planilla} {form.periodo}{nombrePeriodo(form.periodo) ? ` (${nombrePeriodo(form.periodo)})` : ""}</b>.
                 </Typography>
               </Box>
             </Grid>
