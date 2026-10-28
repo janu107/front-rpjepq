@@ -1,14 +1,16 @@
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 import BlockIcon from "@mui/icons-material/Block";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import LockOpenIcon from "@mui/icons-material/LockOpen";
 import EditIcon from "@mui/icons-material/Edit";
 import PaidIcon from "@mui/icons-material/Paid";
 import PrintIcon from "@mui/icons-material/Print";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
-  Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider,
+  Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider,
   FormControl, FormControlLabel, Grid, IconButton, InputLabel, MenuItem, Paper, Select, Stack,
-  Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, Tooltip, Typography
+  Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
@@ -19,7 +21,7 @@ import PageHeader from "../../components/common/PageHeader";
 import StatusChip from "../../components/common/StatusChip";
 import { useAuth } from "../../context/AuthContext";
 import { numeroALetras } from "../../utils/numeroALetras";
-import { canCreate, canEdit } from "../../utils/permissions";
+import { canCreate, canEdit, isAdmin } from "../../utils/permissions";
 
 const money = (v) => `Q ${Number(v || 0).toFixed(2)}`;
 const currentPeriodo = () => new Date().toISOString().slice(0, 7);
@@ -105,11 +107,41 @@ const imprimirCheque = async (id, noDocumento, titulo = "Imprimir cheque") => {
 // ---------------------------------------------------------------------------
 // Tab 1: Sesiones (actas) con registro de asistencia individual de los miembros
 // ---------------------------------------------------------------------------
+const JUNTAS = [
+  { valor: "JUNTA ADMINISTRADORA", corto: "Administradora" },
+  { valor: "JUNTA VIGILANCIA", corto: "Vigilancia" }
+];
+const cortoJunta = (t) => JUNTAS.find((j) => j.valor === t)?.corto || "Sin definir";
+const nombreMiembro = (m) => `${m.nombre || m.nombres || ""} ${m.apellidos || ""}`.trim();
+
 const SesionesTab = ({ user, miembros }) => {
   const [rows, setRows] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ acta: "", fechaSesion: "", descripcion: "", asistentes: [] });
+  const [soloLectura, setSoloLectura] = useState(false);
+  const [filtroJunta, setFiltroJunta] = useState("TODAS");
+  const [form, setForm] = useState({ acta: "", fechaSesion: "", descripcion: "", tipoJunta: "", asistentes: [] });
+
+  // Miembros que se muestran: los de la junta elegida (activos), más los que ya
+  // estaban marcados. Sin junta (sesiones antiguas) se muestran todos.
+  const miembrosVisibles = useMemo(() => {
+    const marcados = new Set(form.asistentes.map(Number));
+    return miembros.filter((m) => {
+      if (marcados.has(Number(m.id))) return !form.tipoJunta || m.tipoJunta === form.tipoJunta;
+      if (String(m.estado || "ACTIVO").toUpperCase() !== "ACTIVO") return false;
+      return !form.tipoJunta || m.tipoJunta === form.tipoJunta;
+    });
+  }, [miembros, form.tipoJunta, form.asistentes]);
+
+  const filasVisibles = filtroJunta === "TODAS" ? rows : rows.filter((r) => (r.tipoJunta || "") === filtroJunta);
+
+  const cambiarJunta = (tipoJunta) => {
+    if (!tipoJunta) return;
+    setForm((f) => {
+      const ids = new Set(miembros.filter((m) => m.tipoJunta === tipoJunta).map((m) => Number(m.id)));
+      return { ...f, tipoJunta, asistentes: f.asistentes.map(Number).filter((id) => ids.has(id)) };
+    });
+  };
 
   const load = async () => {
     try {
@@ -123,18 +155,21 @@ const SesionesTab = ({ user, miembros }) => {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ acta: "", fechaSesion: "", descripcion: "", asistentes: [] });
+    setSoloLectura(false);
+    setForm({ acta: "", fechaSesion: "", descripcion: "", tipoJunta: filtroJunta === "TODAS" ? "" : filtroJunta, asistentes: [] });
     setDialogOpen(true);
   };
-  const openEdit = async (row) => {
+  const openEdit = async (row, lectura = false) => {
     try {
       const { data } = await axiosClient.get(`/sesiones/${row.id}`);
       const s = data.data;
       setEditing(s);
+      setSoloLectura(lectura);
       setForm({
         acta: s.acta || "",
         fechaSesion: s.fechaSesion || "",
         descripcion: s.descripcion || "",
+        tipoJunta: s.tipoJunta || "",
         asistentes: (s.asistentesIds || []).map(Number)
       });
       setDialogOpen(true);
@@ -154,6 +189,7 @@ const SesionesTab = ({ user, miembros }) => {
   const save = async () => {
     if (!form.acta.trim()) { Swal.fire("Validación", "El acta es obligatoria.", "warning"); return; }
     if (!form.fechaSesion) { Swal.fire("Validación", "La fecha de la sesión es obligatoria.", "warning"); return; }
+    if (!form.tipoJunta && (!editing || editing.tipoJunta)) { Swal.fire("Validación", "Seleccione la junta (Administradora o Vigilancia).", "warning"); return; }
     try {
       if (editing) await axiosClient.put(`/sesiones/${editing.id}`, form);
       else await axiosClient.post("/sesiones", form);
@@ -180,32 +216,84 @@ const SesionesTab = ({ user, miembros }) => {
     }
   };
 
+  const aprobar = async (row) => {
+    const result = await Swal.fire({
+      title: "Aprobar sesión",
+      html: `Acta <b>${row.acta}</b> · ${cortoJunta(row.tipoJunta)} · <b>${row.asistentes}</b> asistente(s).<br><br>
+        Al aprobarla se <b>congela la asistencia</b>: ya no se podrán agregar ni quitar asistentes, y se habilita emitir el pago.`,
+      icon: "question", showCancelButton: true, confirmButtonText: "Aprobar", cancelButtonText: "Cancelar", confirmButtonColor: "#2e7d32"
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await axiosClient.post(`/sesiones/${row.id}/aprobar`);
+      Swal.fire("Listo", "Sesión aprobada. La asistencia quedó congelada.", "success");
+      load();
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible aprobar la sesión.", "error");
+    }
+  };
+
+  const reabrir = async (row) => {
+    const result = await Swal.fire({
+      title: "Reabrir sesión", text: `Acta ${row.acta}. Vuelve a ACTIVA para corregir la asistencia (solo si no se ha emitido ningún pago).`,
+      icon: "warning", showCancelButton: true, confirmButtonText: "Reabrir", cancelButtonText: "Cancelar", confirmButtonColor: "#ed6c02"
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await axiosClient.post(`/sesiones/${row.id}/reabrir`);
+      Swal.fire("Listo", "Sesión reabierta.", "success");
+      load();
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible reabrir la sesión.", "error");
+    }
+  };
+
   return (
     <Stack spacing={2}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Sesiones registradas</Typography>
+      <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={1}>
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Sesiones registradas</Typography>
+          <ToggleButtonGroup size="small" exclusive value={filtroJunta} onChange={(_, v) => v && setFiltroJunta(v)}>
+            <ToggleButton value="TODAS">Todas</ToggleButton>
+            {JUNTAS.map((j) => <ToggleButton key={j.valor} value={j.valor}>{j.corto}</ToggleButton>)}
+          </ToggleButtonGroup>
+        </Stack>
         {canCreate(user) && <Button variant="contained" startIcon={<ReceiptLongIcon />} onClick={openCreate}>Nueva sesión</Button>}
       </Stack>
       <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31,78,95,0.08)" }}>
             <TableRow>
-              <TableCell>Acta</TableCell><TableCell>Fecha</TableCell><TableCell>Descripción</TableCell>
+              <TableCell>Acta</TableCell><TableCell>Fecha</TableCell><TableCell>Junta</TableCell><TableCell>Descripción</TableCell>
               <TableCell align="center">Asistentes</TableCell><TableCell>Estado</TableCell><TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((row) => (
+            {filasVisibles.map((row) => (
               <TableRow key={row.id} hover>
                 <TableCell>{row.acta}</TableCell>
                 <TableCell>{row.fechaSesion}</TableCell>
+                <TableCell>{row.tipoJunta ? cortoJunta(row.tipoJunta) : <Typography variant="body2" color="text.secondary">Sin definir</Typography>}</TableCell>
                 <TableCell>{row.descripcion}</TableCell>
                 <TableCell align="center">{row.asistentes}</TableCell>
-                <TableCell><StatusChip value={row.estado} /></TableCell>
+                <TableCell>
+                  <Tooltip title={row.estado === "APROBADA" && row.usuarioAprobacion ? `Aprobada por ${row.usuarioAprobacion}` : ""}>
+                    <span><StatusChip value={row.estado} /></span>
+                  </Tooltip>
+                </TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                    {row.estado !== "ACTIVA" && (
+                      <Tooltip title="Ver asistencia"><IconButton size="small" color="primary" onClick={() => openEdit(row, true)}><VisibilityIcon /></IconButton></Tooltip>
+                    )}
                     {canEdit(user) && row.estado === "ACTIVA" && (
                       <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => openEdit(row)}><EditIcon /></IconButton></Tooltip>
+                    )}
+                    {canEdit(user) && row.estado === "ACTIVA" && row.asistentes > 0 && (
+                      <Tooltip title="Aprobar (congela la asistencia)"><IconButton size="small" color="success" onClick={() => aprobar(row)}><CheckCircleIcon /></IconButton></Tooltip>
+                    )}
+                    {isAdmin(user) && row.estado === "APROBADA" && (
+                      <Tooltip title="Reabrir (solo administrador)"><IconButton size="small" color="warning" onClick={() => reabrir(row)}><LockOpenIcon /></IconButton></Tooltip>
                     )}
                     {canEdit(user) && row.estado === "ACTIVA" && (
                       <Tooltip title="Anular"><IconButton size="small" color="error" onClick={() => anular(row)}><BlockIcon /></IconButton></Tooltip>
@@ -214,44 +302,70 @@ const SesionesTab = ({ user, miembros }) => {
                 </TableCell>
               </TableRow>
             ))}
-            {rows.length === 0 && <TableRow><TableCell colSpan={6} align="center">No hay sesiones registradas.</TableCell></TableRow>}
+            {filasVisibles.length === 0 && <TableRow><TableCell colSpan={7} align="center">No hay sesiones registradas.</TableCell></TableRow>}
           </TableBody>
         </Table>
       </TableContainer>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>{editing ? "Editar sesión" : "Nueva sesión de junta directiva"}</DialogTitle>
+        <DialogTitle>
+          {soloLectura ? `Sesión ${form.acta}` : editing ? "Editar sesión" : "Nueva sesión de junta directiva"}
+          {editing && <Box component="span" sx={{ ml: 1.5, verticalAlign: "middle" }}><StatusChip value={editing.estado} /></Box>}
+        </DialogTitle>
         <DialogContent dividers>
+          {soloLectura && editing?.estado === "APROBADA" && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Sesión aprobada{editing.usuarioAprobacion ? ` por ${editing.usuarioAprobacion}` : ""}: la asistencia está congelada.
+            </Alert>
+          )}
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid item xs={12} md={4}>
-              <TextField label="Acta *" value={form.acta} onChange={(e) => setForm({ ...form, acta: e.target.value.toUpperCase() })} fullWidth />
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>Junta *</Typography>
+              <ToggleButtonGroup exclusive color="primary" value={form.tipoJunta} disabled={soloLectura} onChange={(_, v) => cambiarJunta(v)}>
+                {JUNTAS.map((j) => <ToggleButton key={j.valor} value={j.valor} sx={{ px: 3 }}>{j.valor}</ToggleButton>)}
+              </ToggleButtonGroup>
             </Grid>
             <Grid item xs={12} md={4}>
-              <TextField label="Fecha sesión *" type="date" InputLabelProps={{ shrink: true }} value={form.fechaSesion} onChange={(e) => setForm({ ...form, fechaSesion: e.target.value })} fullWidth />
+              <TextField label="Acta *" value={form.acta} disabled={soloLectura} onChange={(e) => setForm({ ...form, acta: e.target.value.toUpperCase() })} fullWidth />
             </Grid>
             <Grid item xs={12} md={4}>
-              <TextField label="Descripción" value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value.toUpperCase() })} fullWidth />
+              <CampoFecha label="Fecha sesión *" value={form.fechaSesion} disabled={soloLectura} onChange={(v) => setForm((f) => ({ ...f, fechaSesion: v }))} />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField label="Descripción" value={form.descripcion} disabled={soloLectura} onChange={(e) => setForm({ ...form, descripcion: e.target.value.toUpperCase() })} fullWidth />
             </Grid>
             <Grid item xs={12}>
               <Divider sx={{ my: 1 }} />
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Asistencia ({form.asistentes.length})</Typography>
-              <Grid container>
-                {miembros.map((m) => (
-                  <Grid item xs={12} md={6} key={m.id}>
-                    <FormControlLabel
-                      control={<Checkbox checked={form.asistentes.map(Number).includes(Number(m.id))} onChange={() => toggleAsistente(m.id)} />}
-                      label={`${m.nombre || m.nombres || ""} ${m.apellidos || ""}`.trim() + (m.puesto ? ` — ${m.puesto}` : "")}
-                    />
-                  </Grid>
-                ))}
-                {miembros.length === 0 && <Typography color="text.secondary" sx={{ p: 1 }}>No hay miembros de junta directiva registrados.</Typography>}
-              </Grid>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>
+                Asistencia ({form.asistentes.length}){form.tipoJunta ? ` — ${form.tipoJunta}` : ""}
+              </Typography>
+              {!form.tipoJunta && editing && !soloLectura && (
+                <Alert severity="info" sx={{ mb: 1 }}>
+                  Esta sesión se registró sin junta, por eso se muestran todos los miembros. Al elegir la junta se quitan los asistentes de la otra.
+                </Alert>
+              )}
+              {!form.tipoJunta && !editing ? (
+                <Typography color="text.secondary" sx={{ p: 1 }}>Seleccione la junta para ver a sus miembros.</Typography>
+              ) : (
+                <Grid container>
+                  {miembrosVisibles.map((m) => (
+                    <Grid item xs={12} md={6} key={m.id}>
+                      <FormControlLabel
+                        disabled={soloLectura}
+                        control={<Checkbox checked={form.asistentes.map(Number).includes(Number(m.id))} onChange={() => toggleAsistente(m.id)} />}
+                        label={nombreMiembro(m) + (m.puesto ? ` — ${m.puesto}` : "")}
+                      />
+                    </Grid>
+                  ))}
+                  {miembrosVisibles.length === 0 && <Typography color="text.secondary" sx={{ p: 1 }}>No hay miembros activos registrados en esta junta.</Typography>}
+                </Grid>
+              )}
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={save}>Guardar</Button>
+          <Button onClick={() => setDialogOpen(false)}>{soloLectura ? "Cerrar" : "Cancelar"}</Button>
+          {!soloLectura && <Button variant="contained" onClick={save}>Guardar</Button>}
         </DialogActions>
       </Dialog>
     </Stack>

@@ -10,7 +10,11 @@ const statusColor = {
   // Estados de pago de dietas
   PENDIENTE: "warning",
   PAGADO: "info",
-  RECIBIDO: "success"
+  RECIBIDO: "success",
+  // Estados de sesiones de junta
+  ACTIVA: "default",
+  APROBADA: "success",
+  ANULADA: "error"
 };
 
 const StatusChip = ({ value }) => {
