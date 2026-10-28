@@ -73,17 +73,28 @@ const ReporteDetalleAportacionesPage = () => {
   // El PDF de este reporte lo genera el backend (carta vertical), igual que el
   // resto de las Impresiones: así no depende de los márgenes ni del encabezado
   // que agrega el diálogo de impresión del navegador.
+  // Formato "anual": matriz año x mes (una hoja). "detalle": cada aporte en 3 columnas.
   const descargarPdf = async () => {
     if (!seleccionado) return;
+    const eleccion = await Swal.fire({
+      title: "Imprimir estado de cuenta", icon: "question",
+      html: `<b>Resumen por año</b>: una fila por año con los 12 meses (normalmente cabe en una hoja).<br><br>
+        <b>Detalle</b>: cada aporte con su fecha, en 3 columnas por hoja.`,
+      showDenyButton: true, showCancelButton: true,
+      confirmButtonText: "Resumen por año", denyButtonText: "Detalle", cancelButtonText: "Cancelar",
+      confirmButtonColor: "#1f4e5f", denyButtonColor: "#5c6b7a"
+    });
+    if (eleccion.isDismissed) return;
+    const formato = eleccion.isConfirmed ? "anual" : "detalle";
     try {
       const respuesta = await axiosClient.get(
         `/impresiones/aportaciones/${seleccionado.id}/estado-cuenta/pdf`,
-        { responseType: "blob" }
+        { params: { formato }, responseType: "blob" }
       );
       const url = window.URL.createObjectURL(new Blob([respuesta.data], { type: "application/pdf" }));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `aportaciones_${seleccionado.aportanteId}.pdf`);
+      link.setAttribute("download", `aportaciones_${seleccionado.aportanteId}${formato === "detalle" ? "_detalle" : ""}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
