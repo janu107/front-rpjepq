@@ -114,6 +114,33 @@ const JUNTAS = [
 const cortoJunta = (t) => JUNTAS.find((j) => j.valor === t)?.corto || "Sin definir";
 const nombreMiembro = (m) => `${m.nombre || m.nombres || ""} ${m.apellidos || ""}`.trim();
 
+// Orden de cargos para la asistencia: de presidente a vocal. El tesorero titular
+// y el pro-tesorero suplente quedan en la misma fila.
+const RANGOS = [
+  { orden: 1, prueba: (p) => p.includes("PRESIDENTE") },
+  { orden: 2, prueba: (p) => p.includes("SECRETARIO") },
+  { orden: 3, prueba: (p) => p.includes("TESORERO") },
+  { orden: 4, prueba: (p) => p.includes("ENCARGADO") || p.includes("INVERSION") },
+  { orden: 6, prueba: (p) => /VOCAL\s+II\b/.test(p) },
+  { orden: 5, prueba: (p) => /VOCAL\s+I\b/.test(p) }
+];
+const rangoDe = (puesto) => {
+  const p = String(puesto || "").toUpperCase();
+  return RANGOS.find((r) => r.prueba(p))?.orden ?? 9;
+};
+const esSuplente = (puesto) => String(puesto || "").toUpperCase().includes("SUPLENTE");
+
+// Filas por cargo: titulares a la izquierda y suplentes a la derecha.
+const filasPorCargo = (lista) => {
+  const mapa = new Map();
+  lista.forEach((m) => {
+    const k = rangoDe(m.puesto);
+    if (!mapa.has(k)) mapa.set(k, { titulares: [], suplentes: [] });
+    mapa.get(k)[esSuplente(m.puesto) ? "suplentes" : "titulares"].push(m);
+  });
+  return [...mapa.entries()].sort(([a], [b]) => a - b).map(([, v]) => v);
+};
+
 const SesionesTab = ({ user, miembros }) => {
   const [rows, setRows] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -347,18 +374,37 @@ const SesionesTab = ({ user, miembros }) => {
               {!form.tipoJunta && !editing ? (
                 <Typography color="text.secondary" sx={{ p: 1 }}>Seleccione la junta para ver a sus miembros.</Typography>
               ) : (
-                <Grid container>
-                  {miembrosVisibles.map((m) => (
-                    <Grid item xs={12} md={6} key={m.id}>
-                      <FormControlLabel
-                        disabled={soloLectura}
-                        control={<Checkbox checked={form.asistentes.map(Number).includes(Number(m.id))} onChange={() => toggleAsistente(m.id)} />}
-                        label={nombreMiembro(m) + (m.puesto ? ` — ${m.puesto}` : "")}
-                      />
+                <Box>
+                  {miembrosVisibles.length > 0 && (
+                    <Grid container sx={{ borderBottom: "1px solid #dde3ea", mb: 0.5, display: { xs: "none", md: "flex" } }}>
+                      <Grid item md={6}><Typography variant="caption" sx={{ fontWeight: 800, color: "text.secondary", letterSpacing: 0.8 }}>TITULARES</Typography></Grid>
+                      <Grid item md={6}><Typography variant="caption" sx={{ fontWeight: 800, color: "text.secondary", letterSpacing: 0.8 }}>SUPLENTES</Typography></Grid>
+                    </Grid>
+                  )}
+                  {filasPorCargo(miembrosVisibles).map((fila, i) => (
+                    <Grid container key={i} sx={{ py: 0.25, borderBottom: "1px dashed #eef1f4" }}>
+                      {["titulares", "suplentes"].map((lado) => (
+                        <Grid item xs={12} md={6} key={lado}>
+                          {fila[lado].map((m) => (
+                            <FormControlLabel
+                              key={m.id}
+                              sx={{ display: "flex", alignItems: "flex-start", mr: 1, "& .MuiCheckbox-root": { pt: 0.5 } }}
+                              disabled={soloLectura}
+                              control={<Checkbox checked={form.asistentes.map(Number).includes(Number(m.id))} onChange={() => toggleAsistente(m.id)} />}
+                              label={(
+                                <Box sx={{ pt: 0.75 }}>
+                                  <Typography sx={{ fontWeight: 600, lineHeight: 1.25 }}>{nombreMiembro(m)}</Typography>
+                                  <Typography variant="body2" color="text.secondary">{m.puesto}</Typography>
+                                </Box>
+                              )}
+                            />
+                          ))}
+                        </Grid>
+                      ))}
                     </Grid>
                   ))}
                   {miembrosVisibles.length === 0 && <Typography color="text.secondary" sx={{ p: 1 }}>No hay miembros activos registrados en esta junta.</Typography>}
-                </Grid>
+                </Box>
               )}
             </Grid>
           </Grid>
