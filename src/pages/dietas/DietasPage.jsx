@@ -5,14 +5,15 @@ import LockOpenIcon from "@mui/icons-material/LockOpen";
 import EditIcon from "@mui/icons-material/Edit";
 import PaidIcon from "@mui/icons-material/Paid";
 import PrintIcon from "@mui/icons-material/Print";
+import SearchIcon from "@mui/icons-material/Search";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
   Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider,
-  FormControl, FormControlLabel, Grid, IconButton, InputLabel, MenuItem, Paper, Select, Stack,
+  FormControl, FormControlLabel, Grid, IconButton, InputAdornment, InputLabel, MenuItem, Paper, Select, Stack,
   Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
@@ -428,6 +429,18 @@ const PagosTab = ({ user, parIsr, bancos }) => {
   const [reciboDialog, setReciboDialog] = useState({ open: false, row: null, fechaRecibido: "" });
   const [detalle, setDetalle] = useState({ open: false, pago: null, sesiones: [] });
 
+  const [filtroJunta, setFiltroJunta] = useState("TODAS");
+  const [buscar, setBuscar] = useState("");
+  const [anioSel, mesSel] = periodo.split("-");
+  const cambiarPeriodo = (anio, mes) => setPeriodo(`${anio}-${mes}`);
+  const aniosDisponibles = useMemo(() => {
+    const actual = new Date().getFullYear();
+    const lista = [];
+    for (let y = actual + 1; y >= 2024; y -= 1) lista.push(String(y));
+    if (!lista.includes(anioSel)) lista.push(anioSel);
+    return lista;
+  }, [anioSel]);
+
   const load = async (p = periodo) => {
     try {
       const { data } = await axiosClient.get(`/dietas/pagos?periodo=${p}`);
@@ -436,7 +449,8 @@ const PagosTab = ({ user, parIsr, bancos }) => {
       Swal.fire("Error", error.response?.data?.message || "No fue posible cargar los pagos.", "error");
     }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  // Se consulta solo al cambiar año o mes.
+  useEffect(() => { load(periodo); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [periodo]);
 
   const recalcular = async () => {
     try {
@@ -489,28 +503,87 @@ const PagosTab = ({ user, parIsr, bancos }) => {
     }
   };
 
-  const totales = useMemo(() => rows.reduce((acc, r) => ({
+  const sumar = (lista) => lista.reduce((acc, r) => ({
     valor: acc.valor + Number(r.valor || 0), isr: acc.isr + Number(r.isr || 0), liquido: acc.liquido + Number(r.valorPago || 0)
-  }), { valor: 0, isr: 0, liquido: 0 }), [rows]);
+  }), { valor: 0, isr: 0, liquido: 0 });
+
+  // Filtro por junta y búsqueda (cada palabra en nombre, puesto, estado o No. documento),
+  // ordenado por cargo: titular antes que suplente.
+  const filtradas = useMemo(() => {
+    const palabras = buscar.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    return rows
+      .filter((r) => filtroJunta === "TODAS" || r.tipoJunta === filtroJunta)
+      .filter((r) => {
+        const texto = [r.juntaNombre, r.juntaPuesto, r.estado, r.noDocumento, r.banco].join(" ").toLowerCase();
+        return palabras.every((w) => texto.includes(w));
+      })
+      .sort((a, b) => (rangoDe(a.juntaPuesto) - rangoDe(b.juntaPuesto))
+        || (Number(esSuplente(a.juntaPuesto)) - Number(esSuplente(b.juntaPuesto)))
+        || String(a.juntaNombre).localeCompare(String(b.juntaNombre)));
+  }, [rows, filtroJunta, buscar]);
+
+  // Con "Todas" se separa por junta, cada una con su subtotal.
+  const grupos = useMemo(() => {
+    if (filtroJunta !== "TODAS") return [{ titulo: null, filas: filtradas }];
+    const orden = [...JUNTAS.map((j) => j.valor), null];
+    return orden
+      .map((t) => ({ titulo: t ? t : "SIN JUNTA", filas: filtradas.filter((r) => (r.tipoJunta || null) === t) }))
+      .filter((g) => g.filas.length);
+  }, [filtradas, filtroJunta]);
+  const totales = sumar(filtradas);
+
+  const filaTotal = (etiqueta, t, fuerte) => (
+    <TableRow sx={{ "& td": { fontWeight: fuerte ? 800 : 700, bgcolor: fuerte ? "rgba(31,78,95,0.10)" : "rgba(31,78,95,0.04)" } }}>
+      <TableCell colSpan={3} align="right">{etiqueta}</TableCell>
+      <TableCell align="right">{money(t.valor)}</TableCell>
+      <TableCell align="right">{money(t.isr)}</TableCell>
+      <TableCell align="right">{money(t.liquido)}</TableCell>
+      <TableCell colSpan={2} />
+    </TableRow>
+  );
 
   return (
     <Stack spacing={2}>
       <Paper elevation={0} sx={{ p: 2, border: "1px solid #dde3ea" }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={3}>
-            <TextField label="Periodo (mes)" type="month" InputLabelProps={{ shrink: true }} value={periodo} onChange={(e) => setPeriodo(e.target.value)} fullWidth />
-          </Grid>
           <Grid item xs={6} md={2}>
-            <Button variant="outlined" fullWidth onClick={() => load()}>Consultar</Button>
+            <FormControl fullWidth>
+              <InputLabel>Año</InputLabel>
+              <Select label="Año" value={anioSel} onChange={(e) => cambiarPeriodo(e.target.value, mesSel)}>
+                {aniosDisponibles.map((y) => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+              </Select>
+            </FormControl>
           </Grid>
-          <Grid item xs={6} md={3}>
+          <Grid item xs={6} md={2.5}>
+            <FormControl fullWidth>
+              <InputLabel>Mes</InputLabel>
+              <Select label="Mes" value={mesSel} onChange={(e) => cambiarPeriodo(anioSel, e.target.value)}>
+                {MESES.map((m, i) => <MenuItem key={m} value={String(i + 1).padStart(2, "0")}>{m.charAt(0) + m.slice(1).toLowerCase()}</MenuItem>)}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
             {canEdit(user) && <Button variant="contained" startIcon={<AutorenewIcon />} fullWidth onClick={recalcular}>Recalcular totales</Button>}
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={2}>
             <Typography color="text.secondary" variant="body2">ISR vigente</Typography>
             <Typography variant="h6">{Number(parIsr || 0).toFixed(2)} %</Typography>
           </Grid>
         </Grid>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} sx={{ mt: 2 }}>
+          <ToggleButtonGroup size="small" exclusive value={filtroJunta} onChange={(_, v) => v && setFiltroJunta(v)}>
+            <ToggleButton value="TODAS">Todas</ToggleButton>
+            {JUNTAS.map((j) => <ToggleButton key={j.valor} value={j.valor}>{j.corto}</ToggleButton>)}
+          </ToggleButtonGroup>
+          <TextField
+            size="small" value={buscar} onChange={(e) => setBuscar(e.target.value)} sx={{ flex: 1, maxWidth: { md: 460 } }}
+            placeholder="Buscar por nombre, puesto, estado o No. de cheque"
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+          />
+          {(buscar || filtroJunta !== "TODAS") && (
+            <Typography variant="body2" color="text.secondary">{filtradas.length} de {rows.length} pago(s)</Typography>
+          )}
+        </Stack>
       </Paper>
 
       <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
@@ -523,7 +596,16 @@ const PagosTab = ({ user, parIsr, bancos }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((row) => (
+            {grupos.map((g) => (
+              <Fragment key={g.titulo || "unico"}>
+                {g.titulo && (
+                  <TableRow>
+                    <TableCell colSpan={8} sx={{ bgcolor: "#F4F6F8", fontWeight: 800, color: "#1F4E5F", letterSpacing: 0.5 }}>
+                      {g.titulo} <Typography component="span" variant="body2" color="text.secondary">· {g.filas.length} miembro(s)</Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+            {g.filas.map((row) => (
               <TableRow key={row.id} hover>
                 <TableCell>{row.juntaNombre}</TableCell>
                 <TableCell>{row.juntaPuesto}</TableCell>
@@ -548,16 +630,13 @@ const PagosTab = ({ user, parIsr, bancos }) => {
                 </TableCell>
               </TableRow>
             ))}
-            {rows.length === 0 && <TableRow><TableCell colSpan={8} align="center">No hay pagos para el periodo seleccionado.</TableCell></TableRow>}
-            {rows.length > 0 && (
-              <TableRow sx={{ "& td": { fontWeight: 800 } }}>
-                <TableCell colSpan={3} align="right">TOTAL</TableCell>
-                <TableCell align="right">{money(totales.valor)}</TableCell>
-                <TableCell align="right">{money(totales.isr)}</TableCell>
-                <TableCell align="right">{money(totales.liquido)}</TableCell>
-                <TableCell colSpan={2} />
-              </TableRow>
+                {g.titulo && grupos.length > 1 && filaTotal(`SUBTOTAL ${g.titulo}`, sumar(g.filas), false)}
+              </Fragment>
+            ))}
+            {filtradas.length === 0 && (
+              <TableRow><TableCell colSpan={8} align="center">{rows.length ? "Ningún pago coincide con el filtro." : "No hay pagos para el periodo seleccionado."}</TableCell></TableRow>
             )}
+            {filtradas.length > 0 && filaTotal("TOTAL", totales, true)}
           </TableBody>
         </Table>
       </TableContainer>
