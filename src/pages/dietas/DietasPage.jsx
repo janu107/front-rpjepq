@@ -2,6 +2,7 @@ import AutorenewIcon from "@mui/icons-material/Autorenew";
 import BlockIcon from "@mui/icons-material/Block";
 import EditIcon from "@mui/icons-material/Edit";
 import PaidIcon from "@mui/icons-material/Paid";
+import PrintIcon from "@mui/icons-material/Print";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
@@ -13,14 +14,77 @@ import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import CampoFecha from "../../components/common/CampoFecha";
 import PageHeader from "../../components/common/PageHeader";
 import StatusChip from "../../components/common/StatusChip";
 import { useAuth } from "../../context/AuthContext";
+import { numeroALetras } from "../../utils/numeroALetras";
 import { canCreate, canEdit } from "../../utils/permissions";
 
 const money = (v) => `Q ${Number(v || 0).toFixed(2)}`;
 const currentPeriodo = () => new Date().toISOString().slice(0, 7);
 const tipoDocumentoOptions = ["CHEQUE", "TRANSFERENCIA", "DEPOSITO"];
+
+// Lugar que se imprime en el cheque (igual al del PDF del servidor).
+const LUGAR_CHEQUE = "PUERTO QUETZAL, ESCUINTLA";
+const MESES = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+const fechaLarga = (iso) => {
+  const [y, m, d] = String(iso || "").slice(0, 10).split("-").map(Number);
+  return y && m && d ? `${d} DE ${MESES[m - 1]} DE ${y}` : "__ DE ________ DE ____";
+};
+const montoQ = (v) => Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Vista previa del cheque mientras se llenan los datos (formato provisional).
+const ChequePreview = ({ nombre, monto, noDocumento, banco, fechaPago }) => {
+  const falta = (v, t) => v || <span style={{ color: "#B0B8C1" }}>{t}</span>;
+  return (
+    <Box sx={{ mt: 2.5 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, letterSpacing: 0.6 }}>
+        VISTA PREVIA DEL CHEQUE (formato provisional)
+      </Typography>
+      <Box sx={{
+        mt: 0.75, p: 2.5, borderRadius: 1.5, border: "1px solid #C9D3DD",
+        background: "linear-gradient(135deg, #F3F8FB 0%, #E8F1F6 100%)", fontFamily: "Helvetica, Arial, sans-serif"
+      }}>
+        <Stack direction="row" justifyContent="space-between">
+          <Typography sx={{ fontWeight: 800, fontSize: 13 }}>{falta(banco, "BANCO")}</Typography>
+          <Typography sx={{ fontWeight: 800, fontSize: 14 }}>No. {falta(noDocumento, "______")}</Typography>
+        </Stack>
+        <Typography sx={{ textAlign: "right", fontSize: 12, mt: 1.5 }}>{LUGAR_CHEQUE}, {fechaLarga(fechaPago)}</Typography>
+        <Stack direction="row" alignItems="flex-end" spacing={2} sx={{ mt: 1.5 }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography sx={{ fontSize: 10, color: "text.secondary" }}>PÁGUESE A LA ORDEN DE:</Typography>
+            <Typography sx={{ fontWeight: 800, fontSize: 15, borderBottom: "1px solid #7A8794", pb: 0.25 }}>{String(nombre || "").toUpperCase()}</Typography>
+          </Box>
+          <Box sx={{ border: "1.5px solid #222", px: 1.5, py: 0.5, bgcolor: "#fff", minWidth: 120, textAlign: "right" }}>
+            <Typography sx={{ fontWeight: 800, fontSize: 16 }}>Q {montoQ(monto)}</Typography>
+          </Box>
+        </Stack>
+        <Typography sx={{ fontSize: 10, color: "text.secondary", mt: 1.5 }}>LA SUMA DE:</Typography>
+        <Typography sx={{ fontWeight: 700, fontSize: 13, borderBottom: "1px solid #7A8794", pb: 0.25 }}>{numeroALetras(monto)} ***</Typography>
+        <Stack direction="row" justifyContent="flex-end" spacing={3} sx={{ mt: 4 }}>
+          {[1, 2].map((k) => (
+            <Box key={k} sx={{ width: 150, borderTop: "1px solid #444", textAlign: "center", pt: 0.25 }}>
+              <Typography sx={{ fontSize: 9 }}>FIRMA AUTORIZADA</Typography>
+            </Box>
+          ))}
+        </Stack>
+      </Box>
+    </Box>
+  );
+};
+
+// Abre el PDF del cheque (cheque + comprobante) en otra pestaña.
+const imprimirCheque = async (id) => {
+  try {
+    const { data } = await axiosClient.get(`/dietas/${id}/cheque`, { responseType: "blob" });
+    const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+    window.open(url, "_blank");
+    setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+  } catch {
+    Swal.fire("Error", "No fue posible generar el cheque.", "error");
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Tab 1: Sesiones (actas) con registro de asistencia individual de los miembros
@@ -215,9 +279,17 @@ const PagosTab = ({ user, parIsr, bancos }) => {
     }
     try {
       await axiosClient.post(`/dietas/${d.row.id}/pagar`, { noDocumento: d.noDocumento, tipoDocumento: d.tipoDocumento, banco: d.banco, fechaPago: d.fechaPago });
-      Swal.fire("Listo", "Pago emitido.", "success");
       setPagoDialog({ open: false, row: null, noDocumento: "", tipoDocumento: "CHEQUE", banco: "", fechaPago: "" });
       load();
+      if (d.tipoDocumento === "CHEQUE") {
+        const r = await Swal.fire({
+          icon: "success", title: "Pago emitido", text: `¿Desea imprimir el cheque No. ${d.noDocumento}?`,
+          showCancelButton: true, confirmButtonText: "Imprimir cheque", cancelButtonText: "Después", confirmButtonColor: "#1f4e5f"
+        });
+        if (r.isConfirmed) imprimirCheque(d.row.id);
+      } else {
+        Swal.fire("Listo", "Pago emitido.", "success");
+      }
     } catch (error) {
       Swal.fire("Error", error.response?.data?.message || "No fue posible emitir el pago.", "error");
     }
@@ -292,7 +364,10 @@ const PagosTab = ({ user, parIsr, bancos }) => {
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                     <Tooltip title="Ver voucher"><IconButton size="small" color="primary" onClick={() => verDetalle(row)}><VisibilityIcon /></IconButton></Tooltip>
                     {canEdit(user) && row.estado === "PENDIENTE" && (
-                      <Tooltip title="Emitir pago"><IconButton size="small" color="success" onClick={() => setPagoDialog({ open: true, row, noDocumento: "", tipoDocumento: "CHEQUE", banco: "", fechaPago: "" })}><PaidIcon /></IconButton></Tooltip>
+                      <Tooltip title="Emitir pago"><IconButton size="small" color="success" onClick={() => setPagoDialog({ open: true, row, noDocumento: "", tipoDocumento: "CHEQUE", banco: "", fechaPago: new Date().toLocaleDateString("en-CA") })}><PaidIcon /></IconButton></Tooltip>
+                    )}
+                    {row.tipoDocumento === "CHEQUE" && row.noDocumento && ["PAGADO", "RECIBIDO"].includes(row.estado) && (
+                      <Tooltip title={`Imprimir cheque No. ${row.noDocumento}`}><IconButton size="small" color="primary" onClick={() => imprimirCheque(row.id)}><PrintIcon /></IconButton></Tooltip>
                     )}
                     {canEdit(user) && row.estado === "PAGADO" && (
                       <Tooltip title="Marcar recibido"><IconButton size="small" color="success" onClick={() => setReciboDialog({ open: true, row, fechaRecibido: "" })}><ReceiptLongIcon /></IconButton></Tooltip>
@@ -316,7 +391,7 @@ const PagosTab = ({ user, parIsr, bancos }) => {
       </TableContainer>
 
       {/* Emitir pago */}
-      <Dialog open={pagoDialog.open} onClose={() => setPagoDialog({ ...pagoDialog, open: false })} fullWidth maxWidth="sm">
+      <Dialog open={pagoDialog.open} onClose={() => setPagoDialog({ ...pagoDialog, open: false })} fullWidth maxWidth={pagoDialog.tipoDocumento === "CHEQUE" ? "md" : "sm"}>
         <DialogTitle>Emitir pago — {pagoDialog.row?.juntaNombre}</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
@@ -337,8 +412,14 @@ const PagosTab = ({ user, parIsr, bancos }) => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={6}><TextField label="Fecha de pago" type="date" InputLabelProps={{ shrink: true }} value={pagoDialog.fechaPago} onChange={(e) => setPagoDialog({ ...pagoDialog, fechaPago: e.target.value })} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><CampoFecha label="Fecha de pago" value={pagoDialog.fechaPago} onChange={(v) => setPagoDialog((d) => ({ ...d, fechaPago: v }))} /></Grid>
           </Grid>
+          {pagoDialog.tipoDocumento === "CHEQUE" && pagoDialog.row && (
+            <ChequePreview
+              nombre={pagoDialog.row.juntaNombre} monto={pagoDialog.row.valorPago}
+              noDocumento={pagoDialog.noDocumento} banco={pagoDialog.banco} fechaPago={pagoDialog.fechaPago}
+            />
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPagoDialog({ ...pagoDialog, open: false })}>Cancelar</Button>
