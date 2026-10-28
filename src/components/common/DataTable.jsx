@@ -86,8 +86,8 @@ const DataTable = ({
               >
                 {columns.map((column) => <TableCell key={column.key} align={column.align}>{column.render ? column.render(row) : row[column.key]}</TableCell>)}
                 {actions?.length > 0 && (
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={0.75} justifyContent="flex-end" flexWrap="wrap">
+                  <TableCell align="right" sx={{ whiteSpace: "nowrap", width: "1%", pl: 3 }}>
+                    <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="nowrap">
                     {actions.map((action) => action.visible?.(row) === false ? null : (
                       <Tooltip title={action.label} key={action.label}>
                         <IconButton

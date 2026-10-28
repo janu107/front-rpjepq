@@ -15,15 +15,16 @@ const JuntaDirectivaPage = () => (
       { key: "manejos", endpoint: "/catalogos/manejo-administracion" },
       { key: "puestos", endpoint: "/catalogos/puestos" }
     ]}
-    searchFields={["nombre", "apellidos", "nit", "puesto", "estado", "manejoDescripcion"]}
+    searchFields={["idJunta", "nombre", "apellidos", "tipoJunta", "puesto", "nit", "estado"]}
+    codeKey="idJunta"
+    searchPlaceholder="Buscar por código, nombre, apellidos, tipo de junta o puesto"
     columns={[
       { key: "idJunta", label: "ID" },
       { key: "nombre", label: "Nombre" },
       { key: "apellidos", label: "Apellidos" },
       { key: "tipoJunta", label: "Tipo junta" },
       { key: "puesto", label: "Puesto" },
-      { key: "estado", label: "Estado", chip: true },
-      { key: "manejoDescripcion", label: "Manejo" }
+      { key: "estado", label: "Estado", chip: true }
     ]}
     fields={[
       { key: "tipoManejo", label: "Manejo administracion", required: true, type: "select", source: "manejos", getValue: (item) => item.id, getLabel: (item) => item.descripcion, disabled: true },
