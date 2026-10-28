@@ -37,12 +37,11 @@ const EmpleadosPage = ({
         { key: "salario", label: "Salario", required: true, type: "number" }
       ]
     }}
-    searchFields={["id", "nombres", "apellidos", "dpi", "puestoNombre", "manejoDescripcion"]}
-    codeKey="id"
-    searchPlaceholder="Buscar por código, nombre, apellido o DPI"
+    searchFields={["idEmpleado", "nombres", "apellidos", "puestoNombre", "dpi"]}
+    codeKey="idEmpleado"
+    searchPlaceholder="Buscar por código, nombre, apellidos o puesto"
     columns={[
-      { key: "id", label: "Codigo" },
-      { key: "idEmpleado", label: "ID empleado" },
+      { key: "idEmpleado", label: "Código" },
       { key: "nombres", label: "Nombres" },
       { key: "apellidos", label: "Apellidos" },
       { key: "dpi", label: "DPI" },
