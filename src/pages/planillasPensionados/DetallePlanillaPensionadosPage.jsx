@@ -533,7 +533,7 @@ const DetallePlanillaPensionadosPage = () => {
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {r.idBeneficiario
-                          ? <>Beneficiario de {r.fallecido} (cód. {r.codigo ?? "-"})</>
+                          ? <>Beneficiario de {r.fallecido} (cód. {r.codigo ?? "-"}){r.pagarA ? <> &nbsp;|&nbsp; Se deposita a la tutora: <b>{r.pagarA}</b></> : null}{!r.cuentaBanco && !r.formaPago ? <> &nbsp;|&nbsp; <span style={{ color: "#c62828" }}>sin datos de pago</span></> : null}</>
                           : <>Cód: {r.codigo ?? "-"} &nbsp;|&nbsp; DPI: {r.dpi} &nbsp;|&nbsp; Jub: {fmtDate(r.fechaJubilacion)}</>}
                       </Typography>
                     </TableCell>

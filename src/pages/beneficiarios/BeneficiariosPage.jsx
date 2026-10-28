@@ -33,8 +33,52 @@ const edad = (fechaNac) => {
 const esDpi = (v) => /^[0-9]{13}$/.test(String(v || "").trim());
 const esCorreo = (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim());
 
-const nuevoForm = () => ({ tipoParentesco: "", nombres: "", apellidos: "", dpi: "", fechaNacimiento: "", porcentaje: "", telefono: "", correo: "" });
-const nuevaTutora = () => ({ nombres: "", apellidos: "", dpi: "", parentesco: "", telefono: "" });
+const pagoVacio = { formaPago: "", idBanco: "", tipoCuenta: "", cuenta: "" };
+const nuevoForm = () => ({ tipoParentesco: "", nombres: "", apellidos: "", dpi: "", fechaNacimiento: "", porcentaje: "", telefono: "", correo: "", ...pagoVacio });
+const nuevaTutora = () => ({ nombres: "", apellidos: "", dpi: "", parentesco: "", telefono: "", ...pagoVacio });
+const FORMAS_PAGO = ["ABONO CUENTA", "CHEQUE"];
+const TIPOS_CUENTA = ["AHORRO", "MONETARIA"];
+// Mensaje si faltan datos de la cuenta (solo con ABONO CUENTA).
+const errorPago = (o) => (o.formaPago === "ABONO CUENTA" && (!o.idBanco || !o.tipoCuenta || !String(o.cuenta || "").trim())
+  ? "Con ABONO CUENTA indique banco, tipo y número de cuenta" : null);
+
+// Datos de pago (dónde se deposita). Se usa para el beneficiario y para la tutora.
+const CamposPago = ({ valor, onChange, bancos, titulo }) => {
+  const set = (k) => (e) => onChange({ ...valor, [k]: k === "cuenta" ? e.target.value.toUpperCase() : e.target.value });
+  const cuenta = valor.formaPago === "ABONO CUENTA";
+  return (
+    <>
+      <Grid item xs={12}><Typography variant="subtitle2" sx={{ fontWeight: 700, color: PRIMARIO, mt: 0.5 }}>{titulo}</Typography></Grid>
+      <Grid item xs={12} md={3}>
+        <FormControl fullWidth>
+          <InputLabel>Forma de pago</InputLabel>
+          <Select label="Forma de pago" value={valor.formaPago || ""} onChange={(e) => onChange({ ...valor, formaPago: e.target.value })}>
+            <MenuItem value="">(pendiente)</MenuItem>
+            {FORMAS_PAGO.map((f) => <MenuItem key={f} value={f}>{f}</MenuItem>)}
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12} md={3}>
+        <FormControl fullWidth disabled={!cuenta}>
+          <InputLabel>{cuenta ? "Banco *" : "Banco"}</InputLabel>
+          <Select label={cuenta ? "Banco *" : "Banco"} value={valor.idBanco || ""} onChange={set("idBanco")}>
+            {(bancos || []).map((b) => <MenuItem key={b.id} value={b.id}>{b.descripcion}</MenuItem>)}
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12} md={3}>
+        <FormControl fullWidth disabled={!cuenta}>
+          <InputLabel>{cuenta ? "Tipo de cuenta *" : "Tipo de cuenta"}</InputLabel>
+          <Select label={cuenta ? "Tipo de cuenta *" : "Tipo de cuenta"} value={valor.tipoCuenta || ""} onChange={set("tipoCuenta")}>
+            {TIPOS_CUENTA.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12} md={3}><TextField label={cuenta ? "No. de cuenta *" : "No. de cuenta"} value={valor.cuenta || ""} onChange={set("cuenta")} disabled={!cuenta} fullWidth /></Grid>
+    </>
+  );
+};
+const pagoDe = (o) => ({ formaPago: o?.formaPago || "", idBanco: o?.idBanco || "", tipoCuenta: o?.tipoCuenta || "", cuenta: o?.cuenta || "" });
 const soloFecha = (v) => (v ? String(v).slice(0, 10) : "");
 
 const BeneficiariosPage = () => {
@@ -63,6 +107,10 @@ const BeneficiariosPage = () => {
   const [tutoraForm, setTutoraForm] = useState(nuevaTutora());
 
   const soloLectura = !canCreate(user);
+  const [bancos, setBancos] = useState([]);
+  useEffect(() => {
+    axiosClient.get("/catalogos/bancos").then(({ data }) => setBancos(data.data || [])).catch(() => setBancos([]));
+  }, []);
 
   // --- Edición de un beneficiario ya registrado ---
   const [editId, setEditId] = useState(null);
@@ -138,7 +186,9 @@ const BeneficiariosPage = () => {
     if (Object.keys(errModal).length) { Swal.fire("Validación", "Corrija los campos marcados.", "warning"); return; }
     const p = Number(form.porcentaje);
     if (Number.isNaN(p) || p <= 0 || p > 100) { Swal.fire("Validación", "Porcentaje entre 0.01 y 100.", "warning"); return; }
+    if (errorPago(form)) { Swal.fire("Validación", errorPago(form), "warning"); return; }
     setNuevos((prev) => [...prev, {
+      ...pagoDe(form),
       tipoParentesco: form.tipoParentesco,
       nombres: form.nombres.trim(),
       apellidos: form.apellidos.trim(),
@@ -166,6 +216,7 @@ const BeneficiariosPage = () => {
     if (!tutoraForm.apellidos.trim() || !esDpi(tutoraForm.dpi)) {
       Swal.fire("Validación", "La tutora requiere apellidos y DPI de 13 dígitos.", "warning"); return;
     }
+    if (errorPago(tutoraForm)) { Swal.fire("Validación", `Tutora: ${errorPago(tutoraForm)}`, "warning"); return; }
     setNuevos((prev) => prev.map((b, i) => (i === tutoraIdx ? { ...b, tutora: { ...tutoraForm } } : b)));
     setModalTutora(false);
   };
@@ -209,10 +260,11 @@ const BeneficiariosPage = () => {
     setEditId(b.id);
     setEditForm({
       tipoParentesco: b.tipoParentesco || "", nombres: b.nombres || "", apellidos: b.apellidos || "", dpi: b.dpi || "",
-      fechaNacimiento: soloFecha(b.fechaNacimiento), porcentaje: String(b.porcentaje ?? ""), telefono: b.telefono || "", correo: b.correo || ""
+      fechaNacimiento: soloFecha(b.fechaNacimiento), porcentaje: String(b.porcentaje ?? ""), telefono: b.telefono || "", correo: b.correo || "",
+      ...pagoDe(b)
     });
     const t = (b.tutores || []).filter((x) => !x.estado || x.estado === "VIGENTE").slice(-1)[0];
-    setEditTutora(t ? { nombres: t.nombres || "", apellidos: t.apellidos || "", dpi: t.dpi || "", parentesco: t.parentesco || "", telefono: t.telefono || "" } : nuevaTutora());
+    setEditTutora(t ? { nombres: t.nombres || "", apellidos: t.apellidos || "", dpi: t.dpi || "", parentesco: t.parentesco || "", telefono: t.telefono || "", ...pagoDe(t) } : nuevaTutora());
   };
   const setE = (k, upper) => (e) => setEditForm({ ...editForm, [k]: upper ? e.target.value.toUpperCase() : e.target.value });
   const setET = (k, upper) => (e) => setEditTutora({ ...editTutora, [k]: upper ? e.target.value.toUpperCase() : e.target.value });
@@ -229,6 +281,8 @@ const BeneficiariosPage = () => {
     if (!esCorreo(editForm.correo)) err.correo = "Correo inválido";
     if (editMenor && (!editTutora.apellidos.trim() || !esDpi(editTutora.dpi))) err.tutora = "Es menor: la tutora requiere apellidos y DPI de 13 dígitos";
     if (!editMenor && editTieneTutora && (!editTutora.apellidos.trim() || !esDpi(editTutora.dpi))) err.tutora = "Complete apellidos y DPI de la tutora (o deje sus datos vacíos)";
+    if (errorPago(editForm)) err.pago = errorPago(editForm);
+    if ((editMenor || editTieneTutora) && errorPago(editTutora)) err.pagoTutora = `Tutora: ${errorPago(editTutora)}`;
     return err;
   }, [editForm, editTutora, editMenor, editTieneTutora, existentes, editId]);
 
@@ -347,7 +401,19 @@ const BeneficiariosPage = () => {
                           onChange={(e) => setPctEdit((p) => ({ ...p, [b.id]: e.target.value }))} />
                       ) : Number(b.porcentaje).toFixed(2)}
                     </TableCell>
-                    <TableCell><Chip size="small" label={b.estado} /></TableCell>
+                    <TableCell>
+                      <Chip size="small" label={b.estado} />
+                      {(() => {
+                        const t = (b.tutores || []).slice(-1)[0];
+                        const p = b.esMenor && t ? t : b;
+                        const txt = p.formaPago === "ABONO CUENTA" ? `${p.bancoNombre || ""} ${p.cuenta || ""}`.trim() : p.formaPago;
+                        return (
+                          <Typography variant="caption" sx={{ display: "block" }} color={txt ? "text.secondary" : "error"}>
+                            {txt ? `${b.esMenor && t ? "Tutora: " : ""}${txt}` : "Sin datos de pago"}
+                          </Typography>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell>
                       {(b.tutores || []).length
                         ? <Chip size="small" icon={<CheckCircleIcon />} label={`${b.tutores[b.tutores.length - 1].nombres || ""} ${b.tutores[b.tutores.length - 1].apellidos || ""}`.trim() || "Sí"} color="success" />
@@ -452,8 +518,11 @@ const BeneficiariosPage = () => {
             <Grid item xs={12} md={4}><TextField label="Porcentaje *" type="number" value={form.porcentaje} onChange={setF("porcentaje")} error={!!errModal.porcentaje} helperText={errModal.porcentaje} fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="Teléfono" value={form.telefono} onChange={setF("telefono")} fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="Correo" value={form.correo} onChange={setF("correo")} error={!!errModal.correo} helperText={errModal.correo} fullWidth /></Grid>
+            {!(form.fechaNacimiento && edad(form.fechaNacimiento) < 18) && (
+              <CamposPago titulo="Datos de pago (cuenta del beneficiario)" valor={pagoDe(form)} bancos={bancos} onChange={(v) => setForm({ ...form, ...v })} />
+            )}
             {form.fechaNacimiento && edad(form.fechaNacimiento) < 18 && (
-              <Grid item xs={12}><Alert severity="warning">Es menor de edad: después de agregarlo deberá asignarle una tutora antes de guardar.</Alert></Grid>
+              <Grid item xs={12}><Alert severity="warning">Es menor de edad: después de agregarlo deberá asignarle una tutora antes de guardar. Su pago se deposita en la cuenta de la tutora.</Alert></Grid>
             )}
           </Grid>
         </DialogContent>
@@ -483,6 +552,9 @@ const BeneficiariosPage = () => {
             <Grid item xs={12} md={4}><TextField label="Porcentaje" value={editForm.porcentaje} fullWidth disabled helperText="Se cambia con «Ajustar porcentajes»" /></Grid>
             <Grid item xs={12} md={6}><TextField label="Teléfono" value={editForm.telefono} onChange={setE("telefono")} fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="Correo" value={editForm.correo} onChange={setE("correo")} error={!!errEdit.correo} helperText={errEdit.correo} fullWidth /></Grid>
+            {!editMenor && (
+              <CamposPago titulo="Datos de pago (cuenta del beneficiario)" valor={pagoDe(editForm)} bancos={bancos} onChange={(v) => setEditForm({ ...editForm, ...v })} />
+            )}
             {(editMenor || editTieneTutora) && (
               <>
                 <Grid item xs={12}>
@@ -496,6 +568,7 @@ const BeneficiariosPage = () => {
                 <Grid item xs={12} md={4}><TextField label="DPI *" value={editTutora.dpi} onChange={setET("dpi")} error={!!editTutora.dpi && !esDpi(editTutora.dpi)} helperText="13 dígitos" fullWidth /></Grid>
                 <Grid item xs={12} md={4}><TextField label="Parentesco" value={editTutora.parentesco} onChange={setET("parentesco", true)} fullWidth /></Grid>
                 <Grid item xs={12} md={4}><TextField label="Teléfono" value={editTutora.telefono} onChange={setET("telefono")} fullWidth /></Grid>
+                <CamposPago titulo="Datos de pago de la tutora (aquí se deposita lo del menor)" valor={pagoDe(editTutora)} bancos={bancos} onChange={(v) => setEditTutora({ ...editTutora, ...v })} />
               </>
             )}
           </Grid>
@@ -516,6 +589,7 @@ const BeneficiariosPage = () => {
             <Grid item xs={12} md={6}><TextField label="DPI *" value={tutoraForm.dpi} onChange={setT("dpi")} error={!!tutoraForm.dpi && !esDpi(tutoraForm.dpi)} helperText="13 dígitos" fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="Parentesco" value={tutoraForm.parentesco} onChange={setTUpper("parentesco")} fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="Teléfono" value={tutoraForm.telefono} onChange={setT("telefono")} fullWidth /></Grid>
+            <CamposPago titulo="Datos de pago (cuenta de la tutora: aquí se deposita lo del menor)" valor={pagoDe(tutoraForm)} bancos={bancos} onChange={(v) => setTutoraForm({ ...tutoraForm, ...v })} />
           </Grid>
         </DialogContent>
         <DialogActions>
