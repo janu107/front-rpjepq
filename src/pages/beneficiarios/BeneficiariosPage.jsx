@@ -1,5 +1,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import PercentIcon from "@mui/icons-material/Percent";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import SaveIcon from "@mui/icons-material/Save";
@@ -14,7 +16,7 @@ import Swal from "sweetalert2";
 import axiosClient from "../../api/axiosClient";
 import PageHeader from "../../components/common/PageHeader";
 import { useAuth } from "../../context/AuthContext";
-import { canCreate, canDelete } from "../../utils/permissions";
+import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const PARENTESCOS = ["ESPOSA", "HIJO", "HIJO_INVALIDEZ"];
 const PRIMARIO = "#1F4E79";
@@ -33,6 +35,7 @@ const esCorreo = (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim()
 
 const nuevoForm = () => ({ tipoParentesco: "", nombres: "", apellidos: "", dpi: "", fechaNacimiento: "", porcentaje: "", telefono: "", correo: "" });
 const nuevaTutora = () => ({ nombres: "", apellidos: "", dpi: "", parentesco: "", telefono: "" });
+const soloFecha = (v) => (v ? String(v).slice(0, 10) : "");
 
 const BeneficiariosPage = () => {
   const { user } = useAuth();
@@ -61,6 +64,14 @@ const BeneficiariosPage = () => {
 
   const soloLectura = !canCreate(user);
 
+  // --- Edición de un beneficiario ya registrado ---
+  const [editId, setEditId] = useState(null);
+  const [editForm, setEditForm] = useState(nuevoForm());
+  const [editTutora, setEditTutora] = useState(nuevaTutora());
+  const [guardandoEdit, setGuardandoEdit] = useState(false);
+  // --- Ajuste de porcentajes (todos juntos, deben sumar 100) ---
+  const [pctEdit, setPctEdit] = useState(null); // { [id]: "50" } mientras se edita
+
   // Autocomplete con debounce. Un término numérico (código) se acepta desde 1 carácter.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -88,6 +99,7 @@ const BeneficiariosPage = () => {
   const seleccionarJubilado = (jub) => {
     setJubilado(jub);
     setNuevos([]);
+    setPctEdit(null);
     setExistentes([]);
     if (jub) cargarExistentes(jub.id);
   };
@@ -192,6 +204,68 @@ const BeneficiariosPage = () => {
 
   const bloqueadoPorJubilado = jubilado && jubilado.estadoPago && jubilado.estadoPago !== "ACTIVO";
 
+  // ---- Editar beneficiario registrado ----
+  const abrirEditar = (b) => {
+    setEditId(b.id);
+    setEditForm({
+      tipoParentesco: b.tipoParentesco || "", nombres: b.nombres || "", apellidos: b.apellidos || "", dpi: b.dpi || "",
+      fechaNacimiento: soloFecha(b.fechaNacimiento), porcentaje: String(b.porcentaje ?? ""), telefono: b.telefono || "", correo: b.correo || ""
+    });
+    const t = (b.tutores || []).filter((x) => !x.estado || x.estado === "VIGENTE").slice(-1)[0];
+    setEditTutora(t ? { nombres: t.nombres || "", apellidos: t.apellidos || "", dpi: t.dpi || "", parentesco: t.parentesco || "", telefono: t.telefono || "" } : nuevaTutora());
+  };
+  const setE = (k, upper) => (e) => setEditForm({ ...editForm, [k]: upper ? e.target.value.toUpperCase() : e.target.value });
+  const setET = (k, upper) => (e) => setEditTutora({ ...editTutora, [k]: upper ? e.target.value.toUpperCase() : e.target.value });
+  const editMenor = editForm.fechaNacimiento ? edad(editForm.fechaNacimiento) < 18 : false;
+  const editTieneTutora = Boolean(editTutora.apellidos || editTutora.dpi);
+  const otraEsposa = existentes.some((b) => b.id !== editId && b.tipoParentesco === "ESPOSA");
+  const errEdit = useMemo(() => {
+    const err = {};
+    if (!editForm.apellidos.trim()) err.apellidos = "Obligatorio";
+    if (!esDpi(editForm.dpi)) err.dpi = "Debe tener 13 dígitos";
+    else if (existentes.some((b) => b.id !== editId && b.dpi === editForm.dpi.trim())) err.dpi = "DPI de otro beneficiario";
+    if (!editForm.fechaNacimiento) err.fechaNacimiento = "Obligatoria";
+    else if (new Date(editForm.fechaNacimiento) > new Date()) err.fechaNacimiento = "No puede ser futura";
+    if (!esCorreo(editForm.correo)) err.correo = "Correo inválido";
+    if (editMenor && (!editTutora.apellidos.trim() || !esDpi(editTutora.dpi))) err.tutora = "Es menor: la tutora requiere apellidos y DPI de 13 dígitos";
+    if (!editMenor && editTieneTutora && (!editTutora.apellidos.trim() || !esDpi(editTutora.dpi))) err.tutora = "Complete apellidos y DPI de la tutora (o deje sus datos vacíos)";
+    return err;
+  }, [editForm, editTutora, editMenor, editTieneTutora, existentes, editId]);
+
+  const guardarEdicion = async () => {
+    if (!editForm.tipoParentesco) { Swal.fire("Validación", "Seleccione el parentesco.", "warning"); return; }
+    if (Object.keys(errEdit).length) { Swal.fire("Validación", Object.values(errEdit)[0], "warning"); return; }
+    try {
+      setGuardandoEdit(true);
+      const { data } = await axiosClient.put(`/beneficiarios/${editId}`, {
+        ...editForm, tutora: editMenor || editTieneTutora ? editTutora : null
+      });
+      setExistentes(data.data || []);
+      setEditId(null);
+      Swal.fire("Listo", "Beneficiario actualizado.", "success");
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible actualizar el beneficiario.", "error");
+    } finally { setGuardandoEdit(false); }
+  };
+
+  // ---- Ajustar porcentajes ----
+  const cobrando = existentes.some((b) => ["ACTIVO", "SUSPENDIDO"].includes(String(b.estado).toUpperCase()));
+  const totalPctEdit = pctEdit ? Math.round(Object.values(pctEdit).reduce((s, v) => s + Number(v || 0), 0) * 100) / 100 : 0;
+  const iniciarPct = () => setPctEdit(Object.fromEntries(existentes.map((b) => [b.id, String(Number(b.porcentaje))])));
+  const guardarPct = async () => {
+    if (totalPctEdit !== 100) { Swal.fire("Validación", `La suma debe ser 100.00 (actual: ${totalPctEdit.toFixed(2)}).`, "warning"); return; }
+    try {
+      const { data } = await axiosClient.put(`/beneficiarios/jubilado/${jubilado.id}/porcentajes`, {
+        porcentajes: Object.entries(pctEdit).map(([id, porcentaje]) => ({ id: Number(id), porcentaje: Number(porcentaje) }))
+      });
+      setExistentes(data.data || []);
+      setPctEdit(null);
+      Swal.fire("Listo", "Porcentajes actualizados.", "success");
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible actualizar los porcentajes.", "error");
+    }
+  };
+
   return (
     <Stack spacing={2.5}>
       <PageHeader title="Beneficiarios" subtitle="Registro de beneficiarios de jubilados (Jubilados y Pensiones)" />
@@ -235,7 +309,20 @@ const BeneficiariosPage = () => {
       {/* Beneficiarios existentes */}
       {jubilado && (
         <Paper sx={{ p: 2.5 }}>
-          <Typography variant="h6" sx={{ mb: 1.5, color: PRIMARIO }}>Beneficiarios registrados</Typography>
+          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={1} sx={{ mb: 1.5 }}>
+            <Typography variant="h6" sx={{ color: PRIMARIO }}>Beneficiarios registrados</Typography>
+            {canEdit(user) && existentes.length > 0 && !cobrando && (
+              pctEdit ? (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Chip label={`Total: ${totalPctEdit.toFixed(2)}%`} color={totalPctEdit === 100 ? "success" : "error"} sx={{ fontWeight: 700 }} />
+                  <Button onClick={() => setPctEdit(null)}>Cancelar</Button>
+                  <Button variant="contained" startIcon={<SaveIcon />} disabled={totalPctEdit !== 100} onClick={guardarPct}>Guardar porcentajes</Button>
+                </Stack>
+              ) : (
+                <Button variant="outlined" startIcon={<PercentIcon />} onClick={iniciarPct}>Ajustar porcentajes</Button>
+              )
+            )}
+          </Stack>
           {cargando ? <CircularProgress size={22} /> : existentes.length === 0 ? (
             <Typography color="text.secondary">Este jubilado aún no tiene beneficiarios registrados.</Typography>
           ) : (
@@ -244,7 +331,7 @@ const BeneficiariosPage = () => {
                 <TableRow>
                   <TableCell>Parentesco</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell>
                   <TableCell align="right">%</TableCell><TableCell>Estado</TableCell><TableCell>Tutora</TableCell>
-                  {canDelete(user) && <TableCell align="center">Acción</TableCell>}
+                  {(canEdit(user) || canDelete(user)) && <TableCell align="center">Acciones</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -253,10 +340,25 @@ const BeneficiariosPage = () => {
                     <TableCell>{b.tipoParentesco}</TableCell>
                     <TableCell>{`${b.nombres || ""} ${b.apellidos}`.trim()}{b.esMenor && <Chip size="small" label="MENOR" color="warning" sx={{ ml: 1 }} />}</TableCell>
                     <TableCell>{b.dpi}</TableCell>
-                    <TableCell align="right">{Number(b.porcentaje).toFixed(2)}</TableCell>
+                    <TableCell align="right">
+                      {pctEdit ? (
+                        <TextField size="small" type="number" value={pctEdit[b.id] ?? ""} sx={{ width: 100 }}
+                          inputProps={{ min: 0, max: 100, step: "0.01", style: { textAlign: "right" } }}
+                          onChange={(e) => setPctEdit((p) => ({ ...p, [b.id]: e.target.value }))} />
+                      ) : Number(b.porcentaje).toFixed(2)}
+                    </TableCell>
                     <TableCell><Chip size="small" label={b.estado} /></TableCell>
-                    <TableCell>{(b.tutores || []).length ? <Chip size="small" icon={<CheckCircleIcon />} label="Sí" color="success" /> : (b.esMenor ? "—" : "N/A")}</TableCell>
-                    {canDelete(user) && <TableCell align="center"><Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => eliminarExistente(b)}>Eliminar</Button></TableCell>}
+                    <TableCell>
+                      {(b.tutores || []).length
+                        ? <Chip size="small" icon={<CheckCircleIcon />} label={`${b.tutores[b.tutores.length - 1].nombres || ""} ${b.tutores[b.tutores.length - 1].apellidos || ""}`.trim() || "Sí"} color="success" />
+                        : (b.esMenor ? <Chip size="small" color="error" label="Falta tutora" /> : "N/A")}
+                    </TableCell>
+                    {(canEdit(user) || canDelete(user)) && (
+                      <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                        {canEdit(user) && <Button size="small" startIcon={<EditIcon />} onClick={() => abrirEditar(b)} disabled={Boolean(pctEdit)}>Editar</Button>}
+                        {canDelete(user) && <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => eliminarExistente(b)} disabled={Boolean(pctEdit)}>Eliminar</Button>}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -325,7 +427,8 @@ const BeneficiariosPage = () => {
 
       {jubilado && existentes.length > 0 && !soloLectura && (
         <Alert severity="info">
-          Este jubilado ya tiene beneficiarios. Para cambiar la distribución, elimine los actuales y vuelva a registrarlos.
+          Este jubilado ya tiene beneficiarios. Use <b>Editar</b> para corregir los datos de un beneficiario o de su tutora, y
+          <b> Ajustar porcentajes</b> para cambiar el reparto (deben sumar 100%).
         </Alert>
       )}
 
@@ -357,6 +460,49 @@ const BeneficiariosPage = () => {
         <DialogActions>
           <Button onClick={() => setModalBen(false)}>Cancelar</Button>
           <Button variant="contained" onClick={agregarBeneficiario}>Agregar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal: editar beneficiario registrado (y su tutora) */}
+      <Dialog open={editId !== null} onClose={() => setEditId(null)} fullWidth maxWidth="md">
+        <DialogTitle>Editar beneficiario</DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Parentesco *</InputLabel>
+                <Select label="Parentesco *" value={editForm.tipoParentesco} onChange={setE("tipoParentesco")}>
+                  {PARENTESCOS.map((p) => <MenuItem key={p} value={p} disabled={p === "ESPOSA" && otraEsposa}>{p}{p === "ESPOSA" && otraEsposa ? " (ya existe)" : ""}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}><TextField label="Nombres" value={editForm.nombres} onChange={setE("nombres", true)} fullWidth /></Grid>
+            <Grid item xs={12} md={4}><TextField label="Apellidos *" value={editForm.apellidos} onChange={setE("apellidos", true)} error={!!errEdit.apellidos} helperText={errEdit.apellidos} fullWidth /></Grid>
+            <Grid item xs={12} md={4}><TextField label="DPI *" value={editForm.dpi} onChange={setE("dpi")} error={!!errEdit.dpi} helperText={errEdit.dpi || "13 dígitos"} fullWidth /></Grid>
+            <Grid item xs={12} md={4}><TextField label="Fecha nacimiento *" type="date" value={editForm.fechaNacimiento} onChange={setE("fechaNacimiento")} error={!!errEdit.fechaNacimiento} helperText={errEdit.fechaNacimiento || (editForm.fechaNacimiento ? `Edad: ${edad(editForm.fechaNacimiento)} años` : "")} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
+            <Grid item xs={12} md={4}><TextField label="Porcentaje" value={editForm.porcentaje} fullWidth disabled helperText="Se cambia con «Ajustar porcentajes»" /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Teléfono" value={editForm.telefono} onChange={setE("telefono")} fullWidth /></Grid>
+            <Grid item xs={12} md={6}><TextField label="Correo" value={editForm.correo} onChange={setE("correo")} error={!!errEdit.correo} helperText={errEdit.correo} fullWidth /></Grid>
+            {(editMenor || editTieneTutora) && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: PRIMARIO, mt: 1 }}>
+                    Tutora {editMenor ? "(obligatoria: es menor de edad)" : ""}
+                  </Typography>
+                  {errEdit.tutora && <Typography variant="caption" color="error">{errEdit.tutora}</Typography>}
+                </Grid>
+                <Grid item xs={12} md={6}><TextField label="Nombres" value={editTutora.nombres} onChange={setET("nombres", true)} fullWidth /></Grid>
+                <Grid item xs={12} md={6}><TextField label="Apellidos *" value={editTutora.apellidos} onChange={setET("apellidos", true)} fullWidth /></Grid>
+                <Grid item xs={12} md={4}><TextField label="DPI *" value={editTutora.dpi} onChange={setET("dpi")} error={!!editTutora.dpi && !esDpi(editTutora.dpi)} helperText="13 dígitos" fullWidth /></Grid>
+                <Grid item xs={12} md={4}><TextField label="Parentesco" value={editTutora.parentesco} onChange={setET("parentesco", true)} fullWidth /></Grid>
+                <Grid item xs={12} md={4}><TextField label="Teléfono" value={editTutora.telefono} onChange={setET("telefono")} fullWidth /></Grid>
+              </>
+            )}
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditId(null)}>Cancelar</Button>
+          <Button variant="contained" startIcon={guardandoEdit ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />} disabled={guardandoEdit} onClick={guardarEdicion}>Guardar cambios</Button>
         </DialogActions>
       </Dialog>
 
