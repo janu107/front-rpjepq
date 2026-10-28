@@ -1,5 +1,7 @@
+import DownloadIcon from "@mui/icons-material/Download";
 import SearchIcon from "@mui/icons-material/Search";
 import {
+  Button,
   Alert, Autocomplete, Box, Grid, InputAdornment, Paper, TextField, Typography
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
@@ -104,6 +106,24 @@ const ReporteDetalleAportacionesPage = () => {
     }
   };
 
+  // Excel: hoja "Detalle por año" (cada aporte con subtotal por año) y hoja "Resumen anual".
+  const exportarExcel = async () => {
+    if (!seleccionado) return;
+    try {
+      const respuesta = await axiosClient.get(`/impresiones/aportaciones/${seleccionado.id}/estado-cuenta/excel`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([respuesta.data], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `aportaciones_${seleccionado.aportanteId}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      Swal.fire("Error", "No fue posible generar el Excel.", "error");
+    }
+  };
+
   const selector = (
     <Paper elevation={0} className="no-print" sx={{ p: 2, border: "1px solid #dde3ea" }}>
       <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>Empleado EPQ</Typography>
@@ -171,7 +191,12 @@ const ReporteDetalleAportacionesPage = () => {
   return (
     <Box>
       {selector}
-      <Box sx={{ mt: 2 }}>
+      <Box className="no-print" sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={exportarExcel} disabled={!movimientos.length}>
+          Exportar a Excel
+        </Button>
+      </Box>
+      <Box sx={{ mt: 1 }}>
         <ReportePDF
           titulo="Reporte de Detalle de Aportaciones"
           rows={movimientos}
