@@ -57,7 +57,7 @@ const ChequePreview = ({ nombre, monto, noDocumento, banco, fechaPago }) => {
             <Typography sx={{ fontWeight: 800, fontSize: 15, borderBottom: "1px solid #7A8794", pb: 0.25 }}>{String(nombre || "").toUpperCase()}</Typography>
           </Box>
           <Box sx={{ border: "1.5px solid #222", px: 1.5, py: 0.5, bgcolor: "#fff", minWidth: 120, textAlign: "right" }}>
-            <Typography sx={{ fontWeight: 800, fontSize: 16 }}>Q {montoQ(monto)}</Typography>
+            <Typography sx={{ fontWeight: 800, fontSize: 16 }}>**{montoQ(monto)}**</Typography>
           </Box>
         </Stack>
         <Typography sx={{ fontSize: 10, color: "text.secondary", mt: 1.5 }}>LA SUMA DE:</Typography>
@@ -74,16 +74,32 @@ const ChequePreview = ({ nombre, monto, noDocumento, banco, fechaPago }) => {
   );
 };
 
-// Abre el PDF del cheque (cheque + comprobante) en otra pestaña.
-const imprimirCheque = async (id) => {
+// Abre el PDF del cheque-voucher en otra pestaña.
+// modo "preimpreso": solo datos, para imprimir sobre el cheque físico.
+// modo "completo": con etiquetas y líneas (revisión u hoja en blanco).
+const abrirChequePdf = async (id, modo) => {
   try {
-    const { data } = await axiosClient.get(`/dietas/${id}/cheque`, { responseType: "blob" });
+    const { data } = await axiosClient.get(`/dietas/${id}/cheque`, { params: { modo }, responseType: "blob" });
     const url = window.URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
     window.open(url, "_blank");
     setTimeout(() => window.URL.revokeObjectURL(url), 60000);
   } catch {
     Swal.fire("Error", "No fue posible generar el cheque.", "error");
   }
+};
+
+const imprimirCheque = async (id, noDocumento, titulo = "Imprimir cheque") => {
+  const r = await Swal.fire({
+    icon: "question", title: titulo,
+    html: `Cheque No. <b>${String(noDocumento || "").replace(/</g, "&lt;")}</b><br><br>
+      <b>En cheque</b>: imprime solo los datos sobre el cheque-voucher físico.<br>
+      <b>Formato completo</b>: con etiquetas y líneas, para revisar o imprimir en hoja blanca.`,
+    showCancelButton: true, showDenyButton: true,
+    confirmButtonText: "En cheque", denyButtonText: "Formato completo", cancelButtonText: "Después",
+    confirmButtonColor: "#1f4e5f", denyButtonColor: "#5c6b7a"
+  });
+  if (r.isConfirmed) abrirChequePdf(id, "preimpreso");
+  else if (r.isDenied) abrirChequePdf(id, "completo");
 };
 
 // ---------------------------------------------------------------------------
@@ -282,11 +298,7 @@ const PagosTab = ({ user, parIsr, bancos }) => {
       setPagoDialog({ open: false, row: null, noDocumento: "", tipoDocumento: "CHEQUE", banco: "", fechaPago: "" });
       load();
       if (d.tipoDocumento === "CHEQUE") {
-        const r = await Swal.fire({
-          icon: "success", title: "Pago emitido", text: `¿Desea imprimir el cheque No. ${d.noDocumento}?`,
-          showCancelButton: true, confirmButtonText: "Imprimir cheque", cancelButtonText: "Después", confirmButtonColor: "#1f4e5f"
-        });
-        if (r.isConfirmed) imprimirCheque(d.row.id);
+        imprimirCheque(d.row.id, d.noDocumento, "Pago emitido — ¿imprimir el cheque?");
       } else {
         Swal.fire("Listo", "Pago emitido.", "success");
       }
@@ -367,7 +379,7 @@ const PagosTab = ({ user, parIsr, bancos }) => {
                       <Tooltip title="Emitir pago"><IconButton size="small" color="success" onClick={() => setPagoDialog({ open: true, row, noDocumento: "", tipoDocumento: "CHEQUE", banco: "", fechaPago: new Date().toLocaleDateString("en-CA") })}><PaidIcon /></IconButton></Tooltip>
                     )}
                     {row.tipoDocumento === "CHEQUE" && row.noDocumento && ["PAGADO", "RECIBIDO"].includes(row.estado) && (
-                      <Tooltip title={`Imprimir cheque No. ${row.noDocumento}`}><IconButton size="small" color="primary" onClick={() => imprimirCheque(row.id)}><PrintIcon /></IconButton></Tooltip>
+                      <Tooltip title={`Imprimir cheque No. ${row.noDocumento}`}><IconButton size="small" color="primary" onClick={() => imprimirCheque(row.id, row.noDocumento)}><PrintIcon /></IconButton></Tooltip>
                     )}
                     {canEdit(user) && row.estado === "PAGADO" && (
                       <Tooltip title="Marcar recibido"><IconButton size="small" color="success" onClick={() => setReciboDialog({ open: true, row, fechaRecibido: "" })}><ReceiptLongIcon /></IconButton></Tooltip>
