@@ -525,11 +525,16 @@ const DetallePlanillaPensionadosPage = () => {
               </TableHead>
               <TableBody>
                 {detallePaginado.map((r) => (
-                  <TableRow key={r.idJubilado} hover>
+                  <TableRow key={`${r.idJubilado}-${r.idBeneficiario || 0}`} hover sx={r.idBeneficiario ? { bgcolor: "rgba(25,118,210,0.04)" } : undefined}>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={500}>{r.nombreCompleto}</Typography>
+                      <Typography variant="body2" fontWeight={500}>
+                        {r.nombreCompleto}
+                        {r.idBeneficiario && <Chip size="small" color="info" variant="outlined" sx={{ ml: 1 }} label={r.conceptoBeneficiario === "COBRO DEUDA DEL FALLECIDO" ? "VIUDEZ: COBRA LA DEUDA" : r.conceptoBeneficiario} />}
+                      </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Cód: {r.codigo ?? "-"} &nbsp;|&nbsp; DPI: {r.dpi} &nbsp;|&nbsp; Jub: {fmtDate(r.fechaJubilacion)}
+                        {r.idBeneficiario
+                          ? <>Beneficiario de {r.fallecido} (cód. {r.codigo ?? "-"})</>
+                          : <>Cód: {r.codigo ?? "-"} &nbsp;|&nbsp; DPI: {r.dpi} &nbsp;|&nbsp; Jub: {fmtDate(r.fechaJubilacion)}</>}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">{money(r.pensionTeorica)}</TableCell>
@@ -545,6 +550,7 @@ const DetallePlanillaPensionadosPage = () => {
                     <TableCell align="right" sx={{ color: "error.main" }}>{r.totalDescuentos > 0 ? money(r.totalDescuentos) : "—"}</TableCell>
                     <TableCell align="right"><b>{money(r.netoPagar)}</b></TableCell>
                     <TableCell align="center">
+                      {r.idBeneficiario ? <Typography variant="caption" color="text.secondary">Beneficiario</Typography> : (
                       <Stack direction="row" spacing={0.5} justifyContent="center">
                         <Tooltip title="Estado de cuenta">
                           <Button size="small" variant="text" onClick={() => handleEstadoCuenta(r.idJubilado)}>
@@ -566,6 +572,7 @@ const DetallePlanillaPensionadosPage = () => {
                           </Tooltip>
                         )}
                       </Stack>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

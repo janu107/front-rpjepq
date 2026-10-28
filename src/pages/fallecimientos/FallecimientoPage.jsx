@@ -106,7 +106,7 @@ const FallecimientoPage = () => {
             <>
               <Typography sx={{ mt: 2, mb: 1, fontWeight: 600 }}>Beneficiarios que se activarán:</Typography>
               <Table size="small">
-                <TableHead><TableRow><TableCell>Nombre</TableCell><TableCell>Parentesco</TableCell><TableCell align="right">%</TableCell><TableCell>Alerta</TableCell></TableRow></TableHead>
+                <TableHead><TableRow><TableCell>Nombre</TableCell><TableCell>Parentesco</TableCell><TableCell align="right">%</TableCell><TableCell>Qué cobrará</TableCell><TableCell>Alerta</TableCell></TableRow></TableHead>
                 <TableBody>
                   {beneficiarios.map((b) => {
                     const menor = edad(b.fechaNacimiento) < 18;
@@ -116,12 +116,29 @@ const FallecimientoPage = () => {
                         <TableCell>{`${b.nombres || ""} ${b.apellidos}`.trim()}</TableCell>
                         <TableCell>{b.tipoParentesco}</TableCell>
                         <TableCell align="right">{Number(b.porcentaje).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {b.tipoParentesco === "ESPOSA"
+                              ? (deuda > 0 ? "Primero la deuda del fallecido; al terminarla, viudez" : "Viudez")
+                              : b.tipoParentesco === "HIJO_INVALIDEZ" ? "Orfandad (sin límite de edad)"
+                                : menor ? "Orfandad hasta los 18 (se paga a la tutora)" : "Mayor de edad: solo lo que se le deba"}
+                          </Typography>
+                        </TableCell>
                         <TableCell>{alerta && <Chip size="small" color="warning" icon={<WarningAmberIcon />} label="Menor sin tutora" />}</TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
+
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <b>Cómo se paga a los beneficiarios</b> (en la planilla de jubilados):<br />
+                • <b>Esposa</b>: cobra lo que recibía el jubilado (el % de la planilla sobre su líquido) y todo se abona a su deuda
+                {deuda > 0 ? <> de <b>{fmtQ(deuda)}</b></> : null}, del mes más viejo al más nuevo. Al terminarla, la planilla siguiente pasa a <b>viudez</b>:
+                su % de la pensión, pagado con el mismo % de la planilla (el resto queda como deuda a su favor).<br />
+                • <b>Hijos menores</b>: <b>orfandad</b>, su % de la pensión pagado con el % de la planilla, a la tutora. Al cumplir 18 se les paga
+                de una vez lo que se les debe y dejan de cobrar.
+              </Alert>
 
               <Grid container spacing={2} sx={{ mt: 0.5 }}>
                 <Grid item xs={12} md={4}><TextField label="Fecha fallecimiento *" type="date" value={form.fechaFallecimiento} onChange={setF("fechaFallecimiento")} error={!!errFecha} helperText={errFecha} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
