@@ -156,7 +156,7 @@ const SesionesTab = ({ user, miembros }) => {
   const openCreate = () => {
     setEditing(null);
     setSoloLectura(false);
-    setForm({ acta: "", fechaSesion: "", descripcion: "", tipoJunta: filtroJunta === "TODAS" ? "" : filtroJunta, asistentes: [] });
+    setForm({ acta: "", fechaSesion: new Date().toLocaleDateString("en-CA"), descripcion: "", tipoJunta: filtroJunta === "TODAS" ? "" : filtroJunta, asistentes: [] });
     setDialogOpen(true);
   };
   const openEdit = async (row, lectura = false) => {
