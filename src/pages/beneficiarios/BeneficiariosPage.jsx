@@ -1,6 +1,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import PercentIcon from "@mui/icons-material/Percent";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -15,6 +16,7 @@ import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
 import PageHeader from "../../components/common/PageHeader";
+import EstadoCuentaBeneficiario from "./EstadoCuentaBeneficiario";
 import { useAuth } from "../../context/AuthContext";
 import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
@@ -119,6 +121,7 @@ const BeneficiariosPage = () => {
   const [guardandoEdit, setGuardandoEdit] = useState(false);
   // --- Ajuste de porcentajes (todos juntos, deben sumar 100) ---
   const [pctEdit, setPctEdit] = useState(null); // { [id]: "50" } mientras se edita
+  const [estadoCuentaId, setEstadoCuentaId] = useState(null);
 
   // Autocomplete con debounce. Un término numérico (código) se acepta desde 1 carácter.
   useEffect(() => {
@@ -385,7 +388,7 @@ const BeneficiariosPage = () => {
                 <TableRow>
                   <TableCell>Parentesco</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell>
                   <TableCell align="right">%</TableCell><TableCell>Estado</TableCell><TableCell>Tutora</TableCell>
-                  {(canEdit(user) || canDelete(user)) && <TableCell align="center">Acciones</TableCell>}
+                  <TableCell align="center">Acciones</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -419,8 +422,9 @@ const BeneficiariosPage = () => {
                         ? <Chip size="small" icon={<CheckCircleIcon />} label={`${b.tutores[b.tutores.length - 1].nombres || ""} ${b.tutores[b.tutores.length - 1].apellidos || ""}`.trim() || "Sí"} color="success" />
                         : (b.esMenor ? <Chip size="small" color="error" label="Falta tutora" /> : "N/A")}
                     </TableCell>
-                    {(canEdit(user) || canDelete(user)) && (
+                    {(
                       <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                        <Button size="small" startIcon={<ReceiptLongIcon />} onClick={() => setEstadoCuentaId(b.id)}>Estado de cuenta</Button>
                         {canEdit(user) && <Button size="small" startIcon={<EditIcon />} onClick={() => abrirEditar(b)} disabled={Boolean(pctEdit)}>Editar</Button>}
                         {canDelete(user) && <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => eliminarExistente(b)} disabled={Boolean(pctEdit)}>Eliminar</Button>}
                       </TableCell>
@@ -531,6 +535,8 @@ const BeneficiariosPage = () => {
           <Button variant="contained" onClick={agregarBeneficiario}>Agregar</Button>
         </DialogActions>
       </Dialog>
+
+      <EstadoCuentaBeneficiario idBeneficiario={estadoCuentaId} onClose={() => setEstadoCuentaId(null)} />
 
       {/* Modal: editar beneficiario registrado (y su tutora) */}
       <Dialog open={editId !== null} onClose={() => setEditId(null)} fullWidth maxWidth="md">
