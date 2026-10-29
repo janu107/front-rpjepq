@@ -165,6 +165,7 @@ const FallecimientoPage = () => {
                             {b.tipoParentesco === "ESPOSA"
                               ? (deuda > 0 ? "Primero la deuda del fallecido; al terminarla, viudez" : "Viudez")
                               : b.tipoParentesco === "HIJO_INVALIDEZ" ? "Orfandad (sin límite de edad)"
+                                : b.tipoParentesco !== "HIJO" ? "Solo registro (aún sin regla de pago)"
                                 : menor ? "Orfandad hasta los 18 (se paga a la tutora)" : "Mayor de edad: solo lo que se le deba"}
                           </Typography>
                         </TableCell>

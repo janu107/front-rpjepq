@@ -20,7 +20,30 @@ import EstadoCuentaBeneficiario from "./EstadoCuentaBeneficiario";
 import { useAuth } from "../../context/AuthContext";
 import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
-const PARENTESCOS = ["ESPOSA", "HIJO", "HIJO_INVALIDEZ"];
+// Solo ESPOSA, HIJO e HIJO_INVALIDEZ cobran por ahora; los demás se registran
+// hasta que se defina su regla de pago.
+const PARENTESCOS_PAGO = ["ESPOSA", "HIJO", "HIJO_INVALIDEZ"];
+const PARENTESCOS = [...PARENTESCOS_PAGO, "ESPOSO", "CONVIVIENTE", "HERMANO", "HERMANA", "SOBRINO", "SOBRINA",
+  "TIO", "TIA", "PRIMO", "PRIMA", "ABUELO", "ABUELA", "NIETO", "NIETA", "AMIGO", "VECINO", "OTRO"];
+const PARENTESCOS_TUTOR = ["MADRE", "PADRE", "ABUELA", "ABUELO", "TIA", "TIO", "HERMANA", "HERMANO", "PRIMA", "PRIMO",
+  "SOBRINA", "SOBRINO", "MADRINA", "PADRINO", "AMIGA", "AMIGO", "VECINA", "VECINO", "OTRO"];
+const opcionParentesco = (p, ocupadaEsposa) => (
+  <MenuItem key={p} value={p} disabled={p === "ESPOSA" && ocupadaEsposa}>
+    {p}{p === "ESPOSA" && ocupadaEsposa ? " (ya existe)" : ""}
+    {!PARENTESCOS_PAGO.includes(p) && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>solo registro</Typography>}
+  </MenuItem>
+);
+// Parentesco del tutor: se elige de la lista o se escribe otro.
+const CampoParentescoTutor = ({ value, onChange, md = 6 }) => (
+  <Grid item xs={12} md={md}>
+    <Autocomplete
+      freeSolo autoSelect options={PARENTESCOS_TUTOR} value={value || ""}
+      onChange={(_, v) => onChange(String(v || "").toUpperCase())}
+      onInputChange={(_, v, reason) => { if (reason === "input") onChange(String(v || "").toUpperCase()); }}
+      renderInput={(p) => <TextField {...p} label="Parentesco con el menor" />}
+    />
+  </Grid>
+);
 const PRIMARIO = "#1F4E79";
 
 const edad = (fechaNac) => {
@@ -511,7 +534,7 @@ const BeneficiariosPage = () => {
               <FormControl fullWidth>
                 <InputLabel>Parentesco *</InputLabel>
                 <Select label="Parentesco *" value={form.tipoParentesco} onChange={setF("tipoParentesco")}>
-                  {PARENTESCOS.map((p) => <MenuItem key={p} value={p} disabled={p === "ESPOSA" && hayEsposa}>{p}{p === "ESPOSA" && hayEsposa ? " (ya existe)" : ""}</MenuItem>)}
+                  {PARENTESCOS.map((p) => opcionParentesco(p, hayEsposa))}
                 </Select>
               </FormControl>
             </Grid>
@@ -547,7 +570,7 @@ const BeneficiariosPage = () => {
               <FormControl fullWidth>
                 <InputLabel>Parentesco *</InputLabel>
                 <Select label="Parentesco *" value={editForm.tipoParentesco} onChange={setE("tipoParentesco")}>
-                  {PARENTESCOS.map((p) => <MenuItem key={p} value={p} disabled={p === "ESPOSA" && otraEsposa}>{p}{p === "ESPOSA" && otraEsposa ? " (ya existe)" : ""}</MenuItem>)}
+                  {PARENTESCOS.map((p) => opcionParentesco(p, otraEsposa))}
                 </Select>
               </FormControl>
             </Grid>
@@ -572,7 +595,7 @@ const BeneficiariosPage = () => {
                 <Grid item xs={12} md={6}><TextField label="Nombres" value={editTutora.nombres} onChange={setET("nombres", true)} fullWidth /></Grid>
                 <Grid item xs={12} md={6}><TextField label="Apellidos *" value={editTutora.apellidos} onChange={setET("apellidos", true)} fullWidth /></Grid>
                 <Grid item xs={12} md={4}><TextField label="DPI *" value={editTutora.dpi} onChange={setET("dpi")} error={!!editTutora.dpi && !esDpi(editTutora.dpi)} helperText="13 dígitos" fullWidth /></Grid>
-                <Grid item xs={12} md={4}><TextField label="Parentesco" value={editTutora.parentesco} onChange={setET("parentesco", true)} fullWidth /></Grid>
+                <CampoParentescoTutor md={4} value={editTutora.parentesco} onChange={(v) => setEditTutora((t) => ({ ...t, parentesco: v }))} />
                 <Grid item xs={12} md={4}><TextField label="Teléfono" value={editTutora.telefono} onChange={setET("telefono")} fullWidth /></Grid>
                 <CamposPago titulo="Datos de pago de la tutora (aquí se deposita lo del menor)" valor={pagoDe(editTutora)} bancos={bancos} onChange={(v) => setEditTutora({ ...editTutora, ...v })} />
               </>
@@ -593,7 +616,7 @@ const BeneficiariosPage = () => {
             <Grid item xs={12} md={6}><TextField label="Nombres" value={tutoraForm.nombres} onChange={setTUpper("nombres")} fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="Apellidos *" value={tutoraForm.apellidos} onChange={setTUpper("apellidos")} fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="DPI *" value={tutoraForm.dpi} onChange={setT("dpi")} error={!!tutoraForm.dpi && !esDpi(tutoraForm.dpi)} helperText="13 dígitos" fullWidth /></Grid>
-            <Grid item xs={12} md={6}><TextField label="Parentesco" value={tutoraForm.parentesco} onChange={setTUpper("parentesco")} fullWidth /></Grid>
+            <CampoParentescoTutor value={tutoraForm.parentesco} onChange={(v) => setTutoraForm((t) => ({ ...t, parentesco: v }))} />
             <Grid item xs={12} md={6}><TextField label="Teléfono" value={tutoraForm.telefono} onChange={setT("telefono")} fullWidth /></Grid>
             <CamposPago titulo="Datos de pago (cuenta de la tutora: aquí se deposita lo del menor)" valor={pagoDe(tutoraForm)} bancos={bancos} onChange={(v) => setTutoraForm({ ...tutoraForm, ...v })} />
           </Grid>
