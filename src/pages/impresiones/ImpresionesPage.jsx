@@ -9,6 +9,7 @@ import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
 import PageHeader from "../../components/common/PageHeader";
+import OficiosBanco from "./OficiosBanco";
 
 // Impresiones formales (mejoras 14-18). Cada pestaña arma los parámetros y pide
 // el PDF al backend, que es quien maqueta el formato oficio / carta.
@@ -41,9 +42,9 @@ const EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 // Pestañas por grupo: "general" (Impresiones) y "jubilacion" (Impresión Jubilación).
 const PESTANAS = [
   "Nómina de sueldos", "Nómina tiempo extra", "Estado de cuenta préstamo", "Resumen", "Nómina de préstamos",
-  "Nómina jubilados", "Resumen jubilados", "Depósitos por banco", "Resumen de depósitos"
+  "Nómina jubilados", "Resumen jubilados", "Depósitos por banco", "Resumen de depósitos", "Oficios al banco"
 ];
-const GRUPOS = { general: [0, 1, 2, 3, 4], jubilacion: [5, 6, 7, 8] };
+const GRUPOS = { general: [0, 1, 2, 3, 4], jubilacion: [5, 6, 7, 8, 9] };
 
 const ImpresionesPage = ({ grupo = "general" }) => {
   const visibles = GRUPOS[grupo] || GRUPOS.general;
@@ -517,6 +518,10 @@ const ImpresionesPage = ({ grupo = "general" }) => {
           </Stack>
         );
       })()}
+
+      {tab === 9 && (
+        <OficiosBanco selectorPlanilla={selectorPlanilla} tipoPlanilla={TIPO_PENSIONADOS} descargar={descargar} descargando={descargando} />
+      )}
 
       <Box>
         <Divider sx={{ mb: 1 }} />
