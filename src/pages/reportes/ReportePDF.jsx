@@ -38,6 +38,10 @@ const FIRMA_ROLES = [
  *  onImprimir  fn            — Si viene, el botón la llama en vez de abrir el diálogo del navegador
  *                               (para reportes cuyo PDF lo genera el backend)
  *  anchoTabla  number        — Ancho máximo de la tabla; si viene, la tabla se centra en la hoja
+ *  agruparPor  string        — Clave por la que se agrupan las filas (ej. tipoJunta): cada grupo
+ *                               lleva su título y su fila de subtotal; sin paginación de pantalla
+ *  getSubtotales fn(filas)   — { claveColumna: valor } para la fila de subtotal de cada grupo
+ *  filtrosIniciales object   — Valores de filtro que se aplican al cargar los datos
  */
 const ReportePDF = ({
   titulo = "Reporte",
@@ -51,7 +55,10 @@ const ReportePDF = ({
   orientacion = "horizontal",
   encabezado = null,
   onImprimir = null,
-  anchoTabla = null
+  anchoTabla = null,
+  agruparPor = null,
+  getSubtotales = null,
+  filtrosIniciales = null
 }) => {
   const [busqueda, setBusqueda] = useState("");
   const [filterValues, setFilterValues] = useState({});
@@ -76,6 +83,14 @@ const ReportePDF = ({
     document.head.appendChild(estilo);
     return () => { estilo.remove(); };
   }, [orientacion]);
+
+  // Filtros por defecto (ej. el último año y mes con datos), una sola vez al cargar.
+  const [iniciado, setIniciado] = useState(false);
+  useEffect(() => {
+    if (iniciado || !rows.length || !filtrosIniciales) return;
+    setFilterValues(filtrosIniciales);
+    setIniciado(true);
+  }, [rows, filtrosIniciales, iniciado]);
 
   const firmaById = (id) => firmas.find((f) => Number(f.id) === Number(id));
 
@@ -110,6 +125,8 @@ const ReportePDF = ({
   const [rowsPerPage, setRowsPerPage] = useState(filasPorPagina);
   useEffect(() => { setPage(0); }, [busqueda, filterValues, filtered.length]);
 
+  // Con grupos se muestran todas las filas para que cada subtotal quede completo.
+  const sinPaginar = Boolean(agruparPor);
   const ultimaPagina = Math.max(0, Math.ceil(filtered.length / rowsPerPage) - 1);
   const paginaActual = Math.min(page, ultimaPagina);
 
@@ -117,9 +134,19 @@ const ReportePDF = ({
   // completo sólo durante el diálogo de impresión.
   const [imprimiendo, setImprimiendo] = useState(false);
   const visibles = useMemo(
-    () => (imprimiendo ? filtered : filtered.slice(paginaActual * rowsPerPage, paginaActual * rowsPerPage + rowsPerPage)),
-    [filtered, imprimiendo, paginaActual, rowsPerPage]
+    () => (imprimiendo || sinPaginar ? filtered : filtered.slice(paginaActual * rowsPerPage, paginaActual * rowsPerPage + rowsPerPage)),
+    [filtered, imprimiendo, sinPaginar, paginaActual, rowsPerPage]
   );
+  const grupos = useMemo(() => {
+    if (!agruparPor) return [[null, visibles]];
+    const mapa = new Map();
+    visibles.forEach((r) => {
+      const k = r[agruparPor] || "SIN CLASIFICAR";
+      if (!mapa.has(k)) mapa.set(k, []);
+      mapa.get(k).push(r);
+    });
+    return [...mapa.entries()];
+  }, [visibles, agruparPor]);
   const desplazamiento = imprimiendo ? 0 : paginaActual * rowsPerPage;
 
   const imprimir = () => {
@@ -283,16 +310,38 @@ const ReportePDF = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {visibles.map((row, i) => (
-                  <TableRow key={row.id ?? i} sx={{ bgcolor: i % 2 === 0 ? "white" : "rgba(31,78,95,0.03)", "&:hover": { bgcolor: "rgba(31,78,95,0.06)" }, "@media print": { bgcolor: i % 2 === 0 ? "white" : "#f5f7f8" } }}>
-                    <TableCell sx={{ fontSize: "0.75rem", "@media print": { fontSize: "8pt" } }}>{desplazamiento + i + 1}</TableCell>
-                    {columns.map((col) => (
-                      <TableCell key={col.key} sx={{ fontSize: "0.75rem", fontWeight: col.bold ? 700 : 400, "@media print": { fontSize: "8pt" } }}>
-                        {col.render ? col.render(row) : (row[col.key] ?? "—")}
+                {grupos.map(([grupo, filasGrupo]) => [
+                  grupo !== null && (
+                    <TableRow key={`g-${grupo}`} sx={{ bgcolor: "#e8eef1", "@media print": { bgcolor: "#e8eef1" } }}>
+                      <TableCell colSpan={columns.length + 1} sx={{ fontWeight: 900, color: "#1f4e5f", fontSize: "0.8rem", py: 0.75, "@media print": { fontSize: "8.5pt" } }}>
+                        {grupo} <Typography component="span" variant="caption" color="text.secondary">· {filasGrupo.length} registro(s)</Typography>
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
+                    </TableRow>
+                  ),
+                  ...filasGrupo.map((row, i) => (
+                    <TableRow key={row.id ?? `${grupo}-${i}`} sx={{ bgcolor: i % 2 === 0 ? "white" : "rgba(31,78,95,0.03)", "&:hover": { bgcolor: "rgba(31,78,95,0.06)" }, "@media print": { bgcolor: i % 2 === 0 ? "white" : "#f5f7f8" } }}>
+                      <TableCell sx={{ fontSize: "0.75rem", "@media print": { fontSize: "8pt" } }}>{grupo !== null ? i + 1 : desplazamiento + i + 1}</TableCell>
+                      {columns.map((col) => (
+                        <TableCell key={col.key} sx={{ fontSize: "0.75rem", fontWeight: col.bold ? 700 : 400, "@media print": { fontSize: "8pt" } }}>
+                          {col.render ? col.render(row) : (row[col.key] ?? "—")}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  )),
+                  grupo !== null && getSubtotales && (() => {
+                    const sub = getSubtotales(filasGrupo);
+                    return (
+                      <TableRow key={`s-${grupo}`} sx={{ borderTop: "1.5px solid #1f4e5f" }}>
+                        <TableCell sx={{ py: 0.75 }} />
+                        {columns.map((col, k) => (
+                          <TableCell key={col.key} sx={{ fontWeight: 800, color: "#1f4e5f", fontSize: "0.75rem", py: 0.75, "@media print": { fontSize: "8pt" } }}>
+                            {k === 0 ? `Subtotal ${grupo}` : (sub[col.key] ?? "")}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })()
+                ])}
                 {filtered.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={columns.length + 1} align="center" sx={{ py: 4, color: "text.secondary" }}>
@@ -305,7 +354,7 @@ const ReportePDF = ({
           </TableContainer>
 
           {/* Paginación de pantalla: al imprimir no aparece y se listan todas las filas. */}
-          {filtered.length > rowsPerPage && (
+          {!sinPaginar && filtered.length > rowsPerPage && (
             <TablePagination
               className="no-print"
               component="div"

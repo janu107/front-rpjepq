@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axiosClient from "../../api/axiosClient";
 import ReportePDF from "./ReportePDF";
 
@@ -19,6 +19,8 @@ const COLUMNS = [
 ];
 
 const FILTER_DEFS = [
+  { key: "anio", label: "Año", dynamic: true },
+  { key: "mes", label: "Mes", dynamic: true },
   { key: "tipoJunta", label: "Tipo junta", dynamic: true },
   { key: "puesto", label: "Puesto", dynamic: true },
   { key: "estado", label: "Estado", dynamic: true }
@@ -35,8 +37,25 @@ const ReporteDietasPage = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // Al abrir: el año y mes más recientes con dietas.
+  const filtrosIniciales = useMemo(() => {
+    if (!rows.length) return null;
+    const ultimo = [...rows].sort((a, b) => String(b.periodo).localeCompare(String(a.periodo)))[0];
+    return { anio: ultimo.anio, mes: ultimo.mes };
+  }, [rows]);
+
+  const suma = (f, k) => f.reduce((s, r) => s + Number(r[k] || 0), 0);
+
   return (
     <ReportePDF
+      agruparPor="tipoJunta"
+      filtrosIniciales={filtrosIniciales}
+      getSubtotales={(f) => ({
+        sesionesMes: suma(f, "sesionesMes"),
+        valor: money(suma(f, "valor")),
+        retencionIsr: money(suma(f, "retencionIsr")),
+        liquido: money(suma(f, "liquido"))
+      })}
       titulo="Reporte de Pago de Dietas"
       rows={rows}
       loading={loading}
@@ -45,6 +64,7 @@ const ReporteDietasPage = () => {
       filterDefs={FILTER_DEFS}
       getTotales={(f) => [
         { label: "Total registros", value: f.length },
+        { label: "Total sesiones", value: suma(f, "sesionesMes") },
         { label: "Total bruto", value: money(f.reduce((s, r) => s + Number(r.valor || 0), 0)) },
         { label: "Total ISR", value: money(f.reduce((s, r) => s + Number(r.retencionIsr || 0), 0)) },
         { label: "Total liquido", value: money(f.reduce((s, r) => s + Number(r.liquido || 0), 0)), main: true }
