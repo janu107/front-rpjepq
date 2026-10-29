@@ -38,8 +38,18 @@ const TIPOS_JUBILADOS = [2, 4];
 const TIPO_PENSIONADOS = 2;
 const EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-const ImpresionesPage = () => {
-  const [tab, setTab] = useState(0);
+// Pestañas por grupo: "general" (Impresiones) y "jubilacion" (Impresión Jubilación).
+const PESTANAS = [
+  "Nómina de sueldos", "Nómina tiempo extra", "Estado de cuenta préstamo", "Resumen", "Nómina de préstamos",
+  "Nómina jubilados", "Resumen jubilados", "Depósitos por banco", "Resumen de depósitos"
+];
+const GRUPOS = { general: [0, 1, 2, 3, 4], jubilacion: [5, 6, 7, 8] };
+
+const ImpresionesPage = ({ grupo = "general" }) => {
+  const visibles = GRUPOS[grupo] || GRUPOS.general;
+  const [posicion, setPosicion] = useState(0);
+  const tab = visibles[Math.min(posicion, visibles.length - 1)];
+  useEffect(() => { setPosicion(0); }, [grupo]);
   const [planillas, setPlanillas] = useState([]);
   const [prestamos, setPrestamos] = useState([]);
   const [descargando, setDescargando] = useState(false);
@@ -188,21 +198,15 @@ const ImpresionesPage = () => {
   return (
     <Stack spacing={2.5}>
       <PageHeader
-        title="Impresiones"
-        subtitle="Nóminas en formato oficio, estados de cuenta y resúmenes en carta"
+        title={grupo === "jubilacion" ? "Impresión Jubilación" : "Impresiones"}
+        subtitle={grupo === "jubilacion"
+          ? "Nómina y resumen de jubilados, depósitos por banco y resumen de depósitos"
+          : "Nóminas en formato oficio, estados de cuenta y resúmenes en carta"}
       />
 
       <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
-          <Tab label="Nómina de sueldos" />
-          <Tab label="Nómina tiempo extra" />
-          <Tab label="Estado de cuenta préstamo" />
-          <Tab label="Resumen" />
-          <Tab label="Nómina de préstamos" />
-          <Tab label="Nómina jubilados" />
-          <Tab label="Resumen jubilados" />
-          <Tab label="Depósitos por banco" />
-          <Tab label="Resumen de depósitos" />
+        <Tabs value={Math.min(posicion, visibles.length - 1)} onChange={(_, v) => setPosicion(v)} variant="scrollable" scrollButtons="auto">
+          {visibles.map((i) => <Tab key={i} label={PESTANAS[i]} />)}
         </Tabs>
       </Paper>
 

@@ -44,7 +44,8 @@ const MODULOS_PATH = [
   ["/planillas-pensionados", ["JUBILADOS"]],
   ["/nominas-jubilados", ["JUBILADOS"]],
   ["/reportes", ["REPORTES"]],
-  ["/impresiones", ["REPORTES"]]
+  ["/impresiones", ["REPORTES"]],
+  ["/impresiones-jubilacion", ["REPORTES"]]
 ];
 
 const modulosDePath = (path) => {

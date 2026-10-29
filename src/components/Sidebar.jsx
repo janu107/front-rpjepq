@@ -107,6 +107,7 @@ const items = [
     roles: ["ADMIN", "OPERADOR", "CONSULTA"],
     children: [
       { text: "Impresiones (nóminas y estados de cuenta)", path: "/impresiones", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
+      { text: "Impresión Jubilación", path: "/impresiones-jubilacion", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
       { text: "Reportes de N\u00f3mina", path: "/reportes/nomina", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
       { text: "Resumen R\u00e9gimen", path: "/reportes/regimen", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
       { text: "Reporte Pr\u00e9stamos", path: "/reportes/prestamos-regimen", icon: <ListAltIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },

@@ -88,6 +88,7 @@ const AppRouter = () => {
             <Route path="/prestaciones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestacionesPage /></ProtectedRoute>} />
             <Route path="/prestaciones-jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestacionesJubiladosPage /></ProtectedRoute>} />
             <Route path="/impresiones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ImpresionesPage /></ProtectedRoute>} />
+            <Route path="/impresiones-jubilacion" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ImpresionesPage grupo="jubilacion" /></ProtectedRoute>} />
             <Route path="/generacion-planilla" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><GeneracionPlanillaPage /></ProtectedRoute>} />
             <Route path="/reportes/nomina" element={<ReportesNominaPage />} />
             <Route path="/reportes/regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReportesRegimenPage /></ProtectedRoute>} />
