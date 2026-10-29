@@ -1,9 +1,11 @@
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import EditIcon from "@mui/icons-material/Edit";
+import UndoIcon from "@mui/icons-material/Undo";
 import {
-  Alert, Button, Chip, FormControl, FormControlLabel, Grid, Paper, Radio, RadioGroup, Stack,
+  Alert, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Grid, Paper, Radio, RadioGroup, Stack,
   Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography
 } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -11,6 +13,8 @@ import axiosClient from "../../api/axiosClient";
 import BuscadorPersona from "../../components/common/BuscadorPersona";
 import CampoFecha from "../../components/common/CampoFecha";
 import PageHeader from "../../components/common/PageHeader";
+import { useAuth } from "../../context/AuthContext";
+import { isAdmin } from "../../utils/permissions";
 
 const PRIMARIO = "#1F4E79";
 const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -24,6 +28,44 @@ const FallecimientoPage = () => {
   const [beneficiarios, setBeneficiarios] = useState([]);
   const [form, setForm] = useState({ fechaFallecimiento: "", noDefuncion: "", metodoPago: "PAGO_NORMAL", observaciones: "" });
   const [guardando, setGuardando] = useState(false);
+  const { user } = useAuth();
+
+  // --- Fallecimientos ya registrados: corregir o revertir ---
+  const [fallecidos, setFallecidos] = useState([]);
+  const [corregir, setCorregir] = useState(null); // { id, nombre, fechaFallecimiento, noDefuncion }
+  const cargarFallecidos = async () => {
+    try { const { data } = await axiosClient.get("/jubilados/fallecidos"); setFallecidos(data.data || []); } catch { setFallecidos([]); }
+  };
+  useEffect(() => { cargarFallecidos(); }, []);
+
+  const guardarCorreccion = async () => {
+    try {
+      const { data } = await axiosClient.put(`/jubilados/${corregir.id}/fallecimiento`, {
+        fechaFallecimiento: corregir.fechaFallecimiento, noDefuncion: corregir.noDefuncion
+      });
+      setCorregir(null);
+      cargarFallecidos();
+      Swal.fire({ icon: data.data?.aviso ? "warning" : "success", title: "Fallecimiento corregido", text: data.data?.aviso || "Al generar la planilla se recalcula con la nueva fecha." });
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible corregir.", "error");
+    }
+  };
+
+  const revertir = async (f) => {
+    const r = await Swal.fire({
+      icon: "warning", title: "Revertir fallecimiento",
+      html: `<b>${f.codigo} — ${f.nombre}</b> vuelve a quedar <b>ACTIVO</b> y sus beneficiarios a <b>REGISTRADO</b>, como si no se hubiera registrado el fallecimiento.`,
+      showCancelButton: true, confirmButtonText: "Revertir", cancelButtonText: "Cancelar", confirmButtonColor: "#c62828"
+    });
+    if (!r.isConfirmed) return;
+    try {
+      await axiosClient.post(`/jubilados/${f.id}/fallecimiento/revertir`, {});
+      cargarFallecidos();
+      Swal.fire("Listo", "Fallecimiento revertido.", "success");
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible revertir.", "error");
+    }
+  };
 
   const seleccionar = async (opt) => {
     setForm({ fechaFallecimiento: "", noDefuncion: "", metodoPago: "PAGO_NORMAL", observaciones: "" });
@@ -67,6 +109,7 @@ const FallecimientoPage = () => {
       });
       const n = data.data?.beneficiariosActivados ?? beneficiarios.length;
       await Swal.fire("Listo", `Fallecimiento registrado. ${n} beneficiarios activados.`, "success");
+      cargarFallecidos();
       if (form.metodoPago === "CONVENIO") {
         navigate("/convenios", { state: { tipo: "jubilado", id: jub.id, nombre } });
         return;
@@ -170,6 +213,67 @@ const FallecimientoPage = () => {
           )}
         </Paper>
       )}
+
+      {/* Fallecimientos ya registrados */}
+      <Paper sx={{ p: 2.5 }}>
+        <Typography variant="h6" sx={{ color: PRIMARIO, mb: 0.5 }}>Fallecimientos registrados</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          Se puede corregir la fecha o el certificado (o revertir el registro) mientras ninguna planilla CERRADA haya pagado a sus beneficiarios.
+        </Typography>
+        {fallecidos.length === 0 ? (
+          <Typography color="text.secondary">No hay fallecimientos registrados.</Typography>
+        ) : (
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Código</TableCell><TableCell>Jubilado</TableCell><TableCell>Fecha fallecimiento</TableCell>
+                <TableCell>Certificado</TableCell><TableCell align="center">Beneficiarios</TableCell><TableCell>Planillas</TableCell><TableCell align="right">Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {fallecidos.map((f) => (
+                <TableRow key={f.id}>
+                  <TableCell>{f.codigo}</TableCell>
+                  <TableCell>{f.nombre}</TableCell>
+                  <TableCell>{f.fechaFallecimiento ? String(f.fechaFallecimiento).slice(0, 10).split("-").reverse().join("/") : "—"}</TableCell>
+                  <TableCell>{f.noDefuncion || "—"}</TableCell>
+                  <TableCell align="center">{f.beneficiarios}</TableCell>
+                  <TableCell>
+                    {f.planillasCerradas && <Chip size="small" color="success" variant="outlined" label={`Pagado en ${f.planillasCerradas}`} sx={{ mr: 0.5 }} />}
+                    {f.planillasGeneradas && <Chip size="small" color="warning" variant="outlined" label={`Generada ${f.planillasGeneradas}`} />}
+                    {!f.planillasCerradas && !f.planillasGeneradas && <Typography variant="caption" color="text.secondary">Aún sin planilla</Typography>}
+                  </TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                    {f.editable ? (
+                      <>
+                        <Button size="small" startIcon={<EditIcon />} onClick={() => setCorregir({ id: f.id, nombre: f.nombre, fechaFallecimiento: String(f.fechaFallecimiento || "").slice(0, 10), noDefuncion: f.noDefuncion || "" })}>Corregir</Button>
+                        {isAdmin(user) && <Button size="small" color="error" startIcon={<UndoIcon />} onClick={() => revertir(f)}>Revertir</Button>}
+                      </>
+                    ) : <Typography variant="caption" color="text.secondary">Ya pagado: no se puede cambiar</Typography>}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Paper>
+
+      <Dialog open={!!corregir} onClose={() => setCorregir(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Corregir fallecimiento — {corregir?.nombre}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 0.5 }}>
+            <CampoFecha label="Fecha fallecimiento *" value={corregir?.fechaFallecimiento || ""} onChange={(v) => setCorregir((c) => ({ ...c, fechaFallecimiento: v }))} />
+            <TextField label="No. certificado defunción *" value={corregir?.noDefuncion || ""} inputProps={{ maxLength: 50 }}
+              onChange={(e) => setCorregir((c) => ({ ...c, noDefuncion: e.target.value }))} fullWidth />
+            <Alert severity="info">Si la planilla del mes ya está GENERADA con sus beneficiarios, reviértala y genérela de nuevo para recalcular.</Alert>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCorregir(null)}>Cancelar</Button>
+          <Button variant="contained" onClick={guardarCorreccion}
+            disabled={!corregir?.fechaFallecimiento || !String(corregir?.noDefuncion || "").trim()}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 };
