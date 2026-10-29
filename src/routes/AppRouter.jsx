@@ -29,6 +29,7 @@ import ReporteJuntaDirectivaPage from "../pages/reportes/ReporteJuntaDirectivaPa
 import ReporteDietasPage from "../pages/reportes/ReporteDietasPage";
 import ReporteEmpleadosRegimenPage from "../pages/reportes/ReporteEmpleadosRegimenPage";
 import ReporteDetalleAportacionesPage from "../pages/reportes/ReporteDetalleAportacionesPage";
+import ReportesAgrupadosPage from "../pages/reportes/ReportesAgrupadosPage";
 import PlanillasPensionadosPage from "../pages/planillasPensionados/PlanillasPensionadosPage";
 import DetallePlanillaPensionadosPage from "../pages/planillasPensionados/DetallePlanillaPensionadosPage";
 import PlanillasTrabajadoresPage from "../pages/planillasTrabajadores/PlanillasTrabajadoresPage";
@@ -93,11 +94,21 @@ const AppRouter = () => {
             <Route path="/reportes/nomina" element={<ReportesNominaPage />} />
             <Route path="/reportes/regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReportesRegimenPage /></ProtectedRoute>} />
             <Route path="/reportes/prestamos-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReportePrestamosRegimenPage /></ProtectedRoute>} />
-            <Route path="/reportes/junta-directiva" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReporteJuntaDirectivaPage /></ProtectedRoute>} />
-            <Route path="/reportes/dietas" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReporteDietasPage /></ProtectedRoute>} />
+            {/* Reportes Junta Directiva: junta y dietas en pestañas. */}
+            <Route path="/reportes/junta-directiva" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReportesAgrupadosPage pestanas={[
+              { clave: "junta", label: "Junta Directiva", elemento: <ReporteJuntaDirectivaPage /> },
+              { clave: "dietas", label: "Dietas", elemento: <ReporteDietasPage /> }
+            ]} /></ProtectedRoute>} />
+            <Route path="/reportes/dietas" element={<Navigate to="/reportes/junta-directiva?tab=dietas" replace />} />
             <Route path="/reportes/empleados-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReporteEmpleadosRegimenPage /></ProtectedRoute>} />
-            <Route path="/reportes/aportaciones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReporteAportacionesPage /></ProtectedRoute>} />
-            <Route path="/reportes/detalle-aportaciones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReporteDetalleAportacionesPage /></ProtectedRoute>} />
+            {/* Aportaciones EPQ: aportaciones de empleados, reporte y detalle en pestañas. */}
+            <Route path="/reportes/aportaciones-epq" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><ReportesAgrupadosPage pestanas={[
+              { clave: "empleados", label: "Aportaciones de empleados", elemento: <ReportesRegimenPage soloAportaciones /> },
+              { clave: "reporte", label: "Reporte de aportaciones", elemento: <ReporteAportacionesPage /> },
+              { clave: "detalle", label: "Detalle de aportaciones", elemento: <ReporteDetalleAportacionesPage /> }
+            ]} /></ProtectedRoute>} />
+            <Route path="/reportes/aportaciones" element={<Navigate to="/reportes/aportaciones-epq?tab=reporte" replace />} />
+            <Route path="/reportes/detalle-aportaciones" element={<Navigate to="/reportes/aportaciones-epq?tab=detalle" replace />} />
             <Route path="/descuentos-judiciales" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DescuentosJudicialesPage /></ProtectedRoute>} />
             <Route path="/prestamos-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosRegimenPage /></ProtectedRoute>} />
             <Route path="/planillas-pensionados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PlanillasPensionadosPage /></ProtectedRoute>} />

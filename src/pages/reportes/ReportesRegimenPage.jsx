@@ -64,9 +64,11 @@ const ReportTable = ({ columns, rows, search, searchKeys }) => {
   );
 };
 
-const ReportesRegimenPage = () => {
+// soloAportaciones: muestra únicamente "Aportaciones de empleados" (va dentro de
+// Aportaciones EPQ); sin él, Resumen Régimen muestra las demás pestañas.
+const ReportesRegimenPage = ({ soloAportaciones = false }) => {
   const navigate = useNavigate();
-  const [tab, setTab] = useState(0);
+  const [tabSel, setTab] = useState(0);
   const [search, setSearch] = useState("");
   const [data, setData] = useState({ prestamos: [], junta: [], dietas: [], empleados: [], aportaciones: [] });
   const [detalleOpen, setDetalleOpen] = useState(false);
@@ -203,17 +205,21 @@ const ReportesRegimenPage = () => {
     }
   ];
 
+  const visibles = soloAportaciones ? tabs.slice(4) : tabs.slice(0, 4);
+  const tab = soloAportaciones ? 4 : Math.min(tabSel, visibles.length - 1);
   const current = tabs[tab];
 
   return (
     <Stack spacing={2.5}>
       <Box>
-        <Typography variant="h5">Reportes Régimen</Typography>
-        <Typography color="text.secondary">Reportes del sistema de régimen</Typography>
+        <Typography variant="h5">{soloAportaciones ? "Aportaciones de empleados" : "Reportes Régimen"}</Typography>
+        <Typography color="text.secondary">{soloAportaciones ? "Total aportado por empleado y detalle de pagos" : "Reportes del sistema de régimen"}</Typography>
       </Box>
-      <Tabs value={tab} onChange={(_, v) => { setTab(v); setSearch(""); }} variant="scrollable" scrollButtons="auto">
-        {tabs.map((t, i) => <Tab key={i} label={t.label} />)}
-      </Tabs>
+      {!soloAportaciones && (
+        <Tabs value={tab} onChange={(_, v) => { setTab(v); setSearch(""); }} variant="scrollable" scrollButtons="auto">
+          {visibles.map((t, i) => <Tab key={i} label={t.label} />)}
+        </Tabs>
+      )}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
         <TextField
           placeholder="Buscar"
@@ -227,7 +233,7 @@ const ReportesRegimenPage = () => {
           <Button
             variant="outlined"
             startIcon={<PictureAsPdfIcon />}
-            onClick={() => navigate("/reportes/aportaciones")}
+            onClick={() => navigate("/reportes/aportaciones-epq?tab=reporte")}
             sx={{ whiteSpace: "nowrap" }}
           >
             Exportar PDF
