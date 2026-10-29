@@ -35,7 +35,6 @@ const MODULOS_PATH = [
   ["/nomina", ["REGIMEN", "JUBILADOS"]],
   ["/jubilados", ["JUBILADOS"]],
   ["/beneficiarios", ["JUBILADOS"]],
-  ["/depositos-banco", ["JUBILADOS"]],
   ["/fallecimientos", ["JUBILADOS"]],
   ["/amparistas", ["JUBILADOS"]],
   ["/convenios", ["JUBILADOS"]],

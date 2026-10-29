@@ -1,3 +1,4 @@
+import DownloadIcon from "@mui/icons-material/Download";
 import PrintIcon from "@mui/icons-material/Print";
 import {
   Alert, Autocomplete, Box, Button, Divider, FormControl, Grid, InputLabel,
@@ -34,6 +35,8 @@ const TIPO_EMPLEADOS = 1;
 const TIPO_TIEMPO_EXTRA = 3;
 // Planillas de nómina de jubilados: pensionados (2) y amparistas (4).
 const TIPOS_JUBILADOS = [2, 4];
+const TIPO_PENSIONADOS = 2;
+const EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 const ImpresionesPage = () => {
   const [tab, setTab] = useState(0);
@@ -55,6 +58,17 @@ const ImpresionesPage = () => {
   const [prestamoSel, setPrestamoSel] = useState(null);
   const [resumen, setResumen] = useState({ tipoManejo: 1, desde: primerDiaAnio, hasta: ultimoDiaMes });
   const [rangoPrestamos, setRangoPrestamos] = useState({ desde: primerDiaMes, hasta: ultimoDiaMes });
+  // Depósitos por banco y su resumen (planilla de jubilados).
+  const [dep, setDep] = useState({ id: "", banco: "", tipo: "" });
+  const [resDep, setResDep] = useState({ id: "", banco: "", tipo: "" });
+  const [bancosPlanilla, setBancosPlanilla] = useState({});
+  const cargarBancos = async (id) => {
+    if (!id || bancosPlanilla[id]) return;
+    try {
+      const { data } = await axiosClient.get(`/impresiones/depositos-banco/${id}`);
+      setBancosPlanilla((b) => ({ ...b, [id]: data.data?.bancos || [] }));
+    } catch { /* sin lista, se imprimen todos */ }
+  };
 
   const cargar = useCallback(async () => {
     try {
@@ -79,11 +93,11 @@ const ImpresionesPage = () => {
     [firmas]
   );
 
-  const descargar = async (url, filename) => {
+  const descargar = async (url, filename, tipo = "application/pdf") => {
     setDescargando(true);
     try {
       const respuesta = await axiosClient.get(url, { responseType: "blob" });
-      const blobUrl = window.URL.createObjectURL(new Blob([respuesta.data], { type: "application/pdf" }));
+      const blobUrl = window.URL.createObjectURL(new Blob([respuesta.data], { type: tipo }));
       const link = document.createElement("a");
       link.href = blobUrl;
       link.setAttribute("download", filename);
@@ -187,6 +201,8 @@ const ImpresionesPage = () => {
           <Tab label="Nómina de préstamos" />
           <Tab label="Nómina jubilados" />
           <Tab label="Resumen jubilados" />
+          <Tab label="Depósitos por banco" />
+          <Tab label="Resumen de depósitos" />
         </Tabs>
       </Paper>
 
@@ -427,6 +443,55 @@ const ImpresionesPage = () => {
           {editorFirmas}
         </Stack>
       )}
+
+      {/* Depósitos por banco (detalle) y resumen de depósitos */}
+      {(tab === 7 || tab === 8) && (() => {
+        const esResumen = tab === 8;
+        const v = esResumen ? resDep : dep;
+        const setV = esResumen ? setResDep : setDep;
+        const bancos = bancosPlanilla[v.id] || [];
+        const query = () => `seccion=${esResumen ? "resumen" : "detalle"}&banco=${encodeURIComponent(v.banco)}&tipoJubilacion=${encodeURIComponent(v.tipo)}&firmas=${firmasParam}`;
+        const nombre = `${esResumen ? "resumen_depositos" : "depositos"}_${v.id}`;
+        return (
+          <Stack spacing={2}>
+            <Alert severity="info">
+              {esResumen
+                ? "Tamaño carta. Totales a depositar por tipo de jubilación y por banco, con el total general."
+                : "Tamaño carta. Listado de depósitos por banco y tipo de jubilación (código, nombre, cuenta y monto), con \"Van / Vienen\" entre hojas y totales. A los menores se les deposita a la tutora."}
+            </Alert>
+            <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} md={4}>
+                  {selectorPlanilla(TIPO_PENSIONADOS, v.id, (id) => { setV({ ...v, id, banco: "" }); cargarBancos(id); }, "Planilla de jubilados (AAAAMM)")}
+                </Grid>
+                <Grid item xs={12} md={3}>{selectorTipoJubilacion(v.tipo, (tipo) => setV({ ...v, tipo }))}</Grid>
+                <Grid item xs={12} md={2}>
+                  <FormControl fullWidth>
+                    <InputLabel>Banco</InputLabel>
+                    <Select label="Banco" value={v.banco} onChange={(e) => setV({ ...v, banco: e.target.value })}>
+                      <MenuItem value="">Todos</MenuItem>
+                      {bancos.map((b) => <MenuItem key={b} value={b}>{b}</MenuItem>)}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={6} md={1.5}>
+                  <Button fullWidth variant="contained" startIcon={<PrintIcon />} disabled={!v.id || descargando}
+                    onClick={() => descargar(`/impresiones/depositos-banco/${v.id}/pdf?${query()}`, `${nombre}.pdf`)}>
+                    PDF
+                  </Button>
+                </Grid>
+                <Grid item xs={6} md={1.5}>
+                  <Button fullWidth variant="outlined" startIcon={<DownloadIcon />} disabled={!v.id || descargando}
+                    onClick={() => descargar(`/impresiones/depositos-banco/${v.id}/excel?${query()}`, `${nombre}.xlsx`, EXCEL)}>
+                    Excel
+                  </Button>
+                </Grid>
+              </Grid>
+            </Paper>
+            {editorFirmas}
+          </Stack>
+        );
+      })()}
 
       <Box>
         <Divider sx={{ mb: 1 }} />
