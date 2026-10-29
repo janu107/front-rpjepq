@@ -232,7 +232,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
           </Alert>
           <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={7}>
+              <Grid item xs={12} md={5}>
                 {selectorPlanilla(TIPO_EMPLEADOS, idSueldos, setIdSueldos, "Planilla de empleados de régimen")}
               </Grid>
               <Grid item xs={12} md={3}>
@@ -251,6 +251,15 @@ const ImpresionesPage = ({ grupo = "general" }) => {
                     `nomina_sueldos_${idSueldos}.pdf`
                   )}>
                   Imprimir
+                </Button>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <Button fullWidth variant="outlined" disabled={!idSueldos || descargando}
+                  onClick={() => descargar(
+                    `/impresiones/nomina-sueldos/${idSueldos}/excel?area=${encodeURIComponent(areaSueldos)}`,
+                    `nomina_sueldos_${idSueldos}.xlsx`, EXCEL
+                  )}>
+                  Excel
                 </Button>
               </Grid>
             </Grid>
