@@ -40,6 +40,7 @@ import FallecimientoPage from "../pages/fallecimientos/FallecimientoPage";
 import ConveniosPage from "../pages/convenios/ConveniosPage";
 import SuspensionesPage from "../pages/suspensiones/SuspensionesPage";
 import DashboardReportesPage from "../pages/reportesJubilados/DashboardReportesPage";
+import DepositosBancoPage from "../pages/reportesJubilados/DepositosBancoPage";
 import NominasJubiladosPage from "../pages/nominasJubilados/NominasJubiladosPage";
 import DescuentosJudicialesPage from "../pages/descuentosJudiciales/DescuentosJudicialesPage";
 import PrestamosRegimenPage from "../pages/prestamosRegimen/PrestamosRegimenPage";
@@ -110,6 +111,7 @@ const AppRouter = () => {
             <Route path="/convenios" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><ConveniosPage /></ProtectedRoute>} />
             <Route path="/suspensiones" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><SuspensionesPage /></ProtectedRoute>} />
             <Route path="/reportes-jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><DashboardReportesPage /></ProtectedRoute>} />
+            <Route path="/depositos-banco" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR", "CONSULTA"]}><DepositosBancoPage /></ProtectedRoute>} />
             {/* Sin entrada de menú: la generación de nóminas de jubilados y amparistas
                 se unificó en "Planilla de Jubilados y Amparistas" (módulo de Nóminas).
                 La ruta se conserva para no romper enlaces guardados. */}
