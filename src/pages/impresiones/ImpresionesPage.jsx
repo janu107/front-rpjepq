@@ -158,11 +158,23 @@ const ImpresionesPage = ({ grupo = "general" }) => {
   // lista se va filtrando, además de desplegarla como antes.
   const etiquetaPlanilla = (p) => `${p.numeroPlanilla} — ${p.tipoPlanillaNombre ? `${p.tipoPlanillaNombre} — ` : ""}${fecha(p.fechaInicio)} al ${fecha(p.fechaFinal)} — pago ${fecha(p.fechaPago)}`;
   const selectorPlanilla = (tipo, valor, onChange, etiqueta) => {
-    const opcionesPlanilla = planillasDe(tipo);
+    // La más reciente primero (202610, 202609, …).
+    const opcionesPlanilla = [...planillasDe(tipo)].sort((a, b) => Number(b.numeroPlanilla) - Number(a.numeroPlanilla));
     return (
       <Autocomplete
         options={opcionesPlanilla}
         value={opcionesPlanilla.find((p) => p.idPlanilla === valor) || null}
+        // Al escribir "202609" + Tab (o Enter) toma la planilla resaltada y no borra lo escrito.
+        autoHighlight
+        autoSelect
+        filterOptions={(opciones, { inputValue }) => {
+          const t = String(inputValue || "").trim().toLowerCase();
+          if (!t) return opciones;
+          const palabras = t.split(/\s+/);
+          const lista = opciones.filter((o) => palabras.every((w) => etiquetaPlanilla(o).toLowerCase().includes(w)));
+          // Las que empiezan con lo escrito (el número de planilla) van primero.
+          return [...lista.filter((o) => String(o.numeroPlanilla).startsWith(t)), ...lista.filter((o) => !String(o.numeroPlanilla).startsWith(t))];
+        }}
         onChange={(_, v) => onChange(v ? v.idPlanilla : "")}
         isOptionEqualToValue={(o, v) => o.idPlanilla === v?.idPlanilla}
         getOptionLabel={(o) => (o ? etiquetaPlanilla(o) : "")}
