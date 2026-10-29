@@ -9,6 +9,7 @@ import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
 import BuscadorPersona from "../../components/common/BuscadorPersona";
+import CampoFecha from "../../components/common/CampoFecha";
 import PageHeader from "../../components/common/PageHeader";
 
 const PRIMARIO = "#1F4E79";
@@ -141,7 +142,10 @@ const FallecimientoPage = () => {
               </Alert>
 
               <Grid container spacing={2} sx={{ mt: 0.5 }}>
-                <Grid item xs={12} md={4}><TextField label="Fecha fallecimiento *" type="date" value={form.fechaFallecimiento} onChange={setF("fechaFallecimiento")} error={!!errFecha} helperText={errFecha} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
+                <Grid item xs={12} md={4}>
+                  <CampoFecha label="Fecha fallecimiento *" value={form.fechaFallecimiento} onChange={(v) => setForm((f) => ({ ...f, fechaFallecimiento: v }))} />
+                  {errFecha && <Typography variant="caption" color="error">{errFecha}</Typography>}
+                </Grid>
                 <Grid item xs={12} md={4}><TextField label="No. certificado defunción *" value={form.noDefuncion} onChange={setF("noDefuncion")} inputProps={{ maxLength: 50 }} fullWidth /></Grid>
                 <Grid item xs={12} md={4}>
                   <FormControl>
@@ -155,6 +159,11 @@ const FallecimientoPage = () => {
                 <Grid item xs={12}><TextField label="Observaciones" value={form.observaciones} onChange={setF("observaciones")} multiline rows={2} fullWidth /></Grid>
                 <Grid item xs={12}>
                   <Button variant="contained" color="error" disabled={!formValido || guardando} onClick={confirmar}>Confirmar Fallecimiento</Button>
+                  {!formValido && !sinBeneficiarios && (
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                      {!form.fechaFallecimiento ? "Falta la fecha de fallecimiento." : errFecha ? errFecha : !form.noDefuncion.trim() ? "Falta el No. de certificado de defunción." : ""}
+                    </Typography>
+                  )}
                 </Grid>
               </Grid>
             </>
