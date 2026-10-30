@@ -1,6 +1,8 @@
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import EditIcon from "@mui/icons-material/Edit";
 import UndoIcon from "@mui/icons-material/Undo";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import {
   Alert, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Grid, Paper, Radio, RadioGroup, Stack,
   Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography
@@ -33,6 +35,39 @@ const FallecimientoPage = () => {
   // --- Fallecimientos ya registrados: corregir o revertir ---
   const [fallecidos, setFallecidos] = useState([]);
   const [corregir, setCorregir] = useState(null); // { id, nombre, fechaFallecimiento, noDefuncion }
+  // Deuda del fallecido pagada fuera del sistema: { id, nombre, deuda, meses, fecha, documento, observaciones }
+  const [cancelar, setCancelar] = useState(null);
+  const fmtFecha = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
+  const guardarCancelacion = async () => {
+    try {
+      const { data } = await axiosClient.post(`/jubilados/${cancelar.id}/deuda/cancelar`, {
+        fecha: cancelar.fecha, documento: cancelar.documento, observaciones: cancelar.observaciones
+      });
+      const d = data.data || {};
+      setCancelar(null);
+      cargarFallecidos();
+      Swal.fire("Listo", `Se registró la deuda de ${fmtQ(d.total)} (${d.meses} meses) como pagada fuera del sistema. La esposa pasa a cobrar VIUDEZ.${
+        d.planillasRecalculadas?.length ? ` Se recalcularon los beneficiarios de la planilla ${d.planillasRecalculadas.join(", ")} (generada).` : ""}`, "success");
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible registrar la cancelación.", "error");
+    }
+  };
+  const revertirCancelacion = async (f) => {
+    const r = await Swal.fire({
+      icon: "warning", title: "Revertir cancelación de la deuda",
+      html: `La deuda de <b>${f.nombre}</b> (${fmtQ(f.cancelacion.monto)}) vuelve a quedar pendiente y la esposa vuelve a cobrarla.`,
+      input: "text", inputLabel: "Motivo", inputValidator: (v) => (!String(v || "").trim() ? "Indique el motivo" : null),
+      showCancelButton: true, confirmButtonText: "Revertir", cancelButtonText: "Cancelar", confirmButtonColor: "#c62828"
+    });
+    if (!r.isConfirmed) return;
+    try {
+      await axiosClient.post(`/jubilados/${f.id}/deuda/cancelar/revertir`, { motivo: r.value });
+      cargarFallecidos();
+      Swal.fire("Listo", "Cancelación revertida.", "success");
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible revertir.", "error");
+    }
+  };
   const cargarFallecidos = async () => {
     try { const { data } = await axiosClient.get("/jubilados/fallecidos"); setFallecidos(data.data || []); } catch { setFallecidos([]); }
   };
@@ -220,6 +255,7 @@ const FallecimientoPage = () => {
         <Typography variant="h6" sx={{ color: PRIMARIO, mb: 0.5 }}>Fallecimientos registrados</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
           Se puede corregir la fecha o el certificado (o revertir el registro) mientras ninguna planilla CERRADA haya pagado a sus beneficiarios.
+          Si la deuda del fallecido <b>ya se le pagó a la viuda fuera del sistema</b>, regístrelo con <b>Deuda pagada</b>: así la esposa cobra su VIUDEZ y no la deuda.
         </Typography>
         {fallecidos.length === 0 ? (
           <Typography color="text.secondary">No hay fallecimientos registrados.</Typography>
@@ -228,7 +264,8 @@ const FallecimientoPage = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Código</TableCell><TableCell>Jubilado</TableCell><TableCell>Fecha fallecimiento</TableCell>
-                <TableCell>Certificado</TableCell><TableCell align="center">Beneficiarios</TableCell><TableCell>Planillas</TableCell><TableCell align="right">Acciones</TableCell>
+                <TableCell>Certificado</TableCell><TableCell align="center">Beneficiarios</TableCell><TableCell>Deuda del fallecido</TableCell>
+                <TableCell>Planillas</TableCell><TableCell align="right">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -240,11 +277,36 @@ const FallecimientoPage = () => {
                   <TableCell>{f.noDefuncion || "—"}</TableCell>
                   <TableCell align="center">{f.beneficiarios}</TableCell>
                   <TableCell>
+                    {f.cancelacion ? (
+                      <>
+                        <Chip size="small" color="success" icon={<TaskAltIcon />} label={`Pagada fuera del sistema · ${fmtQ(f.cancelacion.monto)}`} />
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                          {fmtFecha(f.cancelacion.fecha)} · {f.cancelacion.documento}
+                        </Typography>
+                      </>
+                    ) : f.deudaPendiente > 0 ? (
+                      <>
+                        <Chip size="small" color="error" variant="outlined" label={`${fmtQ(f.deudaPendiente)} pendiente`} />
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{f.mesesPendientes} meses · la cobra la esposa</Typography>
+                      </>
+                    ) : <Chip size="small" color="success" variant="outlined" label="Saldada" />}
+                  </TableCell>
+                  <TableCell>
                     {f.planillasCerradas && <Chip size="small" color="success" variant="outlined" label={`Pagado en ${f.planillasCerradas}`} sx={{ mr: 0.5 }} />}
                     {f.planillasGeneradas && <Chip size="small" color="warning" variant="outlined" label={`Generada ${f.planillasGeneradas}`} />}
                     {!f.planillasCerradas && !f.planillasGeneradas && <Typography variant="caption" color="text.secondary">Aún sin planilla</Typography>}
                   </TableCell>
                   <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                    <Button size="small" startIcon={<ReceiptLongIcon />} onClick={() => navigate("/estado-cuenta", { state: { id: f.id } })}>Estado de cuenta</Button>
+                    {!f.cancelacion && f.deudaPendiente > 0 && (
+                      <Button size="small" color="success" startIcon={<TaskAltIcon />}
+                        onClick={() => setCancelar({ id: f.id, nombre: f.nombre, deuda: f.deudaPendiente, meses: f.mesesPendientes, fecha: hoy(), documento: "", observaciones: "" })}>
+                        Deuda pagada
+                      </Button>
+                    )}
+                    {f.cancelacion && isAdmin(user) && (
+                      <Button size="small" color="warning" startIcon={<UndoIcon />} onClick={() => revertirCancelacion(f)}>Revertir pago</Button>
+                    )}
                     {f.editable ? (
                       <>
                         <Button size="small" startIcon={<EditIcon />} onClick={() => setCorregir({ id: f.id, nombre: f.nombre, fechaFallecimiento: String(f.fechaFallecimiento || "").slice(0, 10), noDefuncion: f.noDefuncion || "" })}>Corregir</Button>
@@ -258,6 +320,28 @@ const FallecimientoPage = () => {
           </Table>
         )}
       </Paper>
+
+      <Dialog open={!!cancelar} onClose={() => setCancelar(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Deuda del fallecido pagada fuera del sistema — {cancelar?.nombre}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 0.5 }}>
+            <Alert severity="info">
+              Se marcarán como <b>pagados</b> los {cancelar?.meses} meses pendientes (<b>{fmtQ(cancelar?.deuda)}</b>). Desde la próxima planilla
+              la esposa ya no cobra la deuda: cobra su <b>pensión por VIUDEZ</b> (su monto, con la regla del 50%). Los hijos siguen igual.
+            </Alert>
+            <CampoFecha label="Fecha en que se pagó *" value={cancelar?.fecha || ""} onChange={(v) => setCancelar((c) => ({ ...c, fecha: v }))} />
+            <TextField label="Documento que lo respalda *" placeholder="Resolución, acta, No. de cheque…" value={cancelar?.documento || ""}
+              inputProps={{ maxLength: 100 }} onChange={(e) => setCancelar((c) => ({ ...c, documento: e.target.value.toUpperCase() }))} fullWidth />
+            <TextField label="Observaciones" value={cancelar?.observaciones || ""} multiline minRows={2} inputProps={{ maxLength: 500 }}
+              onChange={(e) => setCancelar((c) => ({ ...c, observaciones: e.target.value }))} fullWidth />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCancelar(null)}>Cancelar</Button>
+          <Button variant="contained" color="success" onClick={guardarCancelacion}
+            disabled={!cancelar?.fecha || !String(cancelar?.documento || "").trim()}>Registrar pago</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={!!corregir} onClose={() => setCorregir(null)} fullWidth maxWidth="sm">
         <DialogTitle>Corregir fallecimiento — {corregir?.nombre}</DialogTitle>

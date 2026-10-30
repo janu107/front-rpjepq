@@ -55,7 +55,7 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
             <Grid container spacing={2}>
               <Dato etiqueta="Beneficiario de" valor={`${datos.fallecido.codigo} — ${datos.fallecido.nombre}`} />
               <Dato etiqueta="Fecha de fallecimiento" valor={fmtFecha(datos.fallecido.fechaFallecimiento)} />
-              <Dato etiqueta="Porcentaje" valor={`${Number(b.porcentaje).toFixed(2)}% de ${fmtQ(datos.fallecido.pension)}`} />
+              <Dato etiqueta="Monto mensual (juez)" valor={`${fmtQ(b.monto)} (${Number(b.porcentaje).toFixed(2)}% de ${fmtQ(datos.fallecido.pension)})`} />
               <Dato etiqueta="Edad" valor={b.edad !== null ? `${b.edad} años${b.esMenor ? " (menor)" : ""}` : "—"} />
               <Dato etiqueta="Se le debe por mes" valor={fmtQ(datos.mensual.seLeDebe)} />
               <Dato etiqueta={`Se le paga por mes (${datos.mensual.porcentajePlanilla}%)`} valor={fmtQ(datos.mensual.seLePaga)} />
@@ -63,7 +63,13 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
               <Dato etiqueta="Cuenta" valor={b.pago.formaPago === "ABONO CUENTA" ? `${b.pago.banco || ""} ${b.pago.cuenta || ""}` : (b.pago.formaPago || "Sin datos de pago")} />
             </Grid>
 
-            {df && (
+            {df && df.canceladaFuera && (
+              <Alert severity="success">
+                La deuda del fallecido (<b>{fmtQ(df.canceladaFuera.monto)}</b>, {df.canceladaFuera.meses} meses) se le pagó <b>fuera del sistema</b> el{" "}
+                {fmtFecha(df.canceladaFuera.fecha)} ({df.canceladaFuera.documento}). Lo que cobra ahora es su pensión por <b>VIUDEZ</b>.
+              </Alert>
+            )}
+            {df && !df.canceladaFuera && (
               <Box sx={{ p: 2, border: "1px solid #dde3ea", borderRadius: 1.5 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800, color: PRIMARIO }}>Deuda del fallecido (la cobra la esposa)</Typography>
                 <Grid container spacing={2} sx={{ mt: 0.5 }}>

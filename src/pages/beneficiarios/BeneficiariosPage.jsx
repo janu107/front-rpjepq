@@ -2,7 +2,8 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
-import PercentIcon from "@mui/icons-material/Percent";
+import PaidIcon from "@mui/icons-material/Paid";
+import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import SaveIcon from "@mui/icons-material/Save";
@@ -57,9 +58,46 @@ const edad = (fechaNac) => {
 };
 const esDpi = (v) => /^[0-9]{13}$/.test(String(v || "").trim());
 const esCorreo = (v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim());
+const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const r2 = (n) => Math.round(Number(n || 0) * 100) / 100;
+const esHijo = (p) => p === "HIJO" || p === "HIJO_INVALIDEZ";
+
+// Reparto que manda la ley: la esposa hasta el 50% de la pensión y los hijos,
+// entre todos, hasta el otro 50%. Los montos los dicta el juez; aquí se proponen.
+const resumenReparto = (lista, pension) => {
+  const mitad = r2(pension / 2);
+  const esposa = r2(lista.filter((b) => b.tipoParentesco === "ESPOSA").reduce((a, b) => a + Number(b.monto || 0), 0));
+  const hijos = r2(lista.filter((b) => esHijo(b.tipoParentesco)).reduce((a, b) => a + Number(b.monto || 0), 0));
+  const sinMonto = lista.find((b) => PARENTESCOS_PAGO.includes(b.tipoParentesco) && !(Number(b.monto) > 0));
+  let error = null;
+  if (!(pension > 0)) error = "El jubilado no tiene pensión registrada";
+  else if (esposa > mitad) error = `La esposa puede recibir hasta ${fmtQ(mitad)} (50% de la pensión)`;
+  else if (hijos > mitad) error = `Los hijos, entre todos, pueden recibir hasta ${fmtQ(mitad)} (50% de la pensión)`;
+  else if (sinMonto) error = `Falta el monto de ${sinMonto.apellidos || sinMonto.tipoParentesco}`;
+  return { mitad, esposa, hijos, error };
+};
+// Propuesta: esposa 50%; los hijos se reparten el otro 50% en partes iguales.
+const proponerMontos = (lista, pension) => {
+  const mitad = r2(pension / 2);
+  const hijos = lista.filter((b) => esHijo(b.tipoParentesco));
+  const parte = hijos.length ? Math.floor((mitad / hijos.length) * 100) / 100 : 0;
+  let resto = r2(mitad - parte * hijos.length);
+  return lista.map((b) => {
+    if (b.tipoParentesco === "ESPOSA") return { ...b, monto: mitad };
+    if (esHijo(b.tipoParentesco)) { const m = r2(parte + resto); resto = 0; return { ...b, monto: m }; }
+    return b;
+  });
+};
+const ChipReparto = ({ r }) => (
+  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+    <Chip size="small" label={`Esposa: ${fmtQ(r.esposa)} de ${fmtQ(r.mitad)}`} color={r.esposa > r.mitad ? "error" : "default"} />
+    <Chip size="small" label={`Hijos: ${fmtQ(r.hijos)} de ${fmtQ(r.mitad)}`} color={r.hijos > r.mitad ? "error" : "default"} />
+    {r.error ? <Chip size="small" color="error" label={r.error} /> : <Chip size="small" color="success" icon={<CheckCircleIcon />} label="Reparto correcto" />}
+  </Stack>
+);
 
 const pagoVacio = { formaPago: "", idBanco: "", tipoCuenta: "", cuenta: "" };
-const nuevoForm = () => ({ tipoParentesco: "", nombres: "", apellidos: "", dpi: "", fechaNacimiento: "", porcentaje: "", telefono: "", correo: "", ...pagoVacio });
+const nuevoForm = () => ({ tipoParentesco: "", nombres: "", apellidos: "", dpi: "", fechaNacimiento: "", monto: "", telefono: "", correo: "", ...pagoVacio });
 const nuevaTutora = () => ({ nombres: "", apellidos: "", dpi: "", parentesco: "", telefono: "", ...pagoVacio });
 const FORMAS_PAGO = ["ABONO CUENTA", "CHEQUE"];
 const TIPOS_CUENTA = ["AHORRO", "MONETARIA"];
@@ -142,8 +180,8 @@ const BeneficiariosPage = () => {
   const [editForm, setEditForm] = useState(nuevoForm());
   const [editTutora, setEditTutora] = useState(nuevaTutora());
   const [guardandoEdit, setGuardandoEdit] = useState(false);
-  // --- Ajuste de porcentajes (todos juntos, deben sumar 100) ---
-  const [pctEdit, setPctEdit] = useState(null); // { [id]: "50" } mientras se edita
+  // --- Ajuste de montos (los dicta el juez; se validan entre todos) ---
+  const [pctEdit, setPctEdit] = useState(null); // { [id]: "2500" } mientras se edita
   const [estadoCuentaId, setEstadoCuentaId] = useState(null);
 
   // Autocomplete con debounce. Un término numérico (código) se acepta desde 1 carácter.
@@ -178,13 +216,11 @@ const BeneficiariosPage = () => {
     if (jub) cargarExistentes(jub.id);
   };
 
-  // --- % total y reglas de los nuevos ---
-  const totalPct = useMemo(
-    () => Math.round(nuevos.reduce((s, b) => s + Number(b.porcentaje || 0), 0) * 100) / 100,
-    [nuevos]
-  );
+  // --- Reparto de los nuevos (montos) ---
+  const pension = Number(jubilado?.pension || 0);
+  const reparto = useMemo(() => resumenReparto(nuevos, pension), [nuevos, pension]);
   const hayEsposa = useMemo(() => nuevos.some((b) => b.tipoParentesco === "ESPOSA"), [nuevos]);
-  const pctOk = totalPct === 100;
+  const pctOk = !reparto.error;
 
   // --- Modal beneficiario ---
   const setF = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -196,11 +232,12 @@ const BeneficiariosPage = () => {
     if (form.dpi && !esDpi(form.dpi)) err.dpi = "Debe tener 13 dígitos";
     if (form.dpi && nuevos.some((b) => b.dpi === form.dpi.trim())) err.dpi = "DPI repetido en la lista";
     if (form.fechaNacimiento && new Date(form.fechaNacimiento) > new Date()) err.fechaNacimiento = "No puede ser futura";
-    const p = Number(form.porcentaje);
-    if (form.porcentaje !== "" && (Number.isNaN(p) || p <= 0 || p > 100)) err.porcentaje = "Entre 0.01 y 100";
+    const m = Number(form.monto);
+    if (form.monto !== "" && (Number.isNaN(m) || m < 0)) err.monto = "Monto no válido";
+    else if (form.monto !== "" && pension > 0 && m > pension / 2) err.monto = `Hasta ${fmtQ(pension / 2)} (50% de la pensión)`;
     if (!esCorreo(form.correo)) err.correo = "Correo inválido";
     return err;
-  }, [form, nuevos]);
+  }, [form, nuevos, pension]);
 
   const abrirModalBen = () => { setForm(nuevoForm()); setModalBen(true); };
 
@@ -210,8 +247,8 @@ const BeneficiariosPage = () => {
       Swal.fire("Validación", "Complete apellidos, DPI (13 dígitos) y fecha de nacimiento.", "warning"); return;
     }
     if (Object.keys(errModal).length) { Swal.fire("Validación", "Corrija los campos marcados.", "warning"); return; }
-    const p = Number(form.porcentaje);
-    if (Number.isNaN(p) || p <= 0 || p > 100) { Swal.fire("Validación", "Porcentaje entre 0.01 y 100.", "warning"); return; }
+    const m = r2(form.monto);
+    if (PARENTESCOS_PAGO.includes(form.tipoParentesco) && !(m > 0)) { Swal.fire("Validación", "Indique el monto mensual (lo que dictó el juez).", "warning"); return; }
     if (errorPago(form)) { Swal.fire("Validación", errorPago(form), "warning"); return; }
     setNuevos((prev) => [...prev, {
       ...pagoDe(form),
@@ -220,7 +257,7 @@ const BeneficiariosPage = () => {
       apellidos: form.apellidos.trim(),
       dpi: form.dpi.trim(),
       fechaNacimiento: form.fechaNacimiento,
-      porcentaje: p,
+      monto: m,
       telefono: form.telefono.trim(),
       correo: form.correo.trim(),
       tutora: null
@@ -251,7 +288,7 @@ const BeneficiariosPage = () => {
   const guardarTodo = async () => {
     if (!jubilado) return;
     if (!nuevos.length) { Swal.fire("Validación", "Agregue al menos un beneficiario.", "warning"); return; }
-    if (!pctOk) { Swal.fire("Validación", `La suma de porcentajes debe ser 100.00 (actual: ${totalPct.toFixed(2)}).`, "warning"); return; }
+    if (reparto.error) { Swal.fire("Validación", reparto.error, "warning"); return; }
     if (nuevos.filter((b) => b.tipoParentesco === "ESPOSA").length > 1) { Swal.fire("Validación", "Solo se permite una ESPOSA.", "warning"); return; }
     const menorSinTutora = nuevos.find((b) => edad(b.fechaNacimiento) < 18 && !b.tutora);
     if (menorSinTutora) { Swal.fire("Validación", `El beneficiario menor ${menorSinTutora.apellidos} requiere tutora.`, "warning"); return; }
@@ -286,7 +323,7 @@ const BeneficiariosPage = () => {
     setEditId(b.id);
     setEditForm({
       tipoParentesco: b.tipoParentesco || "", nombres: b.nombres || "", apellidos: b.apellidos || "", dpi: b.dpi || "",
-      fechaNacimiento: soloFecha(b.fechaNacimiento), porcentaje: String(b.porcentaje ?? ""), telefono: b.telefono || "", correo: b.correo || "",
+      fechaNacimiento: soloFecha(b.fechaNacimiento), monto: b.monto ?? "", telefono: b.telefono || "", correo: b.correo || "",
       ...pagoDe(b)
     });
     const t = (b.tutores || []).filter((x) => !x.estado || x.estado === "VIGENTE").slice(-1)[0];
@@ -328,21 +365,34 @@ const BeneficiariosPage = () => {
     } finally { setGuardandoEdit(false); }
   };
 
-  // ---- Ajustar porcentajes ----
+  // ---- Ajustar montos (los vigentes; los INACTIVOS ya no cobran) ----
   const cobrando = existentes.some((b) => ["ACTIVO", "SUSPENDIDO"].includes(String(b.estado).toUpperCase()));
-  const totalPctEdit = pctEdit ? Math.round(Object.values(pctEdit).reduce((s, v) => s + Number(v || 0), 0) * 100) / 100 : 0;
-  const iniciarPct = () => setPctEdit(Object.fromEntries(existentes.map((b) => [b.id, String(Number(b.porcentaje))])));
+  const vigentes = existentes.filter((b) => String(b.estado).toUpperCase() !== "INACTIVO");
+  const repartoEdit = useMemo(
+    () => (pctEdit ? resumenReparto(vigentes.map((b) => ({ ...b, monto: pctEdit[b.id] })), pension) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pctEdit, existentes, pension]
+  );
+  const iniciarPct = () => setPctEdit(Object.fromEntries(vigentes.map((b) => [b.id, b.monto ?? r2((pension * Number(b.porcentaje)) / 100)])));
+  const proponerEdit = () => setPctEdit(Object.fromEntries(proponerMontos(vigentes, pension).map((b) => [b.id, b.monto ?? ""])));
   const guardarPct = async () => {
-    if (totalPctEdit !== 100) { Swal.fire("Validación", `La suma debe ser 100.00 (actual: ${totalPctEdit.toFixed(2)}).`, "warning"); return; }
+    if (repartoEdit?.error) { Swal.fire("Validación", repartoEdit.error, "warning"); return; }
+    if (cobrando) {
+      const r = await Swal.fire({
+        title: "Cambiar montos", icon: "question", showCancelButton: true, confirmButtonText: "Sí, cambiar", cancelButtonText: "Cancelar",
+        text: "Ya están cobrando: los meses ya pagados o generados conservan su monto; el nuevo se aplica desde la próxima planilla que se genere."
+      });
+      if (!r.isConfirmed) return;
+    }
     try {
-      const { data } = await axiosClient.put(`/beneficiarios/jubilado/${jubilado.id}/porcentajes`, {
-        porcentajes: Object.entries(pctEdit).map(([id, porcentaje]) => ({ id: Number(id), porcentaje: Number(porcentaje) }))
+      const { data } = await axiosClient.put(`/beneficiarios/jubilado/${jubilado.id}/montos`, {
+        montos: Object.entries(pctEdit).map(([id, monto]) => ({ id: Number(id), monto: Number(monto || 0) }))
       });
       setExistentes(data.data || []);
       setPctEdit(null);
-      Swal.fire("Listo", "Porcentajes actualizados.", "success");
+      Swal.fire("Listo", "Montos actualizados.", "success");
     } catch (error) {
-      Swal.fire("Error", error.response?.data?.message || "No fue posible actualizar los porcentajes.", "error");
+      Swal.fire("Error", error.response?.data?.message || "No fue posible actualizar los montos.", "error");
     }
   };
 
@@ -377,11 +427,18 @@ const BeneficiariosPage = () => {
             <Grid item xs={6} md={3}><TextField label="DPI" value={jubilado.dpi || ""} fullWidth InputProps={{ readOnly: true }} variant="filled" /></Grid>
             <Grid item xs={6} md={2}><TextField label="Estado" value={jubilado.estado || ""} fullWidth InputProps={{ readOnly: true }} variant="filled" /></Grid>
             <Grid item xs={6} md={2}><TextField label="Estado de pago" value={jubilado.estadoPago || ""} fullWidth InputProps={{ readOnly: true }} variant="filled" /></Grid>
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">
+                Pensión: <b>{fmtQ(pension)}</b> · por ley la esposa recibe hasta <b>{fmtQ(pension / 2)}</b> (50%) y los hijos,
+                entre todos, hasta <b>{fmtQ(pension / 2)}</b> (el otro 50%). Los montos los dicta el juez.
+              </Typography>
+            </Grid>
           </Grid>
         )}
         {bloqueadoPorJubilado && (
           <Alert severity="info" sx={{ mt: 2 }}>
-            Este jubilado está en estado <b>{jubilado.estadoPago}</b>. Solo consulta de beneficiarios.
+            Este jubilado está en estado <b>{jubilado.estadoPago}</b>: no se agregan beneficiarios nuevos. Sí se pueden editar sus datos
+            y <b>ajustar los montos</b> (por ejemplo, por una nueva resolución del juez).
           </Alert>
         )}
       </Paper>
@@ -391,18 +448,19 @@ const BeneficiariosPage = () => {
         <Paper sx={{ p: 2.5 }}>
           <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={1} sx={{ mb: 1.5 }}>
             <Typography variant="h6" sx={{ color: PRIMARIO }}>Beneficiarios registrados</Typography>
-            {canEdit(user) && existentes.length > 0 && !cobrando && (
+            {canEdit(user) && vigentes.length > 0 && (
               pctEdit ? (
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Chip label={`Total: ${totalPctEdit.toFixed(2)}%`} color={totalPctEdit === 100 ? "success" : "error"} sx={{ fontWeight: 700 }} />
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Button size="small" startIcon={<AutoFixHighIcon />} onClick={proponerEdit}>Proponer 50% / 50%</Button>
                   <Button onClick={() => setPctEdit(null)}>Cancelar</Button>
-                  <Button variant="contained" startIcon={<SaveIcon />} disabled={totalPctEdit !== 100} onClick={guardarPct}>Guardar porcentajes</Button>
+                  <Button variant="contained" startIcon={<SaveIcon />} disabled={Boolean(repartoEdit?.error)} onClick={guardarPct}>Guardar montos</Button>
                 </Stack>
               ) : (
-                <Button variant="outlined" startIcon={<PercentIcon />} onClick={iniciarPct}>Ajustar porcentajes</Button>
+                <Button variant="outlined" startIcon={<PaidIcon />} onClick={iniciarPct}>Ajustar montos</Button>
               )
             )}
           </Stack>
+          {pctEdit && repartoEdit && <Box sx={{ mb: 1.5 }}><ChipReparto r={repartoEdit} /></Box>}
           {cargando ? <CircularProgress size={22} /> : existentes.length === 0 ? (
             <Typography color="text.secondary">Este jubilado aún no tiene beneficiarios registrados.</Typography>
           ) : (
@@ -410,7 +468,7 @@ const BeneficiariosPage = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Parentesco</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell>
-                  <TableCell align="right">%</TableCell><TableCell>Estado</TableCell><TableCell>Tutora</TableCell>
+                  <TableCell align="right">Monto mensual</TableCell><TableCell>Estado</TableCell><TableCell>Tutora</TableCell>
                   <TableCell align="center">Acciones</TableCell>
                 </TableRow>
               </TableHead>
@@ -421,11 +479,16 @@ const BeneficiariosPage = () => {
                     <TableCell>{`${b.nombres || ""} ${b.apellidos}`.trim()}{b.esMenor && <Chip size="small" label="MENOR" color="warning" sx={{ ml: 1 }} />}</TableCell>
                     <TableCell>{b.dpi}</TableCell>
                     <TableCell align="right">
-                      {pctEdit ? (
-                        <TextField size="small" type="number" value={pctEdit[b.id] ?? ""} sx={{ width: 100 }}
-                          inputProps={{ min: 0, max: 100, step: "0.01", style: { textAlign: "right" } }}
+                      {pctEdit && pctEdit[b.id] !== undefined ? (
+                        <TextField size="small" type="number" value={pctEdit[b.id] ?? ""} sx={{ width: 130 }}
+                          inputProps={{ min: 0, step: "0.01", style: { textAlign: "right" } }}
                           onChange={(e) => setPctEdit((p) => ({ ...p, [b.id]: e.target.value }))} />
-                      ) : Number(b.porcentaje).toFixed(2)}
+                      ) : (
+                        <>
+                          <b>{b.monto !== null && b.monto !== undefined ? fmtQ(b.monto) : "—"}</b>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{Number(b.porcentaje).toFixed(2)}% de la pensión</Typography>
+                        </>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Chip size="small" label={b.estado} />
@@ -473,7 +536,7 @@ const BeneficiariosPage = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Parentesco</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell>
-                  <TableCell align="right">%</TableCell><TableCell>Menor / Tutora</TableCell><TableCell align="center">Quitar</TableCell>
+                  <TableCell align="right">Monto mensual</TableCell><TableCell>Menor / Tutora</TableCell><TableCell align="center">Quitar</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -484,7 +547,11 @@ const BeneficiariosPage = () => {
                       <TableCell>{b.tipoParentesco}</TableCell>
                       <TableCell>{`${b.nombres} ${b.apellidos}`.trim()}</TableCell>
                       <TableCell>{b.dpi}</TableCell>
-                      <TableCell align="right">{Number(b.porcentaje).toFixed(2)}</TableCell>
+                      <TableCell align="right">
+                        <TextField size="small" type="number" value={b.monto ?? ""} sx={{ width: 130 }}
+                          inputProps={{ min: 0, step: "0.01", style: { textAlign: "right" } }}
+                          onChange={(e) => setNuevos((prev) => prev.map((x, i) => (i === idx ? { ...x, monto: e.target.value === "" ? "" : Number(e.target.value) } : x)))} />
+                      </TableCell>
                       <TableCell>
                         {menor ? (
                           <Stack direction="row" spacing={1} alignItems="center">
@@ -503,15 +570,17 @@ const BeneficiariosPage = () => {
             </Table>
           )}
 
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2 }}>
-            <Chip
-              label={`Total: ${totalPct.toFixed(2)}%`}
-              color={pctOk ? "success" : "error"}
-              icon={pctOk ? <CheckCircleIcon /> : undefined}
-              sx={{ fontWeight: 700, fontSize: 14, py: 2 }}
-            />
+          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ md: "center" }} spacing={1.5} sx={{ mt: 2 }}>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              {nuevos.length > 0 && <ChipReparto r={reparto} />}
+              {nuevos.length > 0 && (
+                <Button size="small" startIcon={<AutoFixHighIcon />} onClick={() => setNuevos((prev) => proponerMontos(prev, pension))}>
+                  Proponer 50% / 50%
+                </Button>
+              )}
+            </Stack>
             <Button variant="contained" color="success" startIcon={guardando ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
-              disabled={guardando || !nuevos.length} onClick={guardarTodo}>
+              disabled={guardando || !nuevos.length || !pctOk} onClick={guardarTodo}>
               Guardar todo
             </Button>
           </Stack>
@@ -521,7 +590,7 @@ const BeneficiariosPage = () => {
       {jubilado && existentes.length > 0 && !soloLectura && (
         <Alert severity="info">
           Este jubilado ya tiene beneficiarios. Use <b>Editar</b> para corregir los datos de un beneficiario o de su tutora, y
-          <b> Ajustar porcentajes</b> para cambiar el reparto (deben sumar 100%).
+          <b> Ajustar montos</b> para anotar lo que dictó el juez (esposa hasta 50% de la pensión; hijos, entre todos, hasta 50%).
         </Alert>
       )}
 
@@ -542,7 +611,12 @@ const BeneficiariosPage = () => {
             <Grid item xs={12} md={4}><TextField label="Apellidos *" value={form.apellidos} onChange={setFUpper("apellidos")} error={!!errModal.apellidos} helperText={errModal.apellidos} fullWidth /></Grid>
             <Grid item xs={12} md={4}><TextField label="DPI *" value={form.dpi} onChange={setF("dpi")} error={!!errModal.dpi} helperText={errModal.dpi || "13 dígitos"} fullWidth /></Grid>
             <Grid item xs={12} md={4}><TextField label="Fecha nacimiento *" type="date" value={form.fechaNacimiento} onChange={setF("fechaNacimiento")} error={!!errModal.fechaNacimiento} helperText={errModal.fechaNacimiento || (form.fechaNacimiento ? `Edad: ${edad(form.fechaNacimiento)} años` : "")} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
-            <Grid item xs={12} md={4}><TextField label="Porcentaje *" type="number" value={form.porcentaje} onChange={setF("porcentaje")} error={!!errModal.porcentaje} helperText={errModal.porcentaje} fullWidth /></Grid>
+            <Grid item xs={12} md={4}>
+              <TextField label={PARENTESCOS_PAGO.includes(form.tipoParentesco) ? "Monto mensual (Q) *" : "Monto mensual (Q)"} type="number" value={form.monto} onChange={setF("monto")}
+                error={!!errModal.monto}
+                helperText={errModal.monto || (pension > 0 && form.monto !== "" ? `${r2((Number(form.monto) / pension) * 100)}% de la pensión (${fmtQ(pension)})` : "Lo que dictó el juez")}
+                fullWidth inputProps={{ min: 0, step: "0.01" }} />
+            </Grid>
             <Grid item xs={12} md={6}><TextField label="Teléfono" value={form.telefono} onChange={setF("telefono")} fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="Correo" value={form.correo} onChange={setF("correo")} error={!!errModal.correo} helperText={errModal.correo} fullWidth /></Grid>
             {!(form.fechaNacimiento && edad(form.fechaNacimiento) < 18) && (
@@ -578,7 +652,7 @@ const BeneficiariosPage = () => {
             <Grid item xs={12} md={4}><TextField label="Apellidos *" value={editForm.apellidos} onChange={setE("apellidos", true)} error={!!errEdit.apellidos} helperText={errEdit.apellidos} fullWidth /></Grid>
             <Grid item xs={12} md={4}><TextField label="DPI *" value={editForm.dpi} onChange={setE("dpi")} error={!!errEdit.dpi} helperText={errEdit.dpi || "13 dígitos"} fullWidth /></Grid>
             <Grid item xs={12} md={4}><TextField label="Fecha nacimiento *" type="date" value={editForm.fechaNacimiento} onChange={setE("fechaNacimiento")} error={!!errEdit.fechaNacimiento} helperText={errEdit.fechaNacimiento || (editForm.fechaNacimiento ? `Edad: ${edad(editForm.fechaNacimiento)} años` : "")} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
-            <Grid item xs={12} md={4}><TextField label="Porcentaje" value={editForm.porcentaje} fullWidth disabled helperText="Se cambia con «Ajustar porcentajes»" /></Grid>
+            <Grid item xs={12} md={4}><TextField label="Monto mensual" value={editForm.monto === "" ? "" : fmtQ(editForm.monto)} fullWidth disabled helperText="Se cambia con «Ajustar montos»" /></Grid>
             <Grid item xs={12} md={6}><TextField label="Teléfono" value={editForm.telefono} onChange={setE("telefono")} fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="Correo" value={editForm.correo} onChange={setE("correo")} error={!!errEdit.correo} helperText={errEdit.correo} fullWidth /></Grid>
             {!editMenor && (

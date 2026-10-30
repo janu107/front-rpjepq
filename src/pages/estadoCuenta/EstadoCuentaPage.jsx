@@ -1,7 +1,8 @@
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import HistoryIcon from "@mui/icons-material/History";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import {
-  Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Skeleton,
+  Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Skeleton,
   Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography
 } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -11,6 +12,7 @@ import Swal from "sweetalert2";
 import axiosClient from "../../api/axiosClient";
 import BuscadorPersona from "../../components/common/BuscadorPersona";
 import PageHeader from "../../components/common/PageHeader";
+import EstadoCuentaBeneficiario from "../beneficiarios/EstadoCuentaBeneficiario";
 
 const PRIMARIO = "#1F4E79";
 const ROJO = "#F44336";
@@ -21,6 +23,8 @@ const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFraction
 const fmtPeriodo = (p) => { const s = String(p); return s.length === 6 ? `${s.slice(4, 6)}/${s.slice(0, 4)}` : s; };
 
 const AZUL = "#1976D2";
+const VERDE_AZUL = "#00897B";
+const fmtFecha = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
 
 // Grupos de descuento (los mismos de la nómina impresa).
 const GRUPOS_DESC = [
@@ -34,6 +38,7 @@ const GRUPOS_DESC = [
 
 const colorEstadoDeuda = (d) => {
   if (d.enProceso) return AZUL;                // planilla generada, aún sin cerrar
+  if (d.estado === "CANCELADA") return VERDE_AZUL; // pagado fuera del sistema
   if (!d.esDeuda) return VERDE;               // historia (pagado 100%)
   if (d.estado === "PAGADA") return VERDE;
   if (d.estado === "PARCIAL") return AMARILLO;
@@ -56,6 +61,7 @@ const EstadoCuentaPage = () => {
   const [historiaOpen, setHistoriaOpen] = useState(false);
   const [historia, setHistoria] = useState([]);
   const [idSel, setIdSel] = useState(null);
+  const [estadoBen, setEstadoBen] = useState(null);
   const location = useLocation();
   // Solo se muestran las columnas de descuento que el jubilado tiene en algún mes.
   const gruposUsados = GRUPOS_DESC.filter((g) => historia.some((d) => Number(d.desglose?.[g.campo] || 0) > 0));
@@ -101,6 +107,7 @@ const EstadoCuentaPage = () => {
   }, [location.state]);
 
   const saldo = Number(resumen?.deudaPendiente || 0);
+  const fall = resumen?.fallecimiento;
 
   return (
     <Stack spacing={2.5}>
@@ -144,26 +151,49 @@ const EstadoCuentaPage = () => {
               <Dato label="Total pagado" valor={fmtQ(resumen?.totalPagado)} />
               <Dato label="Meses de historia" valor={resumen?.periodosHistoria ?? 0} />
             </Grid>
+            {fall && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                <b>Falleció el {fmtFecha(fall.fecha)}</b>{fall.certificado ? ` (certificado ${fall.certificado})` : ""}. Lo que se paga desde
+                entonces es a sus <b>beneficiarios</b>: vea el estado de cuenta de cada uno en la tabla de abajo.
+                {fall.cancelacion ? (
+                  <> Su deuda de <b>{fmtQ(fall.cancelacion.monto)}</b> ({fall.cancelacion.meses} meses) se pagó <b>fuera del sistema</b> el {fmtFecha(fall.cancelacion.fecha)} ({fall.cancelacion.documento}): la esposa cobra su VIUDEZ.</>
+                ) : saldo > 0 ? <> El saldo pendiente de abajo es su deuda: la <b>cobra la esposa</b> antes de pasar a VIUDEZ.</> : null}
+              </Alert>
+            )}
             <Box sx={{ mt: 2, p: 2, borderRadius: 2, textAlign: "center", bgcolor: saldo > 0 ? "rgba(244,67,54,0.08)" : "rgba(76,175,80,0.08)" }}>
-              <Typography variant="caption" color="text.secondary">SALDO PENDIENTE</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {fall ? (fall.cancelacion ? "DEUDA DEL FALLECIDO (PAGADA FUERA DEL SISTEMA)" : "DEUDA DEL FALLECIDO PENDIENTE (LA COBRA LA ESPOSA)") : "SALDO PENDIENTE"}
+              </Typography>
               <Typography sx={{ fontWeight: 800, fontSize: 34, color: saldo > 0 ? ROJO : VERDE }}>{fmtQ(saldo)}</Typography>
             </Box>
           </Paper>
 
           <Paper sx={{ p: 2.5 }}>
-            <Typography variant="h6" sx={{ mb: 1.5, color: PRIMARIO }}>Beneficiarios activos</Typography>
+            <Typography variant="h6" sx={{ mb: 0.5, color: PRIMARIO }}>Beneficiarios activos</Typography>
+            {fall && <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Cada beneficiario tiene su propio estado de cuenta: lo que se le debe mes a mes, lo pagado y lo pendiente.</Typography>}
             {beneficiarios.length === 0 ? <Typography color="text.secondary">Sin beneficiarios activos.</Typography> : (
               <Table size="small">
-                <TableHead><TableRow><TableCell>Nombre</TableCell><TableCell>Parentesco</TableCell><TableCell align="right">%</TableCell><TableCell align="right">Monto mensual</TableCell></TableRow></TableHead>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Nombre</TableCell><TableCell>Parentesco</TableCell><TableCell align="right">Monto mensual (juez)</TableCell>
+                    <TableCell align="right">Se le paga (50%)</TableCell><TableCell align="right">Estado de cuenta</TableCell>
+                  </TableRow>
+                </TableHead>
                 <TableBody>
-                  {beneficiarios.map((b) => (
-                    <TableRow key={b.id}>
-                      <TableCell>{`${b.nombres || ""} ${b.apellidos}`.trim()}</TableCell>
-                      <TableCell>{b.tipoParentesco}</TableCell>
-                      <TableCell align="right">{Number(b.porcentaje).toFixed(2)}</TableCell>
-                      <TableCell align="right">{fmtQ(Number(resumen?.pension || 0) * 0.5 * (Number(b.porcentaje) / 100))}</TableCell>
-                    </TableRow>
-                  ))}
+                  {beneficiarios.map((b) => {
+                    const monto = b.monto ?? Number(resumen?.pension || 0) * (Number(b.porcentaje) / 100);
+                    return (
+                      <TableRow key={b.id}>
+                        <TableCell>{`${b.nombres || ""} ${b.apellidos}`.trim()}</TableCell>
+                        <TableCell>{b.tipoParentesco}</TableCell>
+                        <TableCell align="right">{fmtQ(monto)}</TableCell>
+                        <TableCell align="right">{fmtQ(monto * 0.5)}</TableCell>
+                        <TableCell align="right">
+                          <Button size="small" startIcon={<ReceiptLongIcon />} onClick={() => setEstadoBen(b.id)}>Ver</Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -191,6 +221,8 @@ const EstadoCuentaPage = () => {
         </>
       )}
 
+      <EstadoCuentaBeneficiario idBeneficiario={estadoBen} onClose={() => setEstadoBen(null)} />
+
       <Dialog open={historiaOpen} onClose={() => setHistoriaOpen(false)} fullWidth maxWidth={gruposUsados.length > 2 ? "xl" : "lg"}>
         <DialogTitle>Historia completa</DialogTitle>
         <DialogContent dividers sx={{ pt: 0 }}>
@@ -202,6 +234,7 @@ const EstadoCuentaPage = () => {
             <b> Saldo</b>: lo que todavía se le debe de ese mes. Lo que se paga en cada nómina nueva se abona al mes
             pendiente más antiguo; por eso el mes de la nómina queda con su pensión completa pendiente.
             <b> EN PROCESO</b>: planilla generada que aún no se cierra.
+            <b> CANCELADA</b>: mes de la deuda que se pagó fuera del sistema (registrado en Fallecimientos).
           </Typography>
           <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
             <TableHead>
@@ -244,7 +277,11 @@ const EstadoCuentaPage = () => {
                     <TableCell align="right">{fmtQ(d.montoGenerado)}</TableCell>
                     <TableCell align="right">{fmtQ(d.recibidoMes)}</TableCell>
                     <TableCell align="right">
-                      {d.sinDeuda ? "—" : d.pagadoCon?.length ? (
+                      {d.sinDeuda ? "—" : d.canceladaFuera ? (
+                        <Tooltip arrow title={`Pagado fuera del sistema (${d.canceladaFuera})`}>
+                          <span style={{ borderBottom: "1px dotted #999", cursor: "help" }}>{fmtQ(d.montoPagado)}</span>
+                        </Tooltip>
+                      ) : d.pagadoCon?.length ? (
                         <Tooltip arrow title={`Pagado con la planilla de ${d.pagadoCon.map(fmtPeriodo).join(", ")}`}>
                           <span style={{ borderBottom: "1px dotted #999", cursor: "help" }}>{fmtQ(d.montoPagado)}</span>
                         </Tooltip>
