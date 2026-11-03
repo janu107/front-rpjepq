@@ -156,7 +156,7 @@ const EstadoCuentaPage = () => {
                 <b>Falleció el {fmtFecha(fall.fecha)}</b>{fall.certificado ? ` (certificado ${fall.certificado})` : ""}. Lo que se paga desde
                 entonces es a sus <b>beneficiarios</b>: vea el estado de cuenta de cada uno en la tabla de abajo.
                 {fall.cobradoPorConyuge && (
-                  <> Los <b>{fall.cobradoPorConyuge.meses} meses</b> que se pagaron con su código después de fallecer
+                  <> {fall.cobradoPorConyuge.meses === 1 ? "El" : "Los"} <b>{fall.cobradoPorConyuge.meses} {fall.cobradoPorConyuge.meses === 1 ? "mes" : "meses"}</b> que se {fall.cobradoPorConyuge.meses === 1 ? "pagó" : "pagaron"} con su código después de fallecer
                     ({fmtPeriodo(fall.cobradoPorConyuge.desde)} a {fmtPeriodo(fall.cobradoPorConyuge.hasta)}) los cobró su <b>cónyuge</b> y aparecen en el
                     estado de cuenta de ella o él; aquí solo queda lo suyo hasta el fallecimiento.</>
                 )}
