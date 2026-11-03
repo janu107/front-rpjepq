@@ -2,7 +2,9 @@ import {
   Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Grid,
   LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography
 } from "@mui/material";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
 
@@ -12,7 +14,7 @@ const MES3 = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OC
 const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtPer = (p) => { const s = String(p || ""); return s.length === 6 ? `${MES3[Number(s.slice(4, 6)) - 1]} ${s.slice(0, 4)}` : s; };
 const fmtFecha = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
-const COLOR_ESTADO = { PAGADA: "success", PARCIAL: "warning", PENDIENTE: "error" };
+const COLOR_ESTADO = { PAGADA: "success", PARCIAL: "warning", PENDIENTE: "error", "SE CREA AL CERRAR": "default" };
 const CONCEPTO = { "COBRO DEUDA DEL FALLECIDO": "Cobro de la deuda del fallecido", "LIQUIDACION ORFANDAD": "Liquidación (cumplió 18)" };
 
 const Dato = ({ etiqueta, valor, fuerte }) => (
@@ -34,6 +36,19 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
       .catch((e) => setError(e.response?.data?.message || "No fue posible cargar el estado de cuenta."));
   }, [idBeneficiario]);
 
+  const [descargando, setDescargando] = useState(false);
+  const exportarPdf = async () => {
+    setDescargando(true);
+    try {
+      const resp = await axiosClient.get(`/beneficiarios/${idBeneficiario}/estado-cuenta/pdf`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = `estado_cuenta_${String(datos?.beneficiario?.nombre || idBeneficiario).toLowerCase().replace(/[^a-z0-9]+/g, "_")}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+    } catch {
+      Swal.fire("Error", "No fue posible generar el PDF.", "error");
+    } finally { setDescargando(false); }
+  };
   const b = datos?.beneficiario;
   const df = datos?.deudaFallecido;
   const avance = df && df.total > 0 ? Math.min(100, (df.pagado / df.total) * 100) : 0;
@@ -107,6 +122,13 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
                     : "Aún no hay meses: se crean al cerrar cada planilla."}
                 </Typography>
               ) : (
+                <>
+                {datos.meses.some((m) => m.porCrear) && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Los meses <b>SE CREA AL CERRAR</b> ya se le deben (desde enero 2023 o desde que falleció, lo que sea después) y quedan registrados
+                    al cerrar la próxima planilla; lo que se le paga se abona al mes más antiguo.
+                  </Typography>
+                )}
                 <Table size="small">
                   <TableHead>
                     <TableRow><TableCell>Mes</TableCell><TableCell align="right">Se le debe</TableCell><TableCell align="right">Pagado</TableCell><TableCell align="right">Pendiente</TableCell><TableCell>Estado</TableCell><TableCell>Pagado con</TableCell></TableRow>
@@ -124,6 +146,7 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
                     ))}
                   </TableBody>
                 </Table>
+                </>
               )}
             </Box>
 
@@ -206,7 +229,10 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
           </Stack>
         )}
       </DialogContent>
-      <DialogActions><Button onClick={onClose}>Cerrar</Button></DialogActions>
+      <DialogActions>
+        <Button startIcon={<PictureAsPdfIcon />} onClick={exportarPdf} disabled={!datos || descargando}>Exportar PDF</Button>
+        <Button onClick={onClose}>Cerrar</Button>
+      </DialogActions>
     </Dialog>
   );
 };
