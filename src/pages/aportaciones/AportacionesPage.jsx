@@ -5,8 +5,9 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import SearchIcon from "@mui/icons-material/Search";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import DownloadIcon from "@mui/icons-material/Download";
 import {
-  Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
+  Alert, Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
   InputAdornment, InputLabel, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TablePagination, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
@@ -68,6 +69,18 @@ const AportacionesPage = ({ detailOnly = false }) => {
   const [editingDetalle, setEditingDetalle] = useState(null);
   const [total, setTotal] = useState(0);
   const fileInputRef = useRef(null);
+  const [ayudaCarga, setAyudaCarga] = useState(false);
+  const descargarPlantilla = async () => {
+    try {
+      const resp = await axiosClient.get("/aportaciones/carga-masiva/plantilla", { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([resp.data]));
+      const a = document.createElement("a");
+      a.href = url; a.download = "plantilla_carga_aportaciones.xlsx";
+      document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+    } catch {
+      Swal.fire("Error", "No fue posible descargar la plantilla.", "error");
+    }
+  };
 
   const handleExcelSelected = async (event) => {
     const file = event.target.files?.[0];
@@ -334,13 +347,51 @@ const AportacionesPage = ({ detailOnly = false }) => {
           </Box>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
             {canCreate(user) && (
-              <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => fileInputRef.current?.click()}>
+              <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => setAyudaCarga(true)}>
                 Carga masiva (Excel)
               </Button>
             )}
             {canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} disabled={!selected} onClick={() => { setEditingDetalle(null); setDetalleForm({ fechaPago: "", valor: "" }); setDetalleDialogOpen(true); }}>Nueva aportacion</Button>}
           </Stack>
-          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" hidden onChange={handleExcelSelected} />
+          <input ref={fileInputRef} type="file" accept=".xlsx" hidden onChange={handleExcelSelected} />
+          <Dialog open={ayudaCarga} onClose={() => setAyudaCarga(false)} fullWidth maxWidth="md">
+            <DialogTitle>Carga masiva de aportaciones (Excel)</DialogTitle>
+            <DialogContent dividers>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>Condiciones del archivo</Typography>
+              <Box component="ol" sx={{ m: 0, pl: 2.5, "& li": { mb: 0.5 } }}>
+                <li>Archivo de Excel <b>.xlsx</b> de máximo <b>5 MB</b>. Se lee solo la <b>primera hoja</b>.</li>
+                <li>La <b>fila 1</b> lleva los encabezados <b>ID EMPLEADO</b>, <b>FECHA</b> y <b>MONTO</b> (en cualquier orden; también se aceptan CODIGO, FECHA PAGO o VALOR).</li>
+                <li><b>ID EMPLEADO</b>: el código del empleado EPQ (el mismo de Empleados EPQ). Si no existe, esa fila sale con error.</li>
+                <li><b>FECHA</b>: la fecha de pago del aporte, como fecha de Excel o escrita <b>31/10/2026</b> o <b>2026-10-31</b>.</li>
+                <li><b>MONTO</b>: el valor del aporte, mayor a cero y sin la letra Q (por ejemplo <b>250.50</b>).</li>
+                <li>Una fila por aporte; las filas vacías se ignoran.</li>
+                <li>Si ya existe un aporte del <b>mismo empleado en la misma fecha</b>, la fila se <b>omite</b>: no se duplica ni se cambia el que ya está.</li>
+              </Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, mt: 2, mb: 0.5 }}>Ejemplo (primera hoja del Excel)</Typography>
+              <Table size="small" sx={{ maxWidth: 420, border: "1px solid #dde3ea" }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "#1f4e5f", "& th": { color: "#fff", fontWeight: 700 } }}>
+                    <TableCell>Fila</TableCell><TableCell>ID EMPLEADO</TableCell><TableCell>FECHA</TableCell><TableCell align="right">MONTO</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {[["2", "1234", "31/10/2026", "250.50"], ["3", "1234", "30/11/2026", "250.50"], ["4", "5678", "31/10/2026", "310.00"]].map((r) => (
+                    <TableRow key={r[0]}><TableCell>{r[0]}</TableCell><TableCell>{r[1]}</TableCell><TableCell>{r[2]}</TableCell><TableCell align="right">{r[3]}</TableCell></TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Descargue la <b>plantilla</b>, llénela y súbala con <b>Elegir archivo</b>. Al terminar verá cuántas filas se agregaron,
+                cuántas se omitieron por estar repetidas y qué filas tuvieron error (con el número de fila para corregirlas y volver a subir solo esas).
+              </Alert>
+            </DialogContent>
+            <DialogActions>
+              <Button startIcon={<DownloadIcon />} onClick={descargarPlantilla}>Descargar plantilla</Button>
+              <Box sx={{ flex: 1 }} />
+              <Button onClick={() => setAyudaCarga(false)}>Cancelar</Button>
+              <Button variant="contained" startIcon={<UploadFileIcon />} onClick={() => { setAyudaCarga(false); fileInputRef.current?.click(); }}>Elegir archivo</Button>
+            </DialogActions>
+          </Dialog>
         </Stack>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
           <Autocomplete
