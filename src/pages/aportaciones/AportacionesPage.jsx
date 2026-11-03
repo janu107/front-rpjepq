@@ -97,9 +97,11 @@ const AportacionesPage = ({ detailOnly = false }) => {
       await Swal.fire({
         title: "Carga masiva procesada",
         icon: errores.length > 0 ? "warning" : "success",
-        html: `Filas leidas: <b>${resumen.totalFilas ?? 0}</b><br>`
-          + `Registros insertados: <b>${resumen.insertados ?? 0}</b><br>`
-          + `Omitidos (duplicados): <b>${resumen.omitidos ?? 0}</b><br>`
+        html: (resumen.fecha ? `Período (fecha de pago): <b>${String(resumen.fecha).split("-").reverse().join("/")}</b><br>` : "")
+          + `Filas leídas: <b>${resumen.totalFilas ?? 0}</b><br>`
+          + `Aportes grabados: <b>${resumen.insertados ?? 0}</b><br>`
+          + (resumen.sumados ? `Filas sumadas (código repetido): <b>${resumen.sumados}</b><br>` : "")
+          + `Omitidos (ya tenían aporte en ese período): <b>${resumen.omitidos ?? 0}</b><br>`
           + `Errores: <b>${errores.length}</b>`
           + (erroresHtml ? `<hr style="margin:8px 0">${erroresHtml}` : "")
       });
@@ -362,10 +364,11 @@ const AportacionesPage = ({ detailOnly = false }) => {
                 <li>Archivo de Excel <b>.xlsx</b> de máximo <b>5 MB</b>. Se lee solo la <b>primera hoja</b>.</li>
                 <li>La <b>fila 1</b> lleva los encabezados <b>ID EMPLEADO</b>, <b>FECHA</b> y <b>MONTO</b> (en cualquier orden; también se aceptan CODIGO, FECHA PAGO o VALOR).</li>
                 <li><b>ID EMPLEADO</b>: el código del empleado EPQ (el mismo de Empleados EPQ). Si no existe, esa fila sale con error.</li>
-                <li><b>FECHA</b>: la fecha de pago del aporte, como fecha de Excel o escrita <b>31/10/2026</b> o <b>2026-10-31</b>.</li>
+                <li><b>FECHA</b>: la fecha de pago del período (por ejemplo el último día del mes), como fecha de Excel o escrita <b>30/11/2026</b> o <b>2026-11-30</b>.
+                  <b> Un archivo = un período:</b> todas las filas deben tener la <b>misma fecha</b>; si trae dos o más fechas distintas no se graba nada.</li>
                 <li><b>MONTO</b>: el valor del aporte, mayor a cero y sin la letra Q (por ejemplo <b>250.50</b>).</li>
-                <li>Una fila por aporte; las filas vacías se ignoran.</li>
-                <li>Si ya existe un aporte del <b>mismo empleado en la misma fecha</b>, la fila se <b>omite</b>: no se duplica ni se cambia el que ya está.</li>
+                <li>Si un código viene <b>varias veces</b>, sus montos se <b>suman</b> en un solo aporte. Las filas vacías se ignoran.</li>
+                <li>Si el empleado <b>ya tiene aporte en esa fecha</b> (período ya cargado), se <b>omite</b>; los demás sí se graban.</li>
               </Box>
               <Typography variant="subtitle2" sx={{ fontWeight: 800, mt: 2, mb: 0.5 }}>Ejemplo (primera hoja del Excel)</Typography>
               <Table size="small" sx={{ maxWidth: 420, border: "1px solid #dde3ea" }}>
@@ -375,14 +378,17 @@ const AportacionesPage = ({ detailOnly = false }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {[["2", "1234", "31/10/2026", "250.50"], ["3", "1234", "30/11/2026", "250.50"], ["4", "5678", "31/10/2026", "310.00"]].map((r) => (
+                  {[["2", "1234", "30/11/2026", "250.50"], ["3", "5678", "30/11/2026", "310.00"], ["4", "5678", "30/11/2026", "40.00"]].map((r) => (
                     <TableRow key={r[0]}><TableCell>{r[0]}</TableCell><TableCell>{r[1]}</TableCell><TableCell>{r[2]}</TableCell><TableCell align="right">{r[3]}</TableCell></TableRow>
                   ))}
                 </TableBody>
               </Table>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Resultado: se graban 2 aportes con fecha 30/11/2026: el 1234 por Q250.50 y el 5678 por <b>Q350.00</b> (310 + 40).
+              </Typography>
               <Alert severity="info" sx={{ mt: 2 }}>
                 Descargue la <b>plantilla</b>, llénela y súbala con <b>Elegir archivo</b>. Al terminar verá cuántas filas se agregaron,
-                cuántas se omitieron por estar repetidas y qué filas tuvieron error (con el número de fila para corregirlas y volver a subir solo esas).
+                cuántos empleados se omitieron por tener ya el período y qué filas tuvieron error (con el número de fila para corregirlas y volver a subir solo esas).
               </Alert>
             </DialogContent>
             <DialogActions>
