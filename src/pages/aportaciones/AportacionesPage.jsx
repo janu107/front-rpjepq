@@ -38,6 +38,9 @@ const initialForm = {
 const estados = ["ACTIVO", "INACTIVO", "RETIRADO", "FALLECIDO"];
 const sexoOptions = [{ value: "M", label: "Masculino" }, { value: "F", label: "Femenino" }];
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
+// Para mostrar: fecha DD/MM/AAAA y montos con separador de miles.
+const fechaDMY = (value) => (value ? String(value).slice(0, 10).split("-").reverse().join("/") : "");
+const fmtQ = (n) => `Q ${Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const MANEJO_EPQ_ID = 4;
 const findManejoById = (items = [], id) => items.find((item) => Number(item.id) === Number(id));
 const up = (value) => String(value || "").toUpperCase();
@@ -321,7 +324,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
     const term = search.trim().toLowerCase();
     if (!term) return detalle;
     return detalle.filter((row) =>
-      [row.id, row.idAportacion, row.fechaPago, row.valor, row.fechaCreacion, row.usuarioCreacion].some((value) => String(value || "").toLowerCase().includes(term))
+      [row.id, row.idAportacion, row.fechaPago, fechaDMY(row.fechaPago), row.valor, row.fechaCreacion, fechaDMY(row.fechaCreacion), row.usuarioCreacion].some((value) => String(value || "").toLowerCase().includes(term))
     );
   }, [detalle, search]);
 
@@ -431,7 +434,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
               <Grid item xs={12} md={3}><Typography variant="caption" color="text.secondary">Codigo empleado</Typography><Typography>{selected.idAportacion}</Typography></Grid>
               <Grid item xs={12} md={3}><Typography variant="caption" color="text.secondary">Nombre</Typography><Typography>{selected.nombre} {selected.apellido}</Typography></Grid>
               <Grid item xs={12} md={3}><Typography variant="caption" color="text.secondary">DPI</Typography><Typography>{selected.dpi}</Typography></Grid>
-              <Grid item xs={12} md={3}><Typography variant="caption" color="text.secondary">Total aportado</Typography><Typography>Q {Number(total).toFixed(2)}</Typography></Grid>
+              <Grid item xs={12} md={3}><Typography variant="caption" color="text.secondary">Total aportado</Typography><Typography>{fmtQ(total)}</Typography></Grid>
             </Grid>
           </Paper>
         )}
@@ -454,9 +457,9 @@ const AportacionesPage = ({ detailOnly = false }) => {
                 <TableRow key={row.id} hover>
                   <TableCell>{row.id}</TableCell>
                   <TableCell>{row.idAportacion}</TableCell>
-                  <TableCell>{formatDate(row.fechaPago)}</TableCell>
-                  <TableCell>Q {Number(row.valor).toFixed(2)}</TableCell>
-                  <TableCell>{formatDate(row.fechaCreacion)}</TableCell>
+                  <TableCell>{fechaDMY(row.fechaPago)}</TableCell>
+                  <TableCell>{fmtQ(row.valor)}</TableCell>
+                  <TableCell>{fechaDMY(row.fechaCreacion)}</TableCell>
                   <TableCell>{row.usuarioCreacion}</TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={0.5} justifyContent="flex-end">
@@ -637,7 +640,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
                 </Grid>
               </Paper>
             )}
-            <Typography variant="h6">Total aportado: Q {Number(total).toFixed(2)}</Typography>
+            <Typography variant="h6">Total aportado: {fmtQ(total)}</Typography>
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <TextField label="Fecha pago" type="date" value={detalleForm.fechaPago} onChange={(e) => setDetalleForm({ ...detalleForm, fechaPago: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
               <TextField label="Valor" type="number" value={detalleForm.valor} onChange={(e) => setDetalleForm({ ...detalleForm, valor: e.target.value })} fullWidth />
@@ -656,8 +659,8 @@ const AportacionesPage = ({ detailOnly = false }) => {
                     <TableRow key={row.id}>
                       <TableCell>{row.codigoEmpleado || selected?.idAportacion}</TableCell>
                       <TableCell>{row.nombre || `${selected?.nombre || ""} ${selected?.apellido || ""}`}</TableCell>
-                      <TableCell>Q {Number(row.valor).toFixed(2)}</TableCell>
-                      <TableCell>{formatDate(row.fechaPago)}</TableCell>
+                      <TableCell>{fmtQ(row.valor)}</TableCell>
+                      <TableCell>{fechaDMY(row.fechaPago)}</TableCell>
                       <TableCell align="right">
                         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                           {canEdit(user) && <IconButton size="small" color="primary" onClick={() => editDetalleInline(row)}><EditIcon /></IconButton>}
