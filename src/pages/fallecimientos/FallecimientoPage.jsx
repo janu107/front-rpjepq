@@ -107,6 +107,16 @@ const FallecimientoPage = () => {
   };
   useEffect(() => { cargarFallecidos(); }, []);
 
+  // Texto del ajuste de la deuda (mes proporcional y meses borrados).
+  const textoAjuste = (a) => {
+    if (!a) return "";
+    const per = (p) => `${String(p).slice(4, 6)}/${String(p).slice(0, 4)}`;
+    const partes = [];
+    if (a.proporcional) partes.push(`<b>${per(a.mes)}</b> se calculó proporcional a <b>${a.dias} de 30 días</b>: se le debía ${fmtQ(a.proporcional.liquido)} (recibido ${fmtQ(a.proporcional.recibido)}).`);
+    if (a.mesesBorrados?.length) partes.push(`Se quitaron de su deuda los meses posteriores: <b>${a.mesesBorrados.map(per).join(", ")}</b>.`);
+    (a.avisos || []).forEach((x) => partes.push(x));
+    return partes.length ? `<br><br>${partes.join("<br>")}` : "";
+  };
   const guardarCorreccion = async () => {
     try {
       const { data } = await axiosClient.put(`/jubilados/${corregir.id}/fallecimiento`, {
@@ -114,7 +124,8 @@ const FallecimientoPage = () => {
       });
       setCorregir(null);
       cargarFallecidos();
-      Swal.fire({ icon: data.data?.aviso ? "warning" : "success", title: "Fallecimiento corregido", text: data.data?.aviso || "Al generar la planilla se recalcula con la nueva fecha." });
+      Swal.fire({ icon: data.data?.aviso ? "warning" : "success", title: "Fallecimiento corregido",
+        html: `${data.data?.aviso || "Al generar la planilla se recalcula con la nueva fecha."}${textoAjuste(data.data?.ajuste)}` });
     } catch (error) {
       Swal.fire("Error", error.response?.data?.message || "No fue posible corregir.", "error");
     }
@@ -177,7 +188,7 @@ const FallecimientoPage = () => {
         fechaFallecimiento: form.fechaFallecimiento, noDefuncion: form.noDefuncion
       });
       const n = data.data?.beneficiariosActivados ?? beneficiarios.length;
-      await Swal.fire("Listo", `Fallecimiento registrado. ${n} beneficiarios activados.`, "success");
+      await Swal.fire({ icon: "success", title: "Listo", html: `Fallecimiento registrado. ${n} beneficiarios activados.${textoAjuste(data.data?.ajuste)}` });
       cargarFallecidos();
       if (form.metodoPago === "CONVENIO") {
         navigate("/convenios", { state: { tipo: "jubilado", id: jub.id, nombre } });
