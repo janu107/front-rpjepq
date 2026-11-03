@@ -5,6 +5,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import GavelIcon from "@mui/icons-material/Gavel";
+import TaskAltIcon from "@mui/icons-material/TaskAlt";
+import UndoIcon from "@mui/icons-material/Undo";
 import {
   Alert, Box, Button, IconButton, MenuItem, TextField, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Skeleton,
   Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography
@@ -89,12 +91,52 @@ const EstadoCuentaPage = () => {
         descuentos: ajuste.descuentos.map((x) => ({ id: x.id, tipo: Number(x.tipo), valor: Number(x.valor || 0) }))
       });
       setAjuste(null);
-      const [h, r] = await Promise.all([axiosClient.get(`/jubilados/${idSel}/historia-completa`), axiosClient.get(`/jubilados/${idSel}/resumen-financiero`)]);
-      setHistoria(h.data.data || []); setResumen(r.data.data);
+      await recargarHistoria();
       Swal.fire({ icon: "success", title: "Mes ajustado", text: "Se recalcularon el líquido, lo recibido y la deuda del mes.", timer: 1800, showConfirmButton: false });
     } catch (e) {
       Swal.fire("Error", e.response?.data?.message || "No fue posible guardar.", "error");
     } finally { setGuardandoAjuste(false); }
+  };
+  const recargarHistoria = async () => {
+    const [h, r] = await Promise.all([axiosClient.get(`/jubilados/${idSel}/historia-completa`), axiosClient.get(`/jubilados/${idSel}/resumen-financiero`)]);
+    setHistoria(h.data.data || []); setResumen(r.data.data);
+  };
+  // Un mes de la deuda que ya se pagó fuera del sistema (solo este jubilado y este mes).
+  const marcarMesPagado = async (d) => {
+    const hoy = new Date().toISOString().slice(0, 10);
+    const r = await Swal.fire({
+      title: `Marcar ${fmtPeriodo(d.periodo)} como pagado`,
+      html: `<p style="margin:0 0 8px">El saldo del mes (<b>${fmtQ(d.saldo)}</b>) queda pagado fuera del sistema. Solo afecta a este jubilado y a este mes; se puede revertir.</p>
+        <input id="mp-fecha" type="date" class="swal2-input" value="${hoy}" max="${hoy}" style="width:80%">
+        <input id="mp-doc" class="swal2-input" placeholder="Documento (acta, resolución, cheque…)" style="width:80%">
+        <input id="mp-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="width:80%">`,
+      showCancelButton: true, confirmButtonText: "Marcar pagado", cancelButtonText: "Cancelar", focusConfirm: false,
+      preConfirm: () => {
+        const fecha = document.getElementById("mp-fecha").value;
+        const documento = document.getElementById("mp-doc").value.trim();
+        if (!fecha || !documento) { Swal.showValidationMessage("Indique la fecha y el documento"); return false; }
+        return { fecha, documento, observaciones: document.getElementById("mp-obs").value.trim() };
+      }
+    });
+    if (!r.isConfirmed) return;
+    try {
+      await axiosClient.post(`/jubilados/${idSel}/historia/${d.periodo}/cancelar`, r.value);
+      await recargarHistoria();
+      Swal.fire({ icon: "success", title: "Mes pagado", timer: 1600, showConfirmButton: false });
+    } catch (e) { Swal.fire("Error", e.response?.data?.message || "No fue posible marcar el mes.", "error"); }
+  };
+  const revertirMesPagado = async (d) => {
+    const r = await Swal.fire({
+      icon: "warning", title: `Revertir ${fmtPeriodo(d.periodo)}`,
+      text: "El mes vuelve a quedar pendiente en la deuda.", input: "text", inputPlaceholder: "Motivo",
+      showCancelButton: true, confirmButtonText: "Revertir", cancelButtonText: "Cancelar", confirmButtonColor: "#c62828"
+    });
+    if (!r.isConfirmed) return;
+    try {
+      await axiosClient.post(`/jubilados/${idSel}/historia/${d.periodo}/cancelar/revertir`, { motivo: r.value });
+      await recargarHistoria();
+      Swal.fire({ icon: "success", title: "Mes pendiente otra vez", timer: 1600, showConfirmButton: false });
+    } catch (e) { Swal.fire("Error", e.response?.data?.message || "No fue posible revertir.", "error"); }
   };
   const liquidacionPdf = async () => {
     try {
@@ -323,8 +365,9 @@ const EstadoCuentaPage = () => {
             <b> Saldo</b>: lo que todavía se le debe de ese mes. Lo que se paga en cada nómina nueva se abona al mes
             pendiente más antiguo; por eso el mes de la nómina queda con su pensión completa pendiente.
             <b> EN PROCESO</b>: planilla generada que aún no se cierra.
-            <b> CANCELADA</b>: mes de la deuda que se pagó fuera del sistema (registrado en Fallecimientos).
+            <b> CANCELADA</b>: mes de la deuda que se pagó fuera del sistema (toda la deuda en Fallecimientos, o un mes con el botón ✓).
             <b> Ajustar</b> (lápiz): corrige los descuentos de un mes de la carga histórica (por ejemplo, el último mes de un préstamo con saldo menor a la cuota).
+            <b> ✓ Marcar pagado</b>: un mes que ya se pagó fuera del sistema (por ejemplo, enero 2023); pide fecha y documento y se puede revertir.
           </Typography>
           <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
             <TableHead>
@@ -386,6 +429,16 @@ const EstadoCuentaPage = () => {
                         {d.esDeuda && !d.enProceso && (
                           <Tooltip title="Corregir los descuentos de este mes">
                             <IconButton size="small" onClick={() => abrirAjuste(d.periodo)}><EditIcon fontSize="small" /></IconButton>
+                          </Tooltip>
+                        )}
+                        {d.esDeuda && !d.enProceso && !d.canceladaFuera && Number(d.saldo) > 0 && (
+                          <Tooltip title="Marcar este mes como pagado fuera del sistema">
+                            <IconButton size="small" color="success" onClick={() => marcarMesPagado(d)}><TaskAltIcon fontSize="small" /></IconButton>
+                          </Tooltip>
+                        )}
+                        {d.canceladaMes && (
+                          <Tooltip title="Revertir: el mes vuelve a quedar pendiente">
+                            <IconButton size="small" color="warning" onClick={() => revertirMesPagado(d)}><UndoIcon fontSize="small" /></IconButton>
                           </Tooltip>
                         )}
                       </TableCell>
