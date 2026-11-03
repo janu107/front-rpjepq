@@ -127,6 +127,57 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
               )}
             </Box>
 
+            {datos.historiaConCodigo?.length > 0 && (() => {
+              const hc = datos.historiaConCodigo;
+              const suma = (k) => hc.reduce((a, x) => a + Number(x[k] || 0), 0);
+              return (
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: PRIMARIO }}>
+                    Cobrado con el código del fallecido ({fmtPer(hc[0].periodo)} a {fmtPer(hc[hc.length - 1].periodo)})
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Después de que falleció, la pensión se siguió pagando con su código: eso lo cobró {b.nombre}. Desde enero 2023 cada mes se debe
+                    completo y se paga la mitad, igual que a los jubilados.
+                  </Typography>
+                  <Grid container spacing={2} sx={{ mb: 1 }}>
+                    <Dato etiqueta="Meses" valor={hc.length} />
+                    <Dato etiqueta="Total recibido" valor={fmtQ(suma("recibido"))} />
+                    <Dato etiqueta="Deuda desde 2023" valor={fmtQ(suma("debe"))} />
+                    <Dato etiqueta="Pendiente" valor={fmtQ(suma("saldo"))} fuerte />
+                  </Grid>
+                  <Box sx={{ maxHeight: 300, overflowY: "auto", border: "1px solid #dde3ea", borderRadius: 1 }}>
+                    <Table size="small" stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Mes</TableCell><TableCell align="right">Pensión</TableCell><TableCell align="right">Recibido</TableCell>
+                          <TableCell align="right">Se debía</TableCell><TableCell align="right">Pagado de la deuda</TableCell>
+                          <TableCell align="right">Pendiente</TableCell><TableCell>Estado</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {[...hc].reverse().map((m) => (
+                          <TableRow key={m.periodo}>
+                            <TableCell>{fmtPer(m.periodo)}</TableCell>
+                            <TableCell align="right">{fmtQ(m.pension)}</TableCell>
+                            <TableCell align="right">{fmtQ(m.recibido)}</TableCell>
+                            <TableCell align="right">{m.debe > 0 ? fmtQ(m.debe) : "—"}</TableCell>
+                            <TableCell align="right">{m.debe > 0 ? fmtQ(m.pagado) : "—"}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 700 }}>{m.debe > 0 ? fmtQ(m.saldo) : "—"}</TableCell>
+                            <TableCell>
+                              <Tooltip title={m.canceladaFuera ? `Pagado fuera del sistema (${m.canceladaFuera})` : ""}>
+                                <Chip size="small" label={m.estado}
+                                  color={m.estado === "PENDIENTE" ? "error" : m.estado === "PARCIAL" ? "warning" : "success"} variant={m.debe > 0 ? "filled" : "outlined"} />
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+                </Box>
+              );
+            })()}
+
             <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, color: PRIMARIO, mb: 0.5 }}>
                 Pagos recibidos <Typography component="span" variant="body2" color="text.secondary">· total cobrado {fmtQ(datos.resumen.recibido)} en {datos.resumen.planillasCobradas} planilla(s) cerrada(s)</Typography>

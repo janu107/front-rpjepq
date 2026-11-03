@@ -155,6 +155,11 @@ const EstadoCuentaPage = () => {
               <Alert severity="warning" sx={{ mt: 2 }}>
                 <b>Falleció el {fmtFecha(fall.fecha)}</b>{fall.certificado ? ` (certificado ${fall.certificado})` : ""}. Lo que se paga desde
                 entonces es a sus <b>beneficiarios</b>: vea el estado de cuenta de cada uno en la tabla de abajo.
+                {fall.cobradoPorConyuge && (
+                  <> Los <b>{fall.cobradoPorConyuge.meses} meses</b> que se pagaron con su código después de fallecer
+                    ({fmtPeriodo(fall.cobradoPorConyuge.desde)} a {fmtPeriodo(fall.cobradoPorConyuge.hasta)}) los cobró su <b>cónyuge</b> y aparecen en el
+                    estado de cuenta de ella o él; aquí solo queda lo suyo hasta el fallecimiento.</>
+                )}
                 {fall.cancelacion ? (
                   <> Su deuda de <b>{fmtQ(fall.cancelacion.monto)}</b> ({fall.cancelacion.meses} {fall.cancelacion.meses === 1 ? "mes" : "meses"}) se pagó <b>fuera del sistema</b> el {fmtFecha(fall.cancelacion.fecha)} ({fall.cancelacion.documento}): el cónyuge cobra su VIUDEZ.</>
                 ) : saldo > 0 ? <> El saldo pendiente de abajo es su deuda: la <b>cobra el cónyuge</b> antes de pasar a VIUDEZ.</> : null}
