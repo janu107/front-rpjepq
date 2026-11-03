@@ -1,8 +1,12 @@
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import HistoryIcon from "@mui/icons-material/History";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import GavelIcon from "@mui/icons-material/Gavel";
 import {
-  Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Skeleton,
+  Alert, Box, Button, IconButton, MenuItem, TextField, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Paper, Skeleton,
   Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography
 } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -13,6 +17,8 @@ import axiosClient from "../../api/axiosClient";
 import BuscadorPersona from "../../components/common/BuscadorPersona";
 import PageHeader from "../../components/common/PageHeader";
 import EstadoCuentaBeneficiario from "../beneficiarios/EstadoCuentaBeneficiario";
+import { useAuth } from "../../context/AuthContext";
+import { canEdit } from "../../utils/permissions";
 
 const PRIMARIO = "#1F4E79";
 const ROJO = "#F44336";
@@ -62,6 +68,43 @@ const EstadoCuentaPage = () => {
   const [historia, setHistoria] = useState([]);
   const [idSel, setIdSel] = useState(null);
   const [estadoBen, setEstadoBen] = useState(null);
+  const { user } = useAuth();
+  // Ajuste de descuentos de un mes de la historia: { periodo, datos, descuentos: [{ id?, tipo, valor }] }
+  const [ajuste, setAjuste] = useState(null);
+  const [guardandoAjuste, setGuardandoAjuste] = useState(false);
+  const abrirAjuste = async (periodo) => {
+    try {
+      const { data } = await axiosClient.get(`/jubilados/${idSel}/historia/${periodo}/descuentos`);
+      const m = data.data;
+      if (!m.editable) { Swal.fire("No se puede ajustar", m.motivo, "info"); return; }
+      setAjuste({ periodo, datos: m, descuentos: m.descuentos.map((x) => ({ id: x.id, tipo: x.tipo, valor: String(x.valor) })) });
+    } catch (e) { Swal.fire("Error", e.response?.data?.message || "No fue posible cargar los descuentos del mes.", "error"); }
+  };
+  const totalAjuste = ajuste ? Math.round(ajuste.descuentos.reduce((a, x) => a + Number(x.valor || 0), 0) * 100) / 100 : 0;
+  const liquidoAjuste = ajuste ? Math.max(Math.round((ajuste.datos.pension - totalAjuste) * 100) / 100, 0) : 0;
+  const guardarAjuste = async () => {
+    setGuardandoAjuste(true);
+    try {
+      await axiosClient.put(`/jubilados/${idSel}/historia/${ajuste.periodo}/descuentos`, {
+        descuentos: ajuste.descuentos.map((x) => ({ id: x.id, tipo: Number(x.tipo), valor: Number(x.valor || 0) }))
+      });
+      setAjuste(null);
+      const [h, r] = await Promise.all([axiosClient.get(`/jubilados/${idSel}/historia-completa`), axiosClient.get(`/jubilados/${idSel}/resumen-financiero`)]);
+      setHistoria(h.data.data || []); setResumen(r.data.data);
+      Swal.fire({ icon: "success", title: "Mes ajustado", text: "Se recalcularon el líquido, lo recibido y la deuda del mes.", timer: 1800, showConfirmButton: false });
+    } catch (e) {
+      Swal.fire("Error", e.response?.data?.message || "No fue posible guardar.", "error");
+    } finally { setGuardandoAjuste(false); }
+  };
+  const liquidacionPdf = async () => {
+    try {
+      const resp = await axiosClient.get(`/jubilados/${idSel}/liquidacion.pdf`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = `liquidacion_deuda_${jub?.idJubilado || idSel}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+    } catch { Swal.fire("Error", "No fue posible generar la liquidación.", "error"); }
+  };
   const location = useLocation();
   // Solo se muestran las columnas de descuento que el jubilado tiene en algún mes.
   const gruposUsados = GRUPOS_DESC.filter((g) => historia.some((d) => Number(d.desglose?.[g.campo] || 0) > 0));
@@ -140,6 +183,7 @@ const EstadoCuentaPage = () => {
               <Stack direction="row" spacing={1}>
                 <Button variant="outlined" startIcon={<HistoryIcon />} onClick={verHistoria}>Ver historia completa</Button>
                 <Button variant="outlined" startIcon={<PictureAsPdfIcon />} onClick={exportarPdf}>Exportar PDF</Button>
+                <Button variant="outlined" startIcon={<GavelIcon />} onClick={liquidacionPdf}>Liquidación PDF</Button>
               </Stack>
             </Stack>
             <Grid container spacing={2}>
@@ -228,6 +272,46 @@ const EstadoCuentaPage = () => {
 
       <EstadoCuentaBeneficiario idBeneficiario={estadoBen} onClose={() => setEstadoBen(null)} />
 
+      <Dialog open={!!ajuste} onClose={() => setAjuste(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Ajustar descuentos — {ajuste ? fmtPeriodo(ajuste.periodo) : ""}</DialogTitle>
+        <DialogContent dividers>
+          {ajuste && (
+            <Stack spacing={1.5}>
+              <Typography variant="body2" color="text.secondary">
+                Pensión del mes: <b>{fmtQ(ajuste.datos.pension)}</b>. Escriba los descuentos correctos (por ejemplo, el saldo real del préstamo en su último mes).
+              </Typography>
+              {ajuste.descuentos.map((x, i) => (
+                <Stack key={x.id || `n${i}`} direction="row" spacing={1} alignItems="center">
+                  <TextField select size="small" label="Tipo" value={x.tipo} sx={{ flex: 1 }}
+                    onChange={(e) => setAjuste((a) => ({ ...a, descuentos: a.descuentos.map((y, k) => (k === i ? { ...y, tipo: e.target.value } : y)) }))}>
+                    {ajuste.datos.tipos.map((t) => <MenuItem key={t.id} value={t.id}>{t.descripcion}</MenuItem>)}
+                  </TextField>
+                  <TextField size="small" type="number" label="Monto (Q)" value={x.valor} sx={{ width: 150 }} inputProps={{ min: 0, step: "0.01", style: { textAlign: "right" } }}
+                    onChange={(e) => setAjuste((a) => ({ ...a, descuentos: a.descuentos.map((y, k) => (k === i ? { ...y, valor: e.target.value } : y)) }))} />
+                  <IconButton size="small" color="error" onClick={() => setAjuste((a) => ({ ...a, descuentos: a.descuentos.filter((_, k) => k !== i) }))}><DeleteIcon fontSize="small" /></IconButton>
+                </Stack>
+              ))}
+              <Box>
+                <Button size="small" startIcon={<AddIcon />} onClick={() => setAjuste((a) => ({ ...a, descuentos: [...a.descuentos, { tipo: 9, valor: "" }] }))}>Agregar descuento</Button>
+              </Box>
+              <Box sx={{ p: 1.5, bgcolor: "#F4F6F8", borderRadius: 1.5 }}>
+                <Grid container spacing={1}>
+                  <Dato label="Total descuentos" valor={fmtQ(totalAjuste)} />
+                  <Dato label="Líquido (se le debe)" valor={fmtQ(liquidoAjuste)} />
+                  <Dato label={`Recibido en el mes (${ajuste.datos.porcentaje}%)`} valor={fmtQ(Math.round(liquidoAjuste * ajuste.datos.porcentaje) / 100)} />
+                  <Dato label="Antes se le debía" valor={fmtQ(ajuste.datos.deuda?.original)} />
+                </Grid>
+              </Box>
+              {totalAjuste > ajuste.datos.pension && <Alert severity="error">Los descuentos no pueden ser mayores que la pensión.</Alert>}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAjuste(null)}>Cancelar</Button>
+          <Button variant="contained" onClick={guardarAjuste} disabled={guardandoAjuste || !ajuste || totalAjuste > (ajuste?.datos?.pension || 0)}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={historiaOpen} onClose={() => setHistoriaOpen(false)} fullWidth maxWidth={gruposUsados.length > 2 ? "xl" : "lg"}>
         <DialogTitle>Historia completa</DialogTitle>
         <DialogContent dividers sx={{ pt: 0 }}>
@@ -240,6 +324,7 @@ const EstadoCuentaPage = () => {
             pendiente más antiguo; por eso el mes de la nómina queda con su pensión completa pendiente.
             <b> EN PROCESO</b>: planilla generada que aún no se cierra.
             <b> CANCELADA</b>: mes de la deuda que se pagó fuera del sistema (registrado en Fallecimientos).
+            <b> Ajustar</b> (lápiz): corrige los descuentos de un mes de la carga histórica (por ejemplo, el último mes de un préstamo con saldo menor a la cuota).
           </Typography>
           <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
             <TableHead>
@@ -249,6 +334,7 @@ const EstadoCuentaPage = () => {
                 <TableCell colSpan={gruposUsados.length + 1} align="center" sx={{ borderLeft: "1px solid #DDE3EA", borderRight: "1px solid #DDE3EA" }}>Descuentos</TableCell>
                 <TableCell rowSpan={2} align="right">Monto generado</TableCell>
                 <TableCell rowSpan={2} align="right">Recibido en el mes</TableCell><TableCell rowSpan={2} align="right">Abonado a la deuda</TableCell><TableCell rowSpan={2} align="right">Saldo</TableCell><TableCell rowSpan={2}>Estado</TableCell><TableCell rowSpan={2}>Tipo</TableCell>
+                {canEdit(user) && <TableCell rowSpan={2} align="center">Ajustar</TableCell>}
               </TableRow>
               <TableRow sx={{ "& th": { top: 37, fontSize: 12, color: "text.secondary", py: 0.5 } }}>
                 {gruposUsados.map((g, k) => (
@@ -295,6 +381,15 @@ const EstadoCuentaPage = () => {
                     <TableCell align="right">{fmtQ(d.saldo)}</TableCell>
                     <TableCell><Chip size="small" label={d.enProceso ? "EN PROCESO" : d.esDeuda ? d.estado : "HISTORIA"} sx={{ bgcolor: color, color: "#fff" }} /></TableCell>
                     <TableCell>{d.tipoPago}</TableCell>
+                    {canEdit(user) && (
+                      <TableCell align="center" sx={{ py: 0 }}>
+                        {d.esDeuda && !d.enProceso && (
+                          <Tooltip title="Corregir los descuentos de este mes">
+                            <IconButton size="small" onClick={() => abrirAjuste(d.periodo)}><EditIcon fontSize="small" /></IconButton>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}
