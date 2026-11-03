@@ -103,24 +103,15 @@ const EstadoCuentaPage = () => {
   };
   // Un mes de la deuda que ya se pagó fuera del sistema (solo este jubilado y este mes).
   const marcarMesPagado = async (d) => {
-    const hoy = new Date().toISOString().slice(0, 10);
+    // Solo botones: la ventana de la historia retiene el foco y no deja escribir en un Swal.
     const r = await Swal.fire({
-      title: `Marcar ${fmtPeriodo(d.periodo)} como pagado`,
-      html: `<p style="margin:0 0 8px">El saldo del mes (<b>${fmtQ(d.saldo)}</b>) queda pagado fuera del sistema. Solo afecta a este jubilado y a este mes; se puede revertir.</p>
-        <input id="mp-fecha" type="date" class="swal2-input" value="${hoy}" max="${hoy}" style="width:80%">
-        <input id="mp-doc" class="swal2-input" placeholder="Documento (acta, resolución, cheque…)" style="width:80%">
-        <input id="mp-obs" class="swal2-input" placeholder="Observaciones (opcional)" style="width:80%">`,
-      showCancelButton: true, confirmButtonText: "Marcar pagado", cancelButtonText: "Cancelar", focusConfirm: false,
-      preConfirm: () => {
-        const fecha = document.getElementById("mp-fecha").value;
-        const documento = document.getElementById("mp-doc").value.trim();
-        if (!fecha || !documento) { Swal.showValidationMessage("Indique la fecha y el documento"); return false; }
-        return { fecha, documento, observaciones: document.getElementById("mp-obs").value.trim() };
-      }
+      icon: "question", title: `¿Confirmar ${fmtPeriodo(d.periodo)} como pagado?`,
+      html: `El saldo del mes (<b>${fmtQ(d.saldo)}</b>) queda pagado fuera del sistema, con fecha de hoy y su usuario.<br>Solo afecta a este jubilado y a este mes; se puede revertir.`,
+      showCancelButton: true, confirmButtonText: "Sí, pagado", cancelButtonText: "Cancelar", confirmButtonColor: "#2e7d32"
     });
     if (!r.isConfirmed) return;
     try {
-      await axiosClient.post(`/jubilados/${idSel}/historia/${d.periodo}/cancelar`, r.value);
+      await axiosClient.post(`/jubilados/${idSel}/historia/${d.periodo}/cancelar`, {});
       await recargarHistoria();
       Swal.fire({ icon: "success", title: "Mes pagado", timer: 1600, showConfirmButton: false });
     } catch (e) { Swal.fire("Error", e.response?.data?.message || "No fue posible marcar el mes.", "error"); }
@@ -128,12 +119,12 @@ const EstadoCuentaPage = () => {
   const revertirMesPagado = async (d) => {
     const r = await Swal.fire({
       icon: "warning", title: `Revertir ${fmtPeriodo(d.periodo)}`,
-      text: "El mes vuelve a quedar pendiente en la deuda.", input: "text", inputPlaceholder: "Motivo",
+      text: "El mes vuelve a quedar pendiente en la deuda.",
       showCancelButton: true, confirmButtonText: "Revertir", cancelButtonText: "Cancelar", confirmButtonColor: "#c62828"
     });
     if (!r.isConfirmed) return;
     try {
-      await axiosClient.post(`/jubilados/${idSel}/historia/${d.periodo}/cancelar/revertir`, { motivo: r.value });
+      await axiosClient.post(`/jubilados/${idSel}/historia/${d.periodo}/cancelar/revertir`, { motivo: "Revertido desde estado de cuenta" });
       await recargarHistoria();
       Swal.fire({ icon: "success", title: "Mes pendiente otra vez", timer: 1600, showConfirmButton: false });
     } catch (e) { Swal.fire("Error", e.response?.data?.message || "No fue posible revertir.", "error"); }
@@ -367,7 +358,7 @@ const EstadoCuentaPage = () => {
             <b> EN PROCESO</b>: planilla generada que aún no se cierra.
             <b> CANCELADA</b>: mes de la deuda que se pagó fuera del sistema (toda la deuda en Fallecimientos, o un mes con el botón ✓).
             <b> Ajustar</b> (lápiz): corrige los descuentos de un mes de la carga histórica (por ejemplo, el último mes de un préstamo con saldo menor a la cuota).
-            <b> ✓ Marcar pagado</b>: un mes que ya se pagó fuera del sistema (por ejemplo, enero 2023); pide fecha y documento y se puede revertir.
+            <b> ✓ Marcar pagado</b>: un mes que ya se pagó fuera del sistema (por ejemplo, enero 2023); se confirma con un clic (queda la fecha y el usuario) y se puede revertir.
           </Typography>
           <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
             <TableHead>
