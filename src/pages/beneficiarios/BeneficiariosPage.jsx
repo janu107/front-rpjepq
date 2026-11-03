@@ -21,16 +21,17 @@ import EstadoCuentaBeneficiario from "./EstadoCuentaBeneficiario";
 import { useAuth } from "../../context/AuthContext";
 import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
-// Solo ESPOSA, HIJO e HIJO_INVALIDEZ cobran por ahora; los demás se registran
-// hasta que se defina su regla de pago.
-const PARENTESCOS_PAGO = ["ESPOSA", "HIJO", "HIJO_INVALIDEZ"];
-const PARENTESCOS = [...PARENTESCOS_PAGO, "ESPOSO", "CONVIVIENTE", "HERMANO", "HERMANA", "SOBRINO", "SOBRINA",
+// Cobran el cónyuge (ESPOSA o ESPOSO: viuda o viudo), HIJO e HIJO_INVALIDEZ; los demás
+// solo se registran.
+const PARENTESCOS_PAGO = ["ESPOSA", "ESPOSO", "HIJO", "HIJO_INVALIDEZ"];
+const esConyuge = (p) => p === "ESPOSA" || p === "ESPOSO";
+const PARENTESCOS = [...PARENTESCOS_PAGO, "CONVIVIENTE", "HERMANO", "HERMANA", "SOBRINO", "SOBRINA",
   "TIO", "TIA", "PRIMO", "PRIMA", "ABUELO", "ABUELA", "NIETO", "NIETA", "AMIGO", "VECINO", "OTRO"];
 const PARENTESCOS_TUTOR = ["MADRE", "PADRE", "ABUELA", "ABUELO", "TIA", "TIO", "HERMANA", "HERMANO", "PRIMA", "PRIMO",
   "SOBRINA", "SOBRINO", "MADRINA", "PADRINO", "AMIGA", "AMIGO", "VECINA", "VECINO", "OTRO"];
 const opcionParentesco = (p, ocupadaEsposa) => (
-  <MenuItem key={p} value={p} disabled={p === "ESPOSA" && ocupadaEsposa}>
-    {p}{p === "ESPOSA" && ocupadaEsposa ? " (ya existe)" : ""}
+  <MenuItem key={p} value={p} disabled={esConyuge(p) && ocupadaEsposa}>
+    {p}{esConyuge(p) && ocupadaEsposa ? " (ya hay cónyuge)" : ""}
     {!PARENTESCOS_PAGO.includes(p) && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>solo registro</Typography>}
   </MenuItem>
 );
@@ -62,35 +63,49 @@ const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFraction
 const r2 = (n) => Math.round(Number(n || 0) * 100) / 100;
 const esHijo = (p) => p === "HIJO" || p === "HIJO_INVALIDEZ";
 
-// Reparto que manda la ley: la esposa hasta el 50% de la pensión y los hijos,
+// Reparto que manda la ley: el cónyuge hasta el 50% de la pensión y los hijos,
 // entre todos, hasta el otro 50%. Los montos los dicta el juez; aquí se proponen.
 const resumenReparto = (lista, pension) => {
   const mitad = r2(pension / 2);
-  const esposa = r2(lista.filter((b) => b.tipoParentesco === "ESPOSA").reduce((a, b) => a + Number(b.monto || 0), 0));
+  const esposa = r2(lista.filter((b) => esConyuge(b.tipoParentesco)).reduce((a, b) => a + Number(b.monto || 0), 0));
   const hijos = r2(lista.filter((b) => esHijo(b.tipoParentesco)).reduce((a, b) => a + Number(b.monto || 0), 0));
   const sinMonto = lista.find((b) => PARENTESCOS_PAGO.includes(b.tipoParentesco) && !(Number(b.monto) > 0));
   let error = null;
   if (!(pension > 0)) error = "El jubilado no tiene pensión registrada";
-  else if (esposa > mitad) error = `La esposa puede recibir hasta ${fmtQ(mitad)} (50% de la pensión)`;
+  else if (esposa > mitad) error = `El cónyuge puede recibir hasta ${fmtQ(mitad)} (50% de la pensión)`;
   else if (hijos > mitad) error = `Los hijos, entre todos, pueden recibir hasta ${fmtQ(mitad)} (50% de la pensión)`;
   else if (sinMonto) error = `Falta el monto de ${sinMonto.apellidos || sinMonto.tipoParentesco}`;
   return { mitad, esposa, hijos, error };
 };
-// Propuesta: esposa 50%; los hijos se reparten el otro 50% en partes iguales.
+// Propuesta: cónyuge 50%; los hijos se reparten el otro 50% en partes iguales.
 const proponerMontos = (lista, pension) => {
   const mitad = r2(pension / 2);
   const hijos = lista.filter((b) => esHijo(b.tipoParentesco));
   const parte = hijos.length ? Math.floor((mitad / hijos.length) * 100) / 100 : 0;
   let resto = r2(mitad - parte * hijos.length);
   return lista.map((b) => {
-    if (b.tipoParentesco === "ESPOSA") return { ...b, monto: mitad };
+    if (esConyuge(b.tipoParentesco)) return { ...b, monto: mitad };
     if (esHijo(b.tipoParentesco)) { const m = r2(parte + resto); resto = 0; return { ...b, monto: m }; }
     return b;
   });
 };
+// Monto y % de la pensión enlazados: se escribe cualquiera de los dos y el otro se calcula.
+const MontoPct = ({ monto, pension, onChange, ancho = 112 }) => {
+  const pct = pension > 0 && monto !== "" && monto !== null && monto !== undefined ? r2((Number(monto) / pension) * 100) : "";
+  return (
+    <Stack direction="row" spacing={0.75} justifyContent="flex-end">
+      <TextField size="small" type="number" label="Q" value={monto ?? ""} sx={{ width: ancho }}
+        inputProps={{ min: 0, step: "0.01", style: { textAlign: "right" } }}
+        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))} />
+      <TextField size="small" type="number" label="%" value={pct} sx={{ width: 84 }} disabled={!(pension > 0)}
+        inputProps={{ min: 0, max: 50, step: "0.01", style: { textAlign: "right" } }}
+        onChange={(e) => onChange(e.target.value === "" ? "" : r2((pension * Number(e.target.value)) / 100))} />
+    </Stack>
+  );
+};
 const ChipReparto = ({ r }) => (
   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-    <Chip size="small" label={`Esposa: ${fmtQ(r.esposa)} de ${fmtQ(r.mitad)}`} color={r.esposa > r.mitad ? "error" : "default"} />
+    <Chip size="small" label={`Cónyuge: ${fmtQ(r.esposa)} de ${fmtQ(r.mitad)}`} color={r.esposa > r.mitad ? "error" : "default"} />
     <Chip size="small" label={`Hijos: ${fmtQ(r.hijos)} de ${fmtQ(r.mitad)}`} color={r.hijos > r.mitad ? "error" : "default"} />
     {r.error ? <Chip size="small" color="error" label={r.error} /> : <Chip size="small" color="success" icon={<CheckCircleIcon />} label="Reparto correcto" />}
   </Stack>
@@ -219,7 +234,7 @@ const BeneficiariosPage = () => {
   // --- Reparto de los nuevos (montos) ---
   const pension = Number(jubilado?.pension || 0);
   const reparto = useMemo(() => resumenReparto(nuevos, pension), [nuevos, pension]);
-  const hayEsposa = useMemo(() => nuevos.some((b) => b.tipoParentesco === "ESPOSA"), [nuevos]);
+  const hayEsposa = useMemo(() => nuevos.some((b) => esConyuge(b.tipoParentesco)), [nuevos]);
   const pctOk = !reparto.error;
 
   // --- Modal beneficiario ---
@@ -277,7 +292,7 @@ const BeneficiariosPage = () => {
   const setTUpper = (k) => (e) => setTutoraForm({ ...tutoraForm, [k]: e.target.value.toUpperCase() });
   const guardarTutora = () => {
     if (!tutoraForm.apellidos.trim() || !esDpi(tutoraForm.dpi)) {
-      Swal.fire("Validación", "La tutora requiere apellidos y DPI de 13 dígitos.", "warning"); return;
+      Swal.fire("Validación", "El tutor requiere apellidos y DPI de 13 dígitos.", "warning"); return;
     }
     if (errorPago(tutoraForm)) { Swal.fire("Validación", `Tutora: ${errorPago(tutoraForm)}`, "warning"); return; }
     setNuevos((prev) => prev.map((b, i) => (i === tutoraIdx ? { ...b, tutora: { ...tutoraForm } } : b)));
@@ -289,9 +304,9 @@ const BeneficiariosPage = () => {
     if (!jubilado) return;
     if (!nuevos.length) { Swal.fire("Validación", "Agregue al menos un beneficiario.", "warning"); return; }
     if (reparto.error) { Swal.fire("Validación", reparto.error, "warning"); return; }
-    if (nuevos.filter((b) => b.tipoParentesco === "ESPOSA").length > 1) { Swal.fire("Validación", "Solo se permite una ESPOSA.", "warning"); return; }
+    if (nuevos.filter((b) => esConyuge(b.tipoParentesco)).length > 1) { Swal.fire("Validación", "Solo se permite un cónyuge (esposa o esposo).", "warning"); return; }
     const menorSinTutora = nuevos.find((b) => edad(b.fechaNacimiento) < 18 && !b.tutora);
-    if (menorSinTutora) { Swal.fire("Validación", `El beneficiario menor ${menorSinTutora.apellidos} requiere tutora.`, "warning"); return; }
+    if (menorSinTutora) { Swal.fire("Validación", `El beneficiario menor ${menorSinTutora.apellidos} requiere un tutor (mayor de edad).`, "warning"); return; }
 
     try {
       setGuardando(true);
@@ -333,7 +348,7 @@ const BeneficiariosPage = () => {
   const setET = (k, upper) => (e) => setEditTutora({ ...editTutora, [k]: upper ? e.target.value.toUpperCase() : e.target.value });
   const editMenor = editForm.fechaNacimiento ? edad(editForm.fechaNacimiento) < 18 : false;
   const editTieneTutora = Boolean(editTutora.apellidos || editTutora.dpi);
-  const otraEsposa = existentes.some((b) => b.id !== editId && b.tipoParentesco === "ESPOSA");
+  const otraEsposa = existentes.some((b) => b.id !== editId && esConyuge(b.tipoParentesco));
   const errEdit = useMemo(() => {
     const err = {};
     if (!editForm.apellidos.trim()) err.apellidos = "Obligatorio";
@@ -342,8 +357,8 @@ const BeneficiariosPage = () => {
     if (!editForm.fechaNacimiento) err.fechaNacimiento = "Obligatoria";
     else if (new Date(editForm.fechaNacimiento) > new Date()) err.fechaNacimiento = "No puede ser futura";
     if (!esCorreo(editForm.correo)) err.correo = "Correo inválido";
-    if (editMenor && (!editTutora.apellidos.trim() || !esDpi(editTutora.dpi))) err.tutora = "Es menor: la tutora requiere apellidos y DPI de 13 dígitos";
-    if (!editMenor && editTieneTutora && (!editTutora.apellidos.trim() || !esDpi(editTutora.dpi))) err.tutora = "Complete apellidos y DPI de la tutora (o deje sus datos vacíos)";
+    if (editMenor && (!editTutora.apellidos.trim() || !esDpi(editTutora.dpi))) err.tutora = "Es menor: el tutor requiere apellidos y DPI de 13 dígitos";
+    if (!editMenor && editTieneTutora && (!editTutora.apellidos.trim() || !esDpi(editTutora.dpi))) err.tutora = "Complete apellidos y DPI del tutor (o deje sus datos vacíos)";
     if (errorPago(editForm)) err.pago = errorPago(editForm);
     if ((editMenor || editTieneTutora) && errorPago(editTutora)) err.pagoTutora = `Tutora: ${errorPago(editTutora)}`;
     return err;
@@ -429,13 +444,13 @@ const BeneficiariosPage = () => {
             <Grid item xs={6} md={2}><TextField label="Estado de pago" value={jubilado.estadoPago || ""} fullWidth InputProps={{ readOnly: true }} variant="filled" /></Grid>
             <Grid item xs={12}>
               <Typography variant="body2" color="text.secondary">
-                Pensión: <b>{fmtQ(pension)}</b> · por ley la esposa recibe hasta <b>{fmtQ(pension / 2)}</b> (50%) y los hijos,
+                Pensión{jubilado.enServicio ? " de referencia" : ""}: <b>{fmtQ(pension)}</b> · por ley el cónyuge (viuda o viudo) recibe hasta <b>{fmtQ(pension / 2)}</b> (50%) y los hijos,
                 entre todos, hasta <b>{fmtQ(pension / 2)}</b> (el otro 50%). Los montos los dicta el juez.
               </Typography>
             </Grid>
           </Grid>
         )}
-        {bloqueadoPorJubilado && (
+        {bloqueadoPorJubilado && existentes.length > 0 && (
           <Alert severity="info" sx={{ mt: 2 }}>
             Este jubilado está en estado <b>{jubilado.estadoPago}</b>: no se agregan beneficiarios nuevos. Sí se pueden editar sus datos
             y <b>ajustar los montos</b> (por ejemplo, por una nueva resolución del juez).
@@ -468,7 +483,7 @@ const BeneficiariosPage = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Parentesco</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell>
-                  <TableCell align="right">Monto mensual</TableCell><TableCell>Estado</TableCell><TableCell>Tutora</TableCell>
+                  <TableCell align="right">Monto mensual</TableCell><TableCell>Estado</TableCell><TableCell>Tutor</TableCell>
                   <TableCell align="center">Acciones</TableCell>
                 </TableRow>
               </TableHead>
@@ -480,9 +495,7 @@ const BeneficiariosPage = () => {
                     <TableCell>{b.dpi}</TableCell>
                     <TableCell align="right">
                       {pctEdit && pctEdit[b.id] !== undefined ? (
-                        <TextField size="small" type="number" value={pctEdit[b.id] ?? ""} sx={{ width: 130 }}
-                          inputProps={{ min: 0, step: "0.01", style: { textAlign: "right" } }}
-                          onChange={(e) => setPctEdit((p) => ({ ...p, [b.id]: e.target.value }))} />
+                        <MontoPct monto={pctEdit[b.id]} pension={pension} onChange={(v) => setPctEdit((p) => ({ ...p, [b.id]: v }))} />
                       ) : (
                         <>
                           <b>{b.monto !== null && b.monto !== undefined ? fmtQ(b.monto) : "—"}</b>
@@ -498,7 +511,7 @@ const BeneficiariosPage = () => {
                         const txt = p.formaPago === "ABONO CUENTA" ? `${p.bancoNombre || ""} ${p.cuenta || ""}`.trim() : p.formaPago;
                         return (
                           <Typography variant="caption" sx={{ display: "block" }} color={txt ? "text.secondary" : "error"}>
-                            {txt ? `${b.esMenor && t ? "Tutora: " : ""}${txt}` : "Sin datos de pago"}
+                            {txt ? `${b.esMenor && t ? "Tutor: " : ""}${txt}` : "Sin datos de pago"}
                           </Typography>
                         );
                       })()}
@@ -506,7 +519,7 @@ const BeneficiariosPage = () => {
                     <TableCell>
                       {(b.tutores || []).length
                         ? <Chip size="small" icon={<CheckCircleIcon />} label={`${b.tutores[b.tutores.length - 1].nombres || ""} ${b.tutores[b.tutores.length - 1].apellidos || ""}`.trim() || "Sí"} color="success" />
-                        : (b.esMenor ? <Chip size="small" color="error" label="Falta tutora" /> : "N/A")}
+                        : (b.esMenor ? <Chip size="small" color="error" label="Falta tutor" /> : "N/A")}
                     </TableCell>
                     {(
                       <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
@@ -524,8 +537,14 @@ const BeneficiariosPage = () => {
       )}
 
       {/* Alta de nuevos beneficiarios (solo si no hay existentes) */}
-      {jubilado && !soloLectura && !bloqueadoPorJubilado && existentes.length === 0 && (
+      {jubilado && !soloLectura && (!bloqueadoPorJubilado || jubilado.estadoPago === "FALLECIDO") && existentes.length === 0 && (
         <Paper sx={{ p: 2.5 }}>
+          {jubilado.estadoPago === "FALLECIDO" && (
+            <Alert severity="info" sx={{ mb: 1.5 }}>
+              {jubilado.enServicio ? "Falleció en servicio" : "Ya está registrado como fallecido"}: los beneficiarios que guarde quedan
+              <b> ACTIVOS</b> de una vez y cobran desde la próxima planilla{jubilado.enServicio ? ", sin deuda ni meses atrasados" : ""}.
+            </Alert>
+          )}
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
             <Typography variant="h6" sx={{ color: PRIMARIO }}>Agregar beneficiarios</Typography>
             <Button variant="contained" startIcon={<AddIcon />} onClick={abrirModalBen}>Agregar</Button>
@@ -536,7 +555,7 @@ const BeneficiariosPage = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Parentesco</TableCell><TableCell>Nombre</TableCell><TableCell>DPI</TableCell>
-                  <TableCell align="right">Monto mensual</TableCell><TableCell>Menor / Tutora</TableCell><TableCell align="center">Quitar</TableCell>
+                  <TableCell align="right">Monto mensual</TableCell><TableCell>Menor / Tutor</TableCell><TableCell align="center">Quitar</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -548,17 +567,16 @@ const BeneficiariosPage = () => {
                       <TableCell>{`${b.nombres} ${b.apellidos}`.trim()}</TableCell>
                       <TableCell>{b.dpi}</TableCell>
                       <TableCell align="right">
-                        <TextField size="small" type="number" value={b.monto ?? ""} sx={{ width: 130 }}
-                          inputProps={{ min: 0, step: "0.01", style: { textAlign: "right" } }}
-                          onChange={(e) => setNuevos((prev) => prev.map((x, i) => (i === idx ? { ...x, monto: e.target.value === "" ? "" : Number(e.target.value) } : x)))} />
+                        <MontoPct monto={b.monto} pension={pension}
+                          onChange={(v) => setNuevos((prev) => prev.map((x, i) => (i === idx ? { ...x, monto: v } : x)))} />
                       </TableCell>
                       <TableCell>
                         {menor ? (
                           <Stack direction="row" spacing={1} alignItems="center">
                             <Chip size="small" icon={<ChildCareIcon />} label="MENOR" color="warning" />
                             {b.tutora
-                              ? <Chip size="small" icon={<CheckCircleIcon />} label="Tiene tutora" color="success" />
-                              : <Button size="small" variant="outlined" onClick={() => abrirModalTutora(idx)}>Tutora</Button>}
+                              ? <Chip size="small" icon={<CheckCircleIcon />} label="Tiene tutor" color="success" />
+                              : <Button size="small" variant="outlined" onClick={() => abrirModalTutora(idx)}>Tutor</Button>}
                           </Stack>
                         ) : "N/A"}
                       </TableCell>
@@ -589,8 +607,8 @@ const BeneficiariosPage = () => {
 
       {jubilado && existentes.length > 0 && !soloLectura && (
         <Alert severity="info">
-          Este jubilado ya tiene beneficiarios. Use <b>Editar</b> para corregir los datos de un beneficiario o de su tutora, y
-          <b> Ajustar montos</b> para anotar lo que dictó el juez (esposa hasta 50% de la pensión; hijos, entre todos, hasta 50%).
+          Este jubilado ya tiene beneficiarios. Use <b>Editar</b> para corregir los datos de un beneficiario o de su tutor, y
+          <b> Ajustar montos</b> para anotar lo que dictó el juez, en quetzales o en % (cónyuge hasta 50% de la pensión; hijos, entre todos, hasta 50%).
         </Alert>
       )}
 
@@ -611,11 +629,16 @@ const BeneficiariosPage = () => {
             <Grid item xs={12} md={4}><TextField label="Apellidos *" value={form.apellidos} onChange={setFUpper("apellidos")} error={!!errModal.apellidos} helperText={errModal.apellidos} fullWidth /></Grid>
             <Grid item xs={12} md={4}><TextField label="DPI *" value={form.dpi} onChange={setF("dpi")} error={!!errModal.dpi} helperText={errModal.dpi || "13 dígitos"} fullWidth /></Grid>
             <Grid item xs={12} md={4}><TextField label="Fecha nacimiento *" type="date" value={form.fechaNacimiento} onChange={setF("fechaNacimiento")} error={!!errModal.fechaNacimiento} helperText={errModal.fechaNacimiento || (form.fechaNacimiento ? `Edad: ${edad(form.fechaNacimiento)} años` : "")} InputLabelProps={{ shrink: true }} fullWidth /></Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={7} md={2.5}>
               <TextField label={PARENTESCOS_PAGO.includes(form.tipoParentesco) ? "Monto mensual (Q) *" : "Monto mensual (Q)"} type="number" value={form.monto} onChange={setF("monto")}
-                error={!!errModal.monto}
-                helperText={errModal.monto || (pension > 0 && form.monto !== "" ? `${r2((Number(form.monto) / pension) * 100)}% de la pensión (${fmtQ(pension)})` : "Lo que dictó el juez")}
+                error={!!errModal.monto} helperText={errModal.monto || "Lo que dictó el juez"}
                 fullWidth inputProps={{ min: 0, step: "0.01" }} />
+            </Grid>
+            <Grid item xs={5} md={1.5}>
+              <TextField label="% pensión" type="number" disabled={!(pension > 0)}
+                value={pension > 0 && form.monto !== "" ? r2((Number(form.monto) / pension) * 100) : ""}
+                onChange={(e) => setForm({ ...form, monto: e.target.value === "" ? "" : String(r2((pension * Number(e.target.value)) / 100)) })}
+                helperText={pension > 0 ? `de ${fmtQ(pension)}` : ""} fullWidth inputProps={{ min: 0, max: 50, step: "0.01" }} />
             </Grid>
             <Grid item xs={12} md={6}><TextField label="Teléfono" value={form.telefono} onChange={setF("telefono")} fullWidth /></Grid>
             <Grid item xs={12} md={6}><TextField label="Correo" value={form.correo} onChange={setF("correo")} error={!!errModal.correo} helperText={errModal.correo} fullWidth /></Grid>
@@ -623,7 +646,7 @@ const BeneficiariosPage = () => {
               <CamposPago titulo="Datos de pago (cuenta del beneficiario)" valor={pagoDe(form)} bancos={bancos} onChange={(v) => setForm({ ...form, ...v })} />
             )}
             {form.fechaNacimiento && edad(form.fechaNacimiento) < 18 && (
-              <Grid item xs={12}><Alert severity="warning">Es menor de edad: después de agregarlo deberá asignarle una tutora antes de guardar. Su pago se deposita en la cuenta de la tutora.</Alert></Grid>
+              <Grid item xs={12}><Alert severity="warning">Es menor de edad: después de agregarlo deberá asignarle un tutor (madre, tío, tía u otro mayor de edad) antes de guardar. Su pago se deposita en la cuenta de la tutora.</Alert></Grid>
             )}
           </Grid>
         </DialogContent>
@@ -662,7 +685,7 @@ const BeneficiariosPage = () => {
               <>
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 800, color: PRIMARIO, mt: 1 }}>
-                    Tutora {editMenor ? "(obligatoria: es menor de edad)" : ""}
+                    Tutor {editMenor ? "(obligatorio: es menor de edad)" : ""}
                   </Typography>
                   {errEdit.tutora && <Typography variant="caption" color="error">{errEdit.tutora}</Typography>}
                 </Grid>
@@ -671,7 +694,7 @@ const BeneficiariosPage = () => {
                 <Grid item xs={12} md={4}><TextField label="DPI *" value={editTutora.dpi} onChange={setET("dpi")} error={!!editTutora.dpi && !esDpi(editTutora.dpi)} helperText="13 dígitos" fullWidth /></Grid>
                 <CampoParentescoTutor md={4} value={editTutora.parentesco} onChange={(v) => setEditTutora((t) => ({ ...t, parentesco: v }))} />
                 <Grid item xs={12} md={4}><TextField label="Teléfono" value={editTutora.telefono} onChange={setET("telefono")} fullWidth /></Grid>
-                <CamposPago titulo="Datos de pago de la tutora (aquí se deposita lo del menor)" valor={pagoDe(editTutora)} bancos={bancos} onChange={(v) => setEditTutora({ ...editTutora, ...v })} />
+                <CamposPago titulo="Datos de pago del tutor (aquí se deposita lo del menor)" valor={pagoDe(editTutora)} bancos={bancos} onChange={(v) => setEditTutora({ ...editTutora, ...v })} />
               </>
             )}
           </Grid>
@@ -684,7 +707,7 @@ const BeneficiariosPage = () => {
 
       {/* Modal: tutora */}
       <Dialog open={modalTutora} onClose={() => setModalTutora(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Tutora del menor</DialogTitle>
+        <DialogTitle>Tutor del menor</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12} md={6}><TextField label="Nombres" value={tutoraForm.nombres} onChange={setTUpper("nombres")} fullWidth /></Grid>
@@ -692,12 +715,12 @@ const BeneficiariosPage = () => {
             <Grid item xs={12} md={6}><TextField label="DPI *" value={tutoraForm.dpi} onChange={setT("dpi")} error={!!tutoraForm.dpi && !esDpi(tutoraForm.dpi)} helperText="13 dígitos" fullWidth /></Grid>
             <CampoParentescoTutor value={tutoraForm.parentesco} onChange={(v) => setTutoraForm((t) => ({ ...t, parentesco: v }))} />
             <Grid item xs={12} md={6}><TextField label="Teléfono" value={tutoraForm.telefono} onChange={setT("telefono")} fullWidth /></Grid>
-            <CamposPago titulo="Datos de pago (cuenta de la tutora: aquí se deposita lo del menor)" valor={pagoDe(tutoraForm)} bancos={bancos} onChange={(v) => setTutoraForm({ ...tutoraForm, ...v })} />
+            <CamposPago titulo="Datos de pago (cuenta del tutor: aquí se deposita lo del menor)" valor={pagoDe(tutoraForm)} bancos={bancos} onChange={(v) => setTutoraForm({ ...tutoraForm, ...v })} />
           </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setModalTutora(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={guardarTutora}>Guardar tutora</Button>
+          <Button variant="contained" onClick={guardarTutora}>Guardar tutor</Button>
         </DialogActions>
       </Dialog>
     </Stack>

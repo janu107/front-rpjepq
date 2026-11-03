@@ -59,7 +59,7 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
               <Dato etiqueta="Edad" valor={b.edad !== null ? `${b.edad} años${b.esMenor ? " (menor)" : ""}` : "—"} />
               <Dato etiqueta="Se le debe por mes" valor={fmtQ(datos.mensual.seLeDebe)} />
               <Dato etiqueta={`Se le paga por mes (${datos.mensual.porcentajePlanilla}%)`} valor={fmtQ(datos.mensual.seLePaga)} />
-              <Dato etiqueta="Se deposita a" valor={`${b.pago.aNombreDe}${b.pago.esTutora ? " (tutora)" : ""}`} />
+              <Dato etiqueta="Se deposita a" valor={`${b.pago.aNombreDe}${b.pago.esTutora ? " (tutor)" : ""}`} />
               <Dato etiqueta="Cuenta" valor={b.pago.formaPago === "ABONO CUENTA" ? `${b.pago.banco || ""} ${b.pago.cuenta || ""}` : (b.pago.formaPago || "Sin datos de pago")} />
             </Grid>
 
@@ -71,7 +71,7 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
             )}
             {df && !df.canceladaFuera && (
               <Box sx={{ p: 2, border: "1px solid #dde3ea", borderRadius: 1.5 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: PRIMARIO }}>Deuda del fallecido (la cobra la esposa)</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: PRIMARIO }}>Deuda del fallecido (la cobra el cónyuge)</Typography>
                 <Grid container spacing={2} sx={{ mt: 0.5 }}>
                   <Dato etiqueta="Total de la deuda" valor={fmtQ(df.total)} />
                   <Dato etiqueta="Pagado" valor={fmtQ(df.pagado)} />
@@ -92,7 +92,7 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
 
             <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, color: PRIMARIO, mb: 0.5 }}>
-                {b.parentesco === "ESPOSA" ? "Viudez" : "Orfandad"}: lo que se le debe mes a mes
+                {["ESPOSA", "ESPOSO"].includes(b.parentesco) ? "Viudez" : "Orfandad"}: lo que se le debe mes a mes
               </Typography>
               <Grid container spacing={2} sx={{ mb: 1 }}>
                 <Dato etiqueta="Total que se le debe" valor={fmtQ(datos.resumen.debe)} />
@@ -102,7 +102,7 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
               </Grid>
               {datos.meses.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  {b.parentesco === "ESPOSA" && df && df.pendiente > 0
+                  {["ESPOSA", "ESPOSO"].includes(b.parentesco) && df && df.pendiente > 0
                     ? "La viudez empieza la planilla siguiente a terminar de cobrar la deuda del fallecido."
                     : "Aún no hay meses: se crean al cerrar cada planilla."}
                 </Typography>

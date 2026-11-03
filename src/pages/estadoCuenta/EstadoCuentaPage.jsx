@@ -156,13 +156,13 @@ const EstadoCuentaPage = () => {
                 <b>Falleció el {fmtFecha(fall.fecha)}</b>{fall.certificado ? ` (certificado ${fall.certificado})` : ""}. Lo que se paga desde
                 entonces es a sus <b>beneficiarios</b>: vea el estado de cuenta de cada uno en la tabla de abajo.
                 {fall.cancelacion ? (
-                  <> Su deuda de <b>{fmtQ(fall.cancelacion.monto)}</b> ({fall.cancelacion.meses} {fall.cancelacion.meses === 1 ? "mes" : "meses"}) se pagó <b>fuera del sistema</b> el {fmtFecha(fall.cancelacion.fecha)} ({fall.cancelacion.documento}): la esposa cobra su VIUDEZ.</>
-                ) : saldo > 0 ? <> El saldo pendiente de abajo es su deuda: la <b>cobra la esposa</b> antes de pasar a VIUDEZ.</> : null}
+                  <> Su deuda de <b>{fmtQ(fall.cancelacion.monto)}</b> ({fall.cancelacion.meses} {fall.cancelacion.meses === 1 ? "mes" : "meses"}) se pagó <b>fuera del sistema</b> el {fmtFecha(fall.cancelacion.fecha)} ({fall.cancelacion.documento}): el cónyuge cobra su VIUDEZ.</>
+                ) : saldo > 0 ? <> El saldo pendiente de abajo es su deuda: la <b>cobra el cónyuge</b> antes de pasar a VIUDEZ.</> : null}
               </Alert>
             )}
             <Box sx={{ mt: 2, p: 2, borderRadius: 2, textAlign: "center", bgcolor: saldo > 0 ? "rgba(244,67,54,0.08)" : "rgba(76,175,80,0.08)" }}>
               <Typography variant="caption" color="text.secondary">
-                {fall ? (fall.cancelacion ? "DEUDA DEL FALLECIDO (PAGADA FUERA DEL SISTEMA)" : "DEUDA DEL FALLECIDO PENDIENTE (LA COBRA LA ESPOSA)") : "SALDO PENDIENTE"}
+                {fall ? (fall.cancelacion ? "DEUDA DEL FALLECIDO (PAGADA FUERA DEL SISTEMA)" : "DEUDA DEL FALLECIDO PENDIENTE (LA COBRA EL CÓNYUGE)") : "SALDO PENDIENTE"}
               </Typography>
               <Typography sx={{ fontWeight: 800, fontSize: 34, color: saldo > 0 ? ROJO : VERDE }}>{fmtQ(saldo)}</Typography>
             </Box>

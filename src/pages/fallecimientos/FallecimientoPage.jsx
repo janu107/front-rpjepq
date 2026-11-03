@@ -2,9 +2,10 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import EditIcon from "@mui/icons-material/Edit";
 import UndoIcon from "@mui/icons-material/Undo";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
+import BadgeIcon from "@mui/icons-material/Badge";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import {
-  Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Grid, Paper, Radio, RadioGroup, Stack,
+  Alert, Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Grid, InputLabel, MenuItem, Paper, Radio, RadioGroup, Select, Stack,
   Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography
 } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -35,6 +36,39 @@ const FallecimientoPage = () => {
   // --- Fallecimientos ya registrados: corregir o revertir ---
   const [fallecidos, setFallecidos] = useState([]);
   const [corregir, setCorregir] = useState(null); // { id, nombre, fechaFallecimiento, noDefuncion }
+  // Empleado EPQ que falleció en servicio (nunca fue jubilado).
+  const [servicio, setServicio] = useState(null); // { aportante, codigo, fechaFallecimiento, noDefuncion, pensionReferencia, tipoJubilacion }
+  const [aportantes, setAportantes] = useState([]);
+  const [tiposJub, setTiposJub] = useState([]);
+  const abrirServicio = async () => {
+    setServicio({ aportante: null, codigo: "", fechaFallecimiento: "", noDefuncion: "", pensionReferencia: "", tipoJubilacion: 3 });
+    try {
+      const [a, o] = await Promise.all([axiosClient.get("/aportaciones"), axiosClient.get("/impresiones/opciones").catch(() => ({ data: {} }))]);
+      setAportantes((a.data.data || []).filter((x) => String(x.estado).toUpperCase() !== "FALLECIDO"));
+      setTiposJub(o.data?.data?.tiposJubilacion || []);
+    } catch { setAportantes([]); }
+  };
+  const guardarServicio = async () => {
+    try {
+      const { data } = await axiosClient.post("/jubilados/fallecido-en-servicio", {
+        idAportacion: servicio.aportante?.id, codigo: Number(servicio.codigo), fechaFallecimiento: servicio.fechaFallecimiento,
+        noDefuncion: servicio.noDefuncion, pensionReferencia: Number(servicio.pensionReferencia), tipoJubilacion: servicio.tipoJubilacion
+      });
+      const d = data.data || {};
+      setServicio(null);
+      cargarFallecidos();
+      const per = String(d.inicioBeneficios || "");
+      const r = await Swal.fire({
+        icon: "success", title: "Registrado",
+        html: `<b>${d.codigo} — ${d.nombre}</b> quedó registrado como fallecido en servicio.<br>Ahora registre a sus <b>beneficiarios</b>:
+               quedarán activos y cobran desde la planilla <b>${per.slice(4)}/${per.slice(0, 4)}</b>, sin meses atrasados ni deuda.`,
+        showCancelButton: true, confirmButtonText: "Ir a Beneficiarios", cancelButtonText: "Después"
+      });
+      if (r.isConfirmed) navigate("/beneficiarios");
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible registrarlo.", "error");
+    }
+  };
   // Deuda del fallecido pagada fuera del sistema: { id, nombre, deuda, meses, fecha, documento, observaciones }
   const [cancelar, setCancelar] = useState(null);
   const fmtFecha = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
@@ -46,7 +80,7 @@ const FallecimientoPage = () => {
       const d = data.data || {};
       setCancelar(null);
       cargarFallecidos();
-      Swal.fire("Listo", `Se registró la deuda de ${fmtQ(d.total)} (${d.meses} ${d.meses === 1 ? "mes" : "meses"}) como pagada fuera del sistema. La esposa pasa a cobrar VIUDEZ.${
+      Swal.fire("Listo", `Se registró la deuda de ${fmtQ(d.total)} (${d.meses} ${d.meses === 1 ? "mes" : "meses"}) como pagada fuera del sistema. El cónyuge pasa a cobrar VIUDEZ.${
         d.planillasRecalculadas?.length ? ` Se recalcularon los beneficiarios de la planilla ${d.planillasRecalculadas.join(", ")} (generada).` : ""}`, "success");
     } catch (error) {
       Swal.fire("Error", error.response?.data?.message || "No fue posible registrar la cancelación.", "error");
@@ -55,7 +89,7 @@ const FallecimientoPage = () => {
   const revertirCancelacion = async (f) => {
     const r = await Swal.fire({
       icon: "warning", title: "Revertir cancelación de la deuda",
-      html: `La deuda de <b>${f.nombre}</b> (${fmtQ(f.cancelacion.monto)}) vuelve a quedar pendiente y la esposa vuelve a cobrarla.`,
+      html: `La deuda de <b>${f.nombre}</b> (${fmtQ(f.cancelacion.monto)}) vuelve a quedar pendiente y el cónyuge vuelve a cobrarla.`,
       input: "text", inputLabel: "Motivo", inputValidator: (v) => (!String(v || "").trim() ? "Indique el motivo" : null),
       showCancelButton: true, confirmButtonText: "Revertir", cancelButtonText: "Cancelar", confirmButtonColor: "#c62828"
     });
@@ -185,7 +219,7 @@ const FallecimientoPage = () => {
             <>
               <Typography sx={{ mt: 2, mb: 1, fontWeight: 600 }}>Beneficiarios que se activarán:</Typography>
               <Table size="small">
-                <TableHead><TableRow><TableCell>Nombre</TableCell><TableCell>Parentesco</TableCell><TableCell align="right">%</TableCell><TableCell>Qué cobrará</TableCell><TableCell>Alerta</TableCell></TableRow></TableHead>
+                <TableHead><TableRow><TableCell>Nombre</TableCell><TableCell>Parentesco</TableCell><TableCell align="right">Monto mensual</TableCell><TableCell>Qué cobrará</TableCell><TableCell>Alerta</TableCell></TableRow></TableHead>
                 <TableBody>
                   {beneficiarios.map((b) => {
                     const menor = edad(b.fechaNacimiento) < 18;
@@ -194,14 +228,14 @@ const FallecimientoPage = () => {
                       <TableRow key={b.id}>
                         <TableCell>{`${b.nombres || ""} ${b.apellidos}`.trim()}</TableCell>
                         <TableCell>{b.tipoParentesco}</TableCell>
-                        <TableCell align="right">{Number(b.porcentaje).toFixed(2)}</TableCell>
+                        <TableCell align="right">{b.monto !== null && b.monto !== undefined ? fmtQ(b.monto) : `${Number(b.porcentaje).toFixed(2)}%`}</TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {b.tipoParentesco === "ESPOSA"
+                            {["ESPOSA", "ESPOSO"].includes(b.tipoParentesco)
                               ? (deuda > 0 ? "Primero la deuda del fallecido; al terminarla, viudez" : "Viudez")
                               : b.tipoParentesco === "HIJO_INVALIDEZ" ? "Orfandad (sin límite de edad)"
                                 : b.tipoParentesco !== "HIJO" ? "Solo registro (aún sin regla de pago)"
-                                : menor ? "Orfandad hasta los 18 (se paga a la tutora)" : "Mayor de edad: solo lo que se le deba"}
+                                : menor ? "Orfandad hasta los 18 (se paga al tutor)" : "Mayor de edad: solo lo que se le deba"}
                           </Typography>
                         </TableCell>
                         <TableCell>{alerta && <Chip size="small" color="warning" icon={<WarningAmberIcon />} label="Menor sin tutora" />}</TableCell>
@@ -213,10 +247,10 @@ const FallecimientoPage = () => {
 
               <Alert severity="info" sx={{ mt: 2 }}>
                 <b>Cómo se paga a los beneficiarios</b> (en la planilla de jubilados):<br />
-                • <b>Esposa</b>: cobra lo que recibía el jubilado (el % de la planilla sobre su líquido) y todo se abona a su deuda
+                • <b>Cónyuge</b> (viuda o viudo): cobra lo que recibía el jubilado (el % de la planilla sobre su líquido) y todo se abona a su deuda
                 {deuda > 0 ? <> de <b>{fmtQ(deuda)}</b></> : null}, del mes más viejo al más nuevo. Al terminarla, la planilla siguiente pasa a <b>viudez</b>:
-                su % de la pensión, pagado con el mismo % de la planilla (el resto queda como deuda a su favor).<br />
-                • <b>Hijos menores</b>: <b>orfandad</b>, su % de la pensión pagado con el % de la planilla, a la tutora. Al cumplir 18 se les paga
+                su monto, pagado con el mismo % de la planilla (el resto queda como deuda a su favor).<br />
+                • <b>Hijos menores</b>: <b>orfandad</b>, su monto pagado con el % de la planilla, a su tutor (madre, tío, tía u otro mayor de edad). Al cumplir 18 se les paga
                 de una vez lo que se les debe y dejan de cobrar.
               </Alert>
 
@@ -252,10 +286,23 @@ const FallecimientoPage = () => {
 
       {/* Fallecimientos ya registrados */}
       <Paper sx={{ p: 2.5 }}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between" alignItems={{ md: "center" }}>
+          <Box>
+            <Typography variant="h6" sx={{ color: PRIMARIO }}>Empleado EPQ que falleció en servicio</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Si falleció mientras aportaba (nunca fue jubilado), regístrelo aquí para asignarle beneficiarios. No tiene deuda:
+              su cónyuge entra directo a <b>viudez</b> y sus hijos a <b>orfandad</b>, desde la próxima planilla.
+            </Typography>
+          </Box>
+          <Button variant="outlined" startIcon={<BadgeIcon />} onClick={abrirServicio} sx={{ whiteSpace: "nowrap", flex: "none" }}>Registrar fallecido en servicio</Button>
+        </Stack>
+      </Paper>
+
+      <Paper sx={{ p: 2.5 }}>
         <Typography variant="h6" sx={{ color: PRIMARIO, mb: 0.5 }}>Fallecimientos registrados</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
           Se puede corregir la fecha o el certificado (o revertir el registro) mientras ninguna planilla CERRADA haya pagado a sus beneficiarios.
-          Si la deuda del fallecido <b>ya se le pagó a la viuda fuera del sistema</b>, regístrelo con <b>Deuda pagada</b>: así la esposa cobra su VIUDEZ y no la deuda.
+          Si la deuda del fallecido <b>ya se le pagó a la viuda fuera del sistema</b>, regístrelo con <b>Deuda pagada</b>: así el cónyuge cobra su VIUDEZ y no la deuda.
         </Typography>
         {fallecidos.length === 0 ? (
           <Typography color="text.secondary">No hay fallecimientos registrados.</Typography>
@@ -273,7 +320,7 @@ const FallecimientoPage = () => {
               {fallecidos.map((f) => (
                 <TableRow key={f.id}>
                   <TableCell>{f.codigo}</TableCell>
-                  <TableCell>{f.nombre}</TableCell>
+                  <TableCell>{f.nombre}{f.enServicio && <Chip size="small" color="info" variant="outlined" label="Falleció en servicio" sx={{ display: "flex", width: "fit-content", mt: 0.5 }} />}</TableCell>
                   <TableCell>{f.fechaFallecimiento ? String(f.fechaFallecimiento).slice(0, 10).split("-").reverse().join("/") : "—"}</TableCell>
                   <TableCell>{f.noDefuncion || "—"}</TableCell>
                   <TableCell align="center">{f.beneficiarios}</TableCell>
@@ -288,9 +335,9 @@ const FallecimientoPage = () => {
                     ) : f.deudaPendiente > 0 ? (
                       <>
                         <Chip size="small" color="error" variant="outlined" label={`${fmtQ(f.deudaPendiente)} pendiente`} />
-                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{f.mesesPendientes} {f.mesesPendientes === 1 ? "mes" : "meses"} · la cobra la esposa</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{f.mesesPendientes} {f.mesesPendientes === 1 ? "mes" : "meses"} · la cobra el cónyuge</Typography>
                       </>
-                    ) : <Chip size="small" color="success" variant="outlined" label="Saldada" />}
+                    ) : <Chip size="small" color="success" variant="outlined" label={f.enServicio ? "Sin deuda (en servicio)" : "Saldada"} />}
                   </TableCell>
                   <TableCell>
                     {f.planillasCerradas && <Chip size="small" color="success" variant="outlined" label={`Pagado en ${f.planillasCerradas}`} sx={{ mr: 0.5 }} />}
@@ -311,7 +358,7 @@ const FallecimientoPage = () => {
                     {f.editable ? (
                       <>
                         <Button size="small" startIcon={<EditIcon />} onClick={() => setCorregir({ id: f.id, nombre: f.nombre, fechaFallecimiento: String(f.fechaFallecimiento || "").slice(0, 10), noDefuncion: f.noDefuncion || "" })}>Corregir</Button>
-                        {isAdmin(user) && <Button size="small" color="error" startIcon={<UndoIcon />} onClick={() => revertir(f)}>Revertir</Button>}
+                        {isAdmin(user) && !f.enServicio && <Button size="small" color="error" startIcon={<UndoIcon />} onClick={() => revertir(f)}>Revertir</Button>}
                       </>
                     ) : <Typography variant="caption" color="text.secondary">Ya pagado: no se puede cambiar</Typography>}
                   </TableCell>
@@ -323,13 +370,57 @@ const FallecimientoPage = () => {
         )}
       </Paper>
 
+      <Dialog open={!!servicio} onClose={() => setServicio(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Empleado EPQ que falleció en servicio</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 0.5 }}>
+            <Autocomplete
+              options={aportantes} value={servicio?.aportante || null} autoHighlight autoSelect
+              onChange={(_, v) => setServicio((x) => ({ ...x, aportante: v, codigo: v ? String(v.idAportacion) : "" }))}
+              getOptionLabel={(o) => `${o.idAportacion} — ${o.nombre} ${o.apellido} — ${o.dpi}`}
+              isOptionEqualToValue={(o, v) => o.id === v.id}
+              filterOptions={(ops, { inputValue }) => {
+                const t = inputValue.trim().toLowerCase().split(/\s+/).filter(Boolean);
+                return ops.filter((o) => t.every((w) => `${o.idAportacion} ${o.nombre} ${o.apellido} ${o.dpi}`.toLowerCase().includes(w))).slice(0, 50);
+              }}
+              renderInput={(p) => <TextField {...p} label="Empleado EPQ *" placeholder="Código, nombre o DPI" />}
+            />
+            <TextField label="Código con el que quedará registrado *" value={servicio?.codigo || ""} type="number"
+              helperText="Se propone su código de empleado EPQ; cámbielo si ya lo usa otro jubilado"
+              onChange={(e) => setServicio((x) => ({ ...x, codigo: e.target.value }))} fullWidth />
+            <CampoFecha label="Fecha de fallecimiento *" value={servicio?.fechaFallecimiento || ""} onChange={(v) => setServicio((x) => ({ ...x, fechaFallecimiento: v }))} />
+            <TextField label="No. certificado de defunción *" value={servicio?.noDefuncion || ""} inputProps={{ maxLength: 50 }}
+              onChange={(e) => setServicio((x) => ({ ...x, noDefuncion: e.target.value.toUpperCase() }))} fullWidth />
+            <TextField label="Pensión de referencia (Q) *" type="number" value={servicio?.pensionReferencia || ""}
+              helperText="La pensión que le hubiera correspondido: el cónyuge recibe hasta el 50% y los hijos, entre todos, hasta el otro 50%"
+              onChange={(e) => setServicio((x) => ({ ...x, pensionReferencia: e.target.value }))} fullWidth />
+            {tiposJub.length > 0 && (
+              <FormControl fullWidth>
+                <InputLabel>Tipo de jubilación</InputLabel>
+                <Select label="Tipo de jubilación" value={servicio?.tipoJubilacion || 3} onChange={(e) => setServicio((x) => ({ ...x, tipoJubilacion: e.target.value }))}>
+                  {tiposJub.map((t) => <MenuItem key={t.id} value={t.id}>{t.nombre}</MenuItem>)}
+                </Select>
+              </FormControl>
+            )}
+            <Alert severity="info">El empleado EPQ queda en estado <b>FALLECIDO</b> (deja de aportar). Después registre a sus beneficiarios en <b>Beneficiarios</b>.</Alert>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setServicio(null)}>Cancelar</Button>
+          <Button variant="contained" onClick={guardarServicio}
+            disabled={!servicio?.aportante || !servicio?.codigo || !servicio?.fechaFallecimiento || !String(servicio?.noDefuncion || "").trim() || !(Number(servicio?.pensionReferencia) > 0)}>
+            Registrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={!!cancelar} onClose={() => setCancelar(null)} fullWidth maxWidth="sm">
         <DialogTitle>Deuda del fallecido pagada fuera del sistema — {cancelar?.nombre}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 0.5 }}>
             <Alert severity="info">
               Se marcará{cancelar?.meses === 1 ? "" : "n"} como <b>pagado{cancelar?.meses === 1 ? "" : "s"}</b> {cancelar?.meses === 1 ? "el mes pendiente" : `los ${cancelar?.meses} meses pendientes`} (<b>{fmtQ(cancelar?.deuda)}</b>). Desde la próxima planilla
-              la esposa ya no cobra la deuda: cobra su <b>pensión por VIUDEZ</b> (su monto, con la regla del 50%). Los hijos siguen igual.
+              el cónyuge ya no cobra la deuda: cobra su <b>pensión por VIUDEZ</b> (su monto, con la regla del 50%). Los hijos siguen igual.
             </Alert>
             <CampoFecha label="Fecha en que se pagó *" value={cancelar?.fecha || ""} onChange={(v) => setCancelar((c) => ({ ...c, fecha: v }))} />
             <TextField label="Documento que lo respalda *" placeholder="Resolución, acta, No. de cheque…" value={cancelar?.documento || ""}

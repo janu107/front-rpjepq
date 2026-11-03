@@ -34,7 +34,7 @@ const initialForm = {
   ubicacion: ""
 };
 
-const estados = ["ACTIVO", "INACTIVO", "RETIRADO"];
+const estados = ["ACTIVO", "INACTIVO", "RETIRADO", "FALLECIDO"];
 const sexoOptions = [{ value: "M", label: "Masculino" }, { value: "F", label: "Femenino" }];
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
 const MANEJO_EPQ_ID = 4;
