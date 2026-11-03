@@ -65,7 +65,7 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
 
             {df && df.canceladaFuera && (
               <Alert severity="success">
-                La deuda del fallecido (<b>{fmtQ(df.canceladaFuera.monto)}</b>, {df.canceladaFuera.meses} meses) se le pagó <b>fuera del sistema</b> el{" "}
+                La deuda del fallecido (<b>{fmtQ(df.canceladaFuera.monto)}</b>, {df.canceladaFuera.meses} {df.canceladaFuera.meses === 1 ? "mes" : "meses"}) se le pagó <b>fuera del sistema</b> el{" "}
                 {fmtFecha(df.canceladaFuera.fecha)} ({df.canceladaFuera.documento}). Lo que cobra ahora es su pensión por <b>VIUDEZ</b>.
               </Alert>
             )}

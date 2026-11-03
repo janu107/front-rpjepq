@@ -239,7 +239,7 @@ const SidebarContent = ({ onNavigate }) => {
         <Box>
           <Typography variant="h6" sx={{ letterSpacing: 0.2 }}>RPJEPQ</Typography>
           <Typography variant="caption" sx={{ opacity: 0.75 }}>
-            Administraci\u00f3n
+            Administración
           </Typography>
         </Box>
       </Toolbar>

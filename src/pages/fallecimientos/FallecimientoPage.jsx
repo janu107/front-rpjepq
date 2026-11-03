@@ -4,7 +4,7 @@ import UndoIcon from "@mui/icons-material/Undo";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import {
-  Alert, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Grid, Paper, Radio, RadioGroup, Stack,
+  Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Grid, Paper, Radio, RadioGroup, Stack,
   Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography
 } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -46,7 +46,7 @@ const FallecimientoPage = () => {
       const d = data.data || {};
       setCancelar(null);
       cargarFallecidos();
-      Swal.fire("Listo", `Se registró la deuda de ${fmtQ(d.total)} (${d.meses} meses) como pagada fuera del sistema. La esposa pasa a cobrar VIUDEZ.${
+      Swal.fire("Listo", `Se registró la deuda de ${fmtQ(d.total)} (${d.meses} ${d.meses === 1 ? "mes" : "meses"}) como pagada fuera del sistema. La esposa pasa a cobrar VIUDEZ.${
         d.planillasRecalculadas?.length ? ` Se recalcularon los beneficiarios de la planilla ${d.planillasRecalculadas.join(", ")} (generada).` : ""}`, "success");
     } catch (error) {
       Swal.fire("Error", error.response?.data?.message || "No fue posible registrar la cancelación.", "error");
@@ -260,6 +260,7 @@ const FallecimientoPage = () => {
         {fallecidos.length === 0 ? (
           <Typography color="text.secondary">No hay fallecimientos registrados.</Typography>
         ) : (
+          <Box sx={{ overflowX: "auto" }}>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -287,7 +288,7 @@ const FallecimientoPage = () => {
                     ) : f.deudaPendiente > 0 ? (
                       <>
                         <Chip size="small" color="error" variant="outlined" label={`${fmtQ(f.deudaPendiente)} pendiente`} />
-                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{f.mesesPendientes} meses · la cobra la esposa</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{f.mesesPendientes} {f.mesesPendientes === 1 ? "mes" : "meses"} · la cobra la esposa</Typography>
                       </>
                     ) : <Chip size="small" color="success" variant="outlined" label="Saldada" />}
                   </TableCell>
@@ -296,7 +297,7 @@ const FallecimientoPage = () => {
                     {f.planillasGeneradas && <Chip size="small" color="warning" variant="outlined" label={`Generada ${f.planillasGeneradas}`} />}
                     {!f.planillasCerradas && !f.planillasGeneradas && <Typography variant="caption" color="text.secondary">Aún sin planilla</Typography>}
                   </TableCell>
-                  <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                  <TableCell align="right" sx={{ "& .MuiButton-root": { whiteSpace: "nowrap" }, minWidth: 220 }}>
                     <Button size="small" startIcon={<ReceiptLongIcon />} onClick={() => navigate("/estado-cuenta", { state: { id: f.id } })}>Estado de cuenta</Button>
                     {!f.cancelacion && f.deudaPendiente > 0 && (
                       <Button size="small" color="success" startIcon={<TaskAltIcon />}
@@ -318,6 +319,7 @@ const FallecimientoPage = () => {
               ))}
             </TableBody>
           </Table>
+          </Box>
         )}
       </Paper>
 
@@ -326,7 +328,7 @@ const FallecimientoPage = () => {
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 0.5 }}>
             <Alert severity="info">
-              Se marcarán como <b>pagados</b> los {cancelar?.meses} meses pendientes (<b>{fmtQ(cancelar?.deuda)}</b>). Desde la próxima planilla
+              Se marcará{cancelar?.meses === 1 ? "" : "n"} como <b>pagado{cancelar?.meses === 1 ? "" : "s"}</b> {cancelar?.meses === 1 ? "el mes pendiente" : `los ${cancelar?.meses} meses pendientes`} (<b>{fmtQ(cancelar?.deuda)}</b>). Desde la próxima planilla
               la esposa ya no cobra la deuda: cobra su <b>pensión por VIUDEZ</b> (su monto, con la regla del 50%). Los hijos siguen igual.
             </Alert>
             <CampoFecha label="Fecha en que se pagó *" value={cancelar?.fecha || ""} onChange={(v) => setCancelar((c) => ({ ...c, fecha: v }))} />

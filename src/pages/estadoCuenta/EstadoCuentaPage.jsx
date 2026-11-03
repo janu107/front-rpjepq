@@ -156,7 +156,7 @@ const EstadoCuentaPage = () => {
                 <b>Falleció el {fmtFecha(fall.fecha)}</b>{fall.certificado ? ` (certificado ${fall.certificado})` : ""}. Lo que se paga desde
                 entonces es a sus <b>beneficiarios</b>: vea el estado de cuenta de cada uno en la tabla de abajo.
                 {fall.cancelacion ? (
-                  <> Su deuda de <b>{fmtQ(fall.cancelacion.monto)}</b> ({fall.cancelacion.meses} meses) se pagó <b>fuera del sistema</b> el {fmtFecha(fall.cancelacion.fecha)} ({fall.cancelacion.documento}): la esposa cobra su VIUDEZ.</>
+                  <> Su deuda de <b>{fmtQ(fall.cancelacion.monto)}</b> ({fall.cancelacion.meses} {fall.cancelacion.meses === 1 ? "mes" : "meses"}) se pagó <b>fuera del sistema</b> el {fmtFecha(fall.cancelacion.fecha)} ({fall.cancelacion.documento}): la esposa cobra su VIUDEZ.</>
                 ) : saldo > 0 ? <> El saldo pendiente de abajo es su deuda: la <b>cobra la esposa</b> antes de pasar a VIUDEZ.</> : null}
               </Alert>
             )}
