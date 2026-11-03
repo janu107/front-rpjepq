@@ -2,7 +2,7 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import {
-  Button, Dialog, DialogActions, DialogContent, DialogTitle,
+  Autocomplete, Button, Dialog, DialogActions, DialogContent, DialogTitle,
   FormControl, Grid, InputLabel, MenuItem, Select, Stack, TextField
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
@@ -60,6 +60,8 @@ const PrestamosRegimenPage = () => {
     });
   }, []);
 
+  // Código visible: el del empleado de régimen o el del jubilado.
+  const codigoDe = (p) => p.idEmpleado ?? p.idJubilado ?? p.id;
   const personas = useMemo(() => {
     if (form.tipoPersona === "EMPLEADO") return empleados;
     if (form.tipoPersona === "JUBILADO") return jubilados;
@@ -186,12 +188,37 @@ const PrestamosRegimenPage = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Persona *</InputLabel>
-                <Select label="Persona *" value={form.idPersona} onChange={setf("idPersona")} disabled={!form.tipoPersona}>
-                  {personas.map((p) => <MenuItem key={p.id} value={p.id}>{`${p.nombres} ${p.apellidos} - ${p.dpi}`}</MenuItem>)}
-                </Select>
-              </FormControl>
+              {/* Buscador por código, nombre o DPI. Con el código exacto + Tab (o Enter) se elige y se ve el nombre. */}
+              <Autocomplete
+                options={personas}
+                value={personas.find((p) => p.id === form.idPersona) || null}
+                onChange={(_, p) => setForm({ ...form, idPersona: p ? p.id : "" })}
+                disabled={!form.tipoPersona}
+                autoHighlight
+                autoSelect
+                isOptionEqualToValue={(o, v) => o.id === v.id}
+                getOptionLabel={(p) => `${codigoDe(p)} — ${p.nombres} ${p.apellidos}`}
+                filterOptions={(opts, { inputValue }) => {
+                  const t = inputValue.trim().toLowerCase();
+                  if (!t) return opts.slice(0, 50);
+                  const palabras = t.split(/\s+/);
+                  const lista = opts.filter((p) => palabras.every((w) => `${codigoDe(p)} ${p.nombres} ${p.apellidos} ${p.dpi || ""}`.toLowerCase().includes(w)));
+                  const exacto = lista.filter((p) => String(codigoDe(p)) === t);
+                  return [...exacto, ...lista.filter((p) => String(codigoDe(p)) !== t)].slice(0, 50);
+                }}
+                renderOption={(props, p) => (
+                  <li {...props} key={p.id}>
+                    <b style={{ minWidth: 56, display: "inline-block" }}>{codigoDe(p)}</b>&nbsp;{p.nombres} {p.apellidos}
+                    <span style={{ color: "#7a8790", marginLeft: 8, fontSize: 12 }}>{p.dpi}</span>
+                  </li>
+                )}
+                noOptionsText="No se encontró con ese código, nombre o DPI"
+                renderInput={(params) => (
+                  <TextField {...params} label={form.tipoPersona === "JUBILADO" ? "Jubilado * (código, nombre o DPI)" : form.tipoPersona === "EMPLEADO" ? "Empleado * (código, nombre o DPI)" : "Persona *"}
+                    placeholder={form.tipoPersona ? "Escriba el código y presione Tab" : "Primero elija el tipo de persona"}
+                    helperText={(() => { const p = personas.find((x) => x.id === form.idPersona); return p ? `${p.nombres} ${p.apellidos} · DPI ${p.dpi || "—"}` : " "; })()} />
+                )}
+              />
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
