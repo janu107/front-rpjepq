@@ -43,9 +43,10 @@ const EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 // Pestañas por grupo: "general" (Impresiones) y "jubilacion" (Impresión Jubilación).
 const PESTANAS = [
   "Nómina de sueldos", "Nómina tiempo extra", "Estado de cuenta préstamo", "Resumen", "Nómina de préstamos",
-  "Nómina jubilados", "Resumen jubilados", "Depósitos por banco", "Resumen de depósitos", "Oficios al banco"
+  "Nómina jubilados", "Resumen jubilados", "Depósitos por banco", "Resumen de depósitos", "Oficios al banco",
+  "Nómina deuda fallecidos"
 ];
-const GRUPOS = { general: [0, 1, 2, 3, 4], jubilacion: [5, 6, 7, 8, 9] };
+const GRUPOS = { general: [0, 1, 2, 3, 4], jubilacion: [5, 10, 6, 7, 8, 9] };
 
 const ImpresionesPage = ({ grupo = "general" }) => {
   const visibles = GRUPOS[grupo] || GRUPOS.general;
@@ -73,6 +74,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
   const [idSueldos, setIdSueldos] = useState("");
   const [areaSueldos, setAreaSueldos] = useState("");
   const [idNomJub, setIdNomJub] = useState("");
+  const [idDeudaFall, setIdDeudaFall] = useState("");
   const [tipoNomJub, setTipoNomJub] = useState("");
   const [idResJub, setIdResJub] = useState("");
   const [tipoResJub, setTipoResJub] = useState("");
@@ -436,7 +438,8 @@ const ImpresionesPage = ({ grupo = "general" }) => {
         <Stack spacing={2}>
           <Alert severity="info">
             Formato oficio. Sin elegir tipo, la nómina sale separada por tipo de jubilación (retiro voluntario,
-            vejez, viudez…) con su subtotal; al elegir uno, sale solo ese tipo.
+            vejez, viudez…) con su subtotal; al elegir uno, sale solo ese tipo. Lo que el cónyuge cobra de la deuda
+            de un jubilado fallecido va en la pestaña <b>Nómina deuda fallecidos</b>.
           </Alert>
           <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
             <Grid container spacing={2} alignItems="center">
@@ -451,6 +454,37 @@ const ImpresionesPage = ({ grupo = "general" }) => {
                     `nomina_jubilados_${idNomJub}.pdf`
                   )}>
                   Imprimir nómina
+                </Button>
+              </Grid>
+            </Grid>
+          </Paper>
+          {editorFirmas}
+        </Stack>
+      )}
+
+      {/* Nómina de deuda de fallecidos (misma planilla de jubilados) */}
+      {tab === 10 && (
+        <Stack spacing={2}>
+          <Alert severity="info">
+            Formato oficio. Lo que cada cónyuge cobra en la planilla para abonar a la <b>deuda que se le debía al jubilado fallecido</b>:
+            forma de cobro (porcentaje o convenio), saldo anterior, pago del mes, saldo y meses que se abonan.
+            Se genera y cierra con la planilla de jubilados del mes; la nómina de jubilados no incluye estos pagos.
+          </Alert>
+          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={6}>
+                {selectorPlanilla(TIPOS_JUBILADOS, idDeudaFall, setIdDeudaFall, "Planilla de jubilados")}
+              </Grid>
+              <Grid item xs={6} md={3}>
+                <Button fullWidth variant="contained" startIcon={<PrintIcon />} disabled={!idDeudaFall || descargando}
+                  onClick={() => descargar(`/impresiones/deuda-fallecidos/${idDeudaFall}/pdf?firmas=${firmasParam}`, `nomina_deuda_fallecidos_${idDeudaFall}.pdf`)}>
+                  Imprimir
+                </Button>
+              </Grid>
+              <Grid item xs={6} md={3}>
+                <Button fullWidth variant="outlined" startIcon={<DownloadIcon />} disabled={!idDeudaFall || descargando}
+                  onClick={() => descargar(`/impresiones/deuda-fallecidos/${idDeudaFall}/excel`, `nomina_deuda_fallecidos_${idDeudaFall}.xlsx`, EXCEL)}>
+                  Excel
                 </Button>
               </Grid>
             </Grid>

@@ -16,7 +16,7 @@ const nombrePrest = (p) => { const s = String(p || ""); const m = Number(s.slice
 const fmtPer = (p) => { const s = String(p || ""); return nombrePrest(s) || (s.length === 6 ? `${MES3[Number(s.slice(4, 6)) - 1]} ${s.slice(0, 4)}` : s); };
 const fmtFecha = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
 const COLOR_ESTADO = { PAGADA: "success", PARCIAL: "warning", PENDIENTE: "error", "SE CREA AL CERRAR": "default" };
-const CONCEPTO = { "COBRO DEUDA DEL FALLECIDO": "Cobro de la deuda del fallecido", "LIQUIDACION ORFANDAD": "Liquidación (cumplió 18)" };
+const CONCEPTO = { "COBRO DEUDA DEL FALLECIDO": "Pago de la deuda del fallecido (nómina de deuda)", "LIQUIDACION ORFANDAD": "Liquidación (cumplió 18)" };
 
 const Dato = ({ etiqueta, valor, fuerte }) => (
   <Grid item xs={6} md={3}>

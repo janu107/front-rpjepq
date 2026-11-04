@@ -529,7 +529,7 @@ const DetallePlanillaPensionadosPage = () => {
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
                         {r.nombreCompleto}
-                        {r.idBeneficiario && <Chip size="small" color="info" variant="outlined" sx={{ ml: 1 }} label={r.conceptoBeneficiario === "COBRO DEUDA DEL FALLECIDO" ? "VIUDEZ: COBRA LA DEUDA" : r.conceptoBeneficiario} />}
+                        {r.idBeneficiario && <Chip size="small" color="info" variant="outlined" sx={{ ml: 1 }} label={r.conceptoBeneficiario === "COBRO DEUDA DEL FALLECIDO" ? "DEUDA DEL FALLECIDO" : r.conceptoBeneficiario} />}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {r.idBeneficiario
