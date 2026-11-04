@@ -10,6 +10,7 @@ import Swal from "sweetalert2";
 import axiosClient from "../../api/axiosClient";
 import PageHeader from "../../components/common/PageHeader";
 import OficiosBanco from "./OficiosBanco";
+import { firmasParaImprimir } from "../../utils/firmas";
 
 // Impresiones formales (mejoras 14-18). Cada pestaña arma los parámetros y pide
 // el PDF al backend, que es quien maqueta el formato oficio / carta.
@@ -56,6 +57,17 @@ const ImpresionesPage = ({ grupo = "general" }) => {
   const [descargando, setDescargando] = useState(false);
 
   const [firmas, setFirmas] = useState(FIRMAS_INICIALES);
+  // Firmas del catálogo: empleados del régimen (manejo 1) o jubilados (manejo 2).
+  const [firmasCatalogo, setFirmasCatalogo] = useState([]);
+  useEffect(() => {
+    let vivo = true;
+    firmasParaImprimir(grupo === "jubilacion" ? 2 : 1).then((l) => {
+      if (!vivo) return;
+      setFirmasCatalogo(l);
+      setFirmas(l.length ? l : FIRMAS_INICIALES);
+    });
+    return () => { vivo = false; };
+  }, [grupo]);
 
   const [opciones, setOpciones] = useState({ areas: [], tiposJubilacion: [] });
   const [idSueldos, setIdSueldos] = useState("");
@@ -139,8 +151,13 @@ const ImpresionesPage = ({ grupo = "general" }) => {
     <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
       <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>Firmas del documento</Typography>
       <Typography variant="caption" color="text.secondary">
-        Se imprimen al pie de las nóminas. Déjelas vacías si prefiere firmar sobre líneas en blanco.
+        Se imprimen al pie de las nóminas. {firmasCatalogo.length
+          ? "Vienen de Catálogos › Firmas de planilla; puede cambiarlas solo para esta impresión."
+          : "Regístrelas en Catálogos › Firmas de planilla para que aparezcan solas, o escríbalas aquí. Déjelas vacías para firmar sobre líneas en blanco."}
       </Typography>
+      {firmasCatalogo.length > 0 && (
+        <Box sx={{ mt: 0.5 }}><Button size="small" onClick={() => setFirmas(firmasCatalogo)}>Volver a las firmas del catálogo</Button></Box>
+      )}
       <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
         {firmas.map((f, i) => (
           <Grid item xs={12} md={3} key={f.rol + i}>

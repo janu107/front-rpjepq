@@ -9,6 +9,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import axiosClient from "../../api/axiosClient";
+import { listarFirmas, tipoFirma } from "../../utils/firmas";
 import LogoRegimen from "../../components/common/LogoRegimen";
 
 const today = () =>
@@ -16,9 +17,10 @@ const today = () =>
 
 // Roles de firma en el pie de todos los reportes (se eligen de RPJ_CAT_FIRMA_PLANILLA).
 const FIRMA_ROLES = [
-  { key: "elabora", label: "Elaborado por" },
-  { key: "revisa", label: "Revisado por" },
-  { key: "autoriza", label: "Autorizado por" }
+  { key: "elabora", label: "Elaborado por", tipo: "ELABORADO POR" },
+  { key: "revisa", label: "Revisado por", tipo: "REVISADO POR" },
+  { key: "vobo", label: "Visto bueno", tipo: "VISTO BUENO" },
+  { key: "autoriza", label: "Autorizado por", tipo: "AUTORIZADO POR" }
 ];
 
 /**
@@ -63,13 +65,26 @@ const ReportePDF = ({
   const [busqueda, setBusqueda] = useState("");
   const [filterValues, setFilterValues] = useState({});
   const [firmas, setFirmas] = useState([]);
-  const [firmaSel, setFirmaSel] = useState({ elabora: "", revisa: "", autoriza: "" });
+  const [firmaSel, setFirmaSel] = useState({ elabora: "", revisa: "", vobo: "", autoriza: "" });
 
+  // Firmas del catálogo; cada rol se preselecciona con la primera firma de su tipo.
   useEffect(() => {
-    axiosClient.get("/catalogos/firma-planilla")
-      .then((res) => setFirmas(res.data.data || []))
-      .catch(() => setFirmas([]));
+    listarFirmas().then((lista) => {
+      setFirmas(lista);
+      setFirmaSel((prev) => {
+        const sel = { ...prev };
+        FIRMA_ROLES.forEach((r) => {
+          if (sel[r.key]) return;
+          const f = lista.find((x) => tipoFirma(x.tipo) === r.tipo);
+          if (f) sel[r.key] = f.id;
+        });
+        return sel;
+      });
+    });
   }, []);
+  // Al pie solo van los roles con firma elegida (si no hay ninguna, líneas en blanco de los 3 básicos).
+  const rolesImpresos = FIRMA_ROLES.filter((r) => firmaSel[r.key]);
+  const rolesPie = rolesImpresos.length ? rolesImpresos : FIRMA_ROLES.filter((r) => r.key !== "vobo");
 
   // La orientación de impresión vive en una regla @page global (horizontal por
   // defecto, en styles.css). Como @page no se puede acotar a un elemento, el
@@ -382,8 +397,8 @@ const ReportePDF = ({
           )}
 
           {/* Firmas */}
-          <Box sx={{ mt: 5, pt: 3, borderTop: "1px dashed #bbb", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 3, "@media print": { mt: 3, pt: 2 } }}>
-            {FIRMA_ROLES.map((rol) => {
+          <Box sx={{ mt: 5, pt: 3, borderTop: "1px dashed #bbb", display: "grid", gridTemplateColumns: `repeat(${rolesPie.length}, 1fr)`, gap: 3, "@media print": { mt: 3, pt: 2 } }}>
+            {rolesPie.map((rol) => {
               const firma = firmaById(firmaSel[rol.key]);
               return (
                 <Box key={rol.key} sx={{ textAlign: "center" }}>

@@ -5,8 +5,11 @@ import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import BadgeIcon from "@mui/icons-material/Badge";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import HandshakeIcon from "@mui/icons-material/Handshake";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import PersonOffIcon from "@mui/icons-material/PersonOff";
 import {
-  Alert, Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Grid, InputLabel, MenuItem, Paper, Radio, RadioGroup, Select, Stack,
+  Alert, Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControl, FormControlLabel, Grid, InputLabel,
+  ListItemIcon, ListItemText, ListSubheader, Menu, MenuItem, Paper, Radio, RadioGroup, Select, Stack,
   Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography
 } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -24,6 +27,33 @@ const PRIMARIO = "#1F4E79";
 const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const hoy = () => new Date().toISOString().slice(0, 10);
 const edad = (f) => { const h = new Date(); const n = new Date(f); let e = h.getFullYear() - n.getFullYear(); const m = h.getMonth() - n.getMonth(); if (m < 0 || (m === 0 && h.getDate() < n.getDate())) e -= 1; return e; };
+
+// Menú de acciones de un fallecido, agrupado y con una línea de ayuda por opción.
+// Las opciones que no aplican se muestran deshabilitadas con el motivo.
+const AccionesFallecido = ({ grupos }) => {
+  const [anchor, setAnchor] = useState(null);
+  return (
+    <>
+      <Button size="small" variant="outlined" endIcon={<ArrowDropDownIcon />} onClick={(e) => setAnchor(e.currentTarget)}>Acciones</Button>
+      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }} slotProps={{ paper: { sx: { width: 380, maxWidth: "calc(100vw - 32px)" } } }}>
+        {grupos.filter((g) => g.items.length).map((g, gi) => [
+          gi > 0 && <Divider key={`d${gi}`} />,
+          <ListSubheader key={`h${gi}`} sx={{ lineHeight: "32px", fontWeight: 800, color: PRIMARIO }}>{g.titulo}</ListSubheader>,
+          ...g.items.map((it) => (
+            <MenuItem key={it.titulo} disabled={!!it.motivo} onClick={() => { setAnchor(null); it.onClick(); }}
+              sx={{ alignItems: "flex-start", whiteSpace: "normal", py: 1 }}>
+              <ListItemIcon sx={{ mt: 0.25, color: it.color ? `${it.color}.main` : "inherit" }}>{it.icono}</ListItemIcon>
+              <ListItemText primary={it.titulo} secondary={it.motivo || it.ayuda}
+                primaryTypographyProps={{ fontWeight: 700, fontSize: 14, color: it.color ? `${it.color}.main` : "text.primary" }}
+                secondaryTypographyProps={{ fontSize: 12, color: it.motivo ? "warning.dark" : "text.secondary" }} />
+            </MenuItem>
+          ))
+        ])}
+      </Menu>
+    </>
+  );
+};
 
 const FallecimientoPage = () => {
   const navigate = useNavigate();
@@ -348,8 +378,8 @@ const FallecimientoPage = () => {
       <Paper sx={{ p: 2.5 }}>
         <Typography variant="h6" sx={{ color: PRIMARIO, mb: 0.5 }}>Fallecimientos registrados</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-          Se puede corregir la fecha o el certificado (o revertir el registro) mientras ninguna planilla CERRADA haya pagado a sus beneficiarios.
-          Si la deuda del fallecido <b>ya se le pagó a la viuda fuera del sistema</b>, regístrelo con <b>Deuda pagada</b>: así el cónyuge cobra su VIUDEZ y no la deuda.
+          En <b>Acciones</b> de cada fallecido: la <b>forma de cobro</b> de su deuda (porcentaje o convenio), registrar que la deuda <b>ya se pagó fuera del sistema</b>
+          (el cónyuge pasa directo a VIUDEZ), y <b>corregir o revertir</b> el registro mientras ninguna planilla CERRADA haya pagado a sus beneficiarios.
         </Typography>
         {fallecidos.length === 0 ? (
           <Typography color="text.secondary">No hay fallecimientos registrados.</Typography>
@@ -393,26 +423,53 @@ const FallecimientoPage = () => {
                     {f.planillasGeneradas && <Chip size="small" color="warning" variant="outlined" label={`Generada ${f.planillasGeneradas}`} />}
                     {!f.planillasCerradas && !f.planillasGeneradas && <Typography variant="caption" color="text.secondary">Aún sin planilla</Typography>}
                   </TableCell>
-                  <TableCell align="right" sx={{ "& .MuiButton-root": { whiteSpace: "nowrap" }, minWidth: 220 }}>
-                    <Button size="small" startIcon={<ReceiptLongIcon />} onClick={() => navigate("/estado-cuenta", { state: { id: f.id } })}>Estado de cuenta</Button>
-                    {!f.cancelacion && !f.enServicio && f.deudaPendiente > 0 && (
-                      <Button size="small" color="secondary" startIcon={<HandshakeIcon />} onClick={() => abrirCobro(f.id, f.nombre)}>Forma de cobro</Button>
-                    )}
-                    {!f.cancelacion && f.deudaPendiente > 0 && (
-                      <Button size="small" color="success" startIcon={<TaskAltIcon />}
-                        onClick={() => setCancelar({ id: f.id, nombre: f.nombre, deuda: f.deudaPendiente, meses: f.mesesPendientes, fecha: hoy(), documento: "", observaciones: "" })}>
-                        Deuda pagada
-                      </Button>
-                    )}
-                    {f.cancelacion && isAdmin(user) && (
-                      <Button size="small" color="warning" startIcon={<UndoIcon />} onClick={() => revertirCancelacion(f)}>Revertir pago</Button>
-                    )}
-                    {f.editable ? (
-                      <>
-                        <Button size="small" startIcon={<EditIcon />} onClick={() => setCorregir({ id: f.id, nombre: f.nombre, fechaFallecimiento: String(f.fechaFallecimiento || "").slice(0, 10), noDefuncion: f.noDefuncion || "" })}>Corregir</Button>
-                        {isAdmin(user) && !f.enServicio && <Button size="small" color="error" startIcon={<UndoIcon />} onClick={() => revertir(f)}>Revertir</Button>}
-                      </>
-                    ) : <Typography variant="caption" color="text.secondary">Ya pagado: no se puede cambiar</Typography>}
+                  <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      <Button size="small" startIcon={<ReceiptLongIcon />} onClick={() => navigate("/estado-cuenta", { state: { id: f.id } })}>Estado de cuenta</Button>
+                      <AccionesFallecido grupos={[
+                        {
+                          titulo: "Deuda del fallecido",
+                          items: f.enServicio
+                            ? [{ titulo: "Sin deuda", icono: <TaskAltIcon fontSize="small" />, motivo: "Falleció en servicio: el cónyuge y los hijos cobran directo su pensión.", onClick: () => {} }]
+                            : [
+                              {
+                                titulo: "Forma de cobro", icono: <HandshakeIcon fontSize="small" />, color: "secondary",
+                                ayuda: `Cómo cobra el cónyuge la deuda (hoy: ${f.cuotaConvenio ? `convenio ${fmtQ(f.cuotaConvenio)}/mes` : "por porcentaje"}). Cambiar a porcentaje o convenio.`,
+                                motivo: f.cancelacion ? "La deuda ya se pagó fuera del sistema." : f.deudaPendiente > 0 ? null : "No tiene deuda pendiente.",
+                                onClick: () => abrirCobro(f.id, f.nombre)
+                              },
+                              ...(f.cancelacion ? [{
+                                titulo: "Revertir pago fuera del sistema", icono: <UndoIcon fontSize="small" />, color: "warning",
+                                ayuda: "Se registró por error: la deuda vuelve a quedar pendiente y el cónyuge vuelve a cobrarla.",
+                                motivo: isAdmin(user) ? null : "Solo un administrador puede revertirlo.",
+                                onClick: () => revertirCancelacion(f)
+                              }] : [{
+                                titulo: "Registrar deuda pagada fuera del sistema", icono: <TaskAltIcon fontSize="small" />, color: "success",
+                                ayuda: "La deuda ya se le pagó al cónyuge (caja, cheque, resolución): pasa directo a VIUDEZ.",
+                                motivo: f.deudaPendiente > 0 ? null : "No tiene deuda pendiente.",
+                                onClick: () => setCancelar({ id: f.id, nombre: f.nombre, deuda: f.deudaPendiente, meses: f.mesesPendientes, fecha: hoy(), documento: "", observaciones: "" })
+                              }])
+                            ]
+                        },
+                        {
+                          titulo: "Registro del fallecimiento",
+                          items: [
+                            {
+                              titulo: "Corregir fecha o certificado", icono: <EditIcon fontSize="small" />,
+                              ayuda: "Recalcula el mes proporcional y el aguinaldo y bono 14 del fallecido.",
+                              motivo: f.editable ? null : "Ya se pagó a sus beneficiarios en una planilla cerrada: no se puede cambiar.",
+                              onClick: () => setCorregir({ id: f.id, nombre: f.nombre, fechaFallecimiento: String(f.fechaFallecimiento || "").slice(0, 10), noDefuncion: f.noDefuncion || "" })
+                            },
+                            ...(f.enServicio ? [] : [{
+                              titulo: "Revertir fallecimiento", icono: <PersonOffIcon fontSize="small" />, color: "error",
+                              ayuda: "Se registró por error: vuelve a ser jubilado activo y sus beneficiarios a REGISTRADO.",
+                              motivo: !f.editable ? "Ya se pagó a sus beneficiarios en una planilla cerrada." : isAdmin(user) ? null : "Solo un administrador puede revertirlo.",
+                              onClick: () => revertir(f)
+                            }])
+                          ]
+                        }
+                      ]} />
+                    </Stack>
                   </TableCell>
                 </TableRow>
               ))}

@@ -195,20 +195,20 @@ const catalogConfigs = [
     key: "firma-planilla",
     label: "Firmas de planilla",
     codeKey: "id",
-    searchFields: ["idFirma", "nombre", "puesto", "tipo", "manejoDescripcion"],
+    searchFields: ["nombre", "puesto", "tipo", "manejoDescripcion"],
     columns: [
-      { key: "idFirma", label: "ID" },
+      { key: "manejoDescripcion", label: "Aplica a" },
+      { key: "tipo", label: "Tipo de firma" },
       { key: "nombre", label: "Nombre" },
       { key: "puesto", label: "Puesto" },
-      { key: "tipo", label: "Tipo" },
-      { key: "manejoDescripcion", label: "Manejo" }
+      { key: "idFirma", label: "Orden" }
     ],
     fields: [
-      { key: "tipoManejo", label: "Tipo manejo", required: true, type: "select", source: "manejos" },
-      { key: "idFirma", label: "ID", required: true },
-      { key: "nombre", label: "Nombre", required: true },
-      { key: "puesto", label: "Puesto", required: true },
-      { key: "tipo", label: "Tipo", required: true }
+      { key: "tipoManejo", label: "Aplica a (reportes de…)", required: true, type: "select", source: "manejos" },
+      { key: "tipo", label: "Tipo de firma", required: true, type: "select", options: ["ELABORADO POR", "REVISADO POR", "VISTO BUENO", "AUTORIZADO POR"] },
+      { key: "nombre", label: "Nombre completo", required: true },
+      { key: "puesto", label: "Puesto / cargo", required: true },
+      { key: "idFirma", label: "Orden en el reporte (opcional)", type: "number" }
     ]
   }
 ];

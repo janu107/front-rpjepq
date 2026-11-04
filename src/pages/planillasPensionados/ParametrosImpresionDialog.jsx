@@ -4,6 +4,7 @@ import {
   MenuItem, Select, Stack, TextField, Typography
 } from "@mui/material";
 import { useEffect, useState } from "react";
+import { firmasParaImprimir } from "../../utils/firmas";
 
 const FIRMAS_INICIALES = [
   { rol: "Elaborado por", nombre: "", cargo: "" },
@@ -20,7 +21,10 @@ const ParametrosImpresionDialog = ({ open, titulo, tipos = [], onClose, onImprim
   const [firmas, setFirmas] = useState(FIRMAS_INICIALES);
 
   useEffect(() => {
-    if (open) setTipoJubilacion("");
+    if (!open) return;
+    setTipoJubilacion("");
+    // Firmas de jubilados del catálogo (Catálogos › Firmas de planilla).
+    firmasParaImprimir(2).then((l) => { if (l.length) setFirmas(l); });
   }, [open]);
 
   const setFirma = (i, campo) => (e) => {
@@ -45,7 +49,7 @@ const ParametrosImpresionDialog = ({ open, titulo, tipos = [], onClose, onImprim
           <div>
             <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Firmas del documento</Typography>
             <Typography variant="caption" color="text.secondary">
-              Déjelas vacías si prefiere firmar sobre líneas en blanco.
+              Vienen de Catálogos › Firmas de planilla (jubilados); puede cambiarlas para esta impresión. Déjelas vacías para firmar sobre líneas en blanco.
             </Typography>
             <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
               {firmas.map((f, i) => (
