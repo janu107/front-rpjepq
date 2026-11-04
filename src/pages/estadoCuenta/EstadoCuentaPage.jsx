@@ -346,7 +346,7 @@ const EstadoCuentaPage = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={historiaOpen} onClose={() => setHistoriaOpen(false)} fullWidth maxWidth={gruposUsados.length > 2 ? "xl" : "lg"}>
+      <Dialog open={historiaOpen} onClose={() => setHistoriaOpen(false)} fullWidth maxWidth={false} PaperProps={{ sx: { width: "calc(100vw - 24px)", maxWidth: "none", m: 1.5 } }}>
         <DialogTitle>Historia completa</DialogTitle>
         <DialogContent dividers sx={{ pt: 0 }}>
           <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
@@ -359,10 +359,16 @@ const EstadoCuentaPage = () => {
             <b> EN PROCESO</b>: planilla generada que aún no se cierra.
             <b> CANCELADA</b>: mes de la deuda que se pagó fuera del sistema (toda la deuda en Fallecimientos, o un mes con el botón ✓).
             <b> Ajustar</b> (lápiz): corrige los descuentos de un mes de la carga histórica (por ejemplo, el último mes de un préstamo con saldo menor a la cuota).
-            <b> AGUINALDO / BONO 14</b> (columna Ingreso): del jubilado fallecido, al 100% (proporcional a los días vividos del período, o completo si el período ya había terminado y no se le pagó); se suman a la deuda que cobra el cónyuge.
+            <b> AGUINALDO / BONO 14</b> (columna Ingreso): del jubilado fallecido, al 100%, proporcional a los días vividos del período en curso al fallecer; se suman a la deuda que cobra el cónyuge.
             <b> ✓ Marcar pagado</b>: un mes que ya se pagó fuera del sistema (por ejemplo, enero 2023); se confirma con un clic (queda la fecha y el usuario) y se puede revertir.
           </Typography>
-          <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
+          <Table size="small" stickyHeader sx={{
+            "& thead th": { bgcolor: "#F4F6F8", zIndex: 2, fontSize: 12, lineHeight: 1.2, px: 0.75 },
+            // Compacto para que toda la historia quepa a lo ancho sin deslizar.
+            "& tbody td": { fontSize: 12.5, px: 0.75, py: 0.4 },
+            "& .MuiChip-root": { height: 20, fontSize: 11 }, "& .MuiChip-label": { px: 0.75 },
+            "& .MuiIconButton-root": { p: 0.25 }
+          }}>
             <TableHead>
               <TableRow>
                 <TableCell rowSpan={2}>Período</TableCell>
@@ -421,9 +427,10 @@ const EstadoCuentaPage = () => {
                     </TableCell>
                     <TableCell align="right">{fmtQ(d.saldo)}</TableCell>
                     <TableCell><Chip size="small" label={d.enProceso ? "EN PROCESO" : d.esDeuda ? d.estado : "HISTORIA"} sx={{ bgcolor: color, color: "#fff" }} /></TableCell>
-                    <TableCell>{d.tipoPago}</TableCell>
+                    <TableCell sx={{ fontSize: "11.5px !important", lineHeight: 1.2 }}>{d.tipoPago}</TableCell>
                     {canEdit(user) && (
                       <TableCell align="center" sx={{ py: 0 }}>
+                        <Box sx={{ display: "flex", justifyContent: "center", flexWrap: "nowrap" }}>
                         {d.esDeuda && !d.enProceso && (!d.ingreso || d.ingreso === "PENSIÓN") && (
                           <Tooltip title="Corregir los descuentos de este mes">
                             <IconButton size="small" onClick={() => abrirAjuste(d.periodo)}><EditIcon fontSize="small" /></IconButton>
@@ -439,6 +446,7 @@ const EstadoCuentaPage = () => {
                             <IconButton size="small" color="warning" onClick={() => revertirMesPagado(d)}><UndoIcon fontSize="small" /></IconButton>
                           </Tooltip>
                         )}
+                        </Box>
                       </TableCell>
                     )}
                   </TableRow>
