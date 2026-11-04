@@ -346,24 +346,25 @@ const EstadoCuentaPage = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={historiaOpen} onClose={() => setHistoriaOpen(false)} fullWidth maxWidth={false} PaperProps={{ sx: { width: "calc(100vw - 24px)", maxWidth: "none", m: 1.5 } }}>
+      <Dialog open={historiaOpen} onClose={() => setHistoriaOpen(false)} maxWidth={false} PaperProps={{ sx: { width: "fit-content", maxWidth: "calc(100vw - 24px)", m: 1.5 } }}>
         <DialogTitle>Historia completa</DialogTitle>
         <DialogContent dividers sx={{ pt: 0 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ py: 1.5, width: 0, minWidth: "100%", fontSize: 12.5 }}>
             <b>Descuentos</b>: se muestran por tipo (solo los que tiene el jubilado); pase el mouse sobre el total para ver el detalle exacto.
             <b> Monto generado</b>: lo que vale el mes (pensión − descuentos).
             <b> Recibido en el mes</b>: lo que se le pagó en la planilla de ese mes (desde enero 2023, la mitad).
             <b> Abonado a la deuda</b>: lo pagado de la mitad pendiente de ese mes; las nóminas nuevas abonan al mes pendiente más antiguo.
             <b> Saldo</b>: lo que todavía se le debe de ese mes. Lo que se paga en cada nómina nueva se abona al mes
             pendiente más antiguo; por eso el mes de la nómina queda con su pensión completa pendiente.
-            <b> EN PROCESO</b>: planilla generada que aún no se cierra.
-            <b> CANCELADA</b>: mes de la deuda que se pagó fuera del sistema (toda la deuda en Fallecimientos, o un mes con el botón ✓).
+            <b> Estado</b>: PEN pendiente · PAR parcial · PAG pagada · CAN cancelada fuera del sistema (toda la deuda en Fallecimientos, o un mes con el botón ✓) · PRO en proceso (planilla generada sin cerrar) · HIS historia (pagado completo).
             <b> Ajustar</b> (lápiz): corrige los descuentos de un mes de la carga histórica (por ejemplo, el último mes de un préstamo con saldo menor a la cuota).
             <b> AGUINALDO / BONO 14</b> (columna Ingreso): del jubilado fallecido, al 100%, proporcional a los días vividos del período en curso al fallecer; se suman a la deuda que cobra el cónyuge.
             <b> ✓ Marcar pagado</b>: un mes que ya se pagó fuera del sistema (por ejemplo, enero 2023); se confirma con un clic (queda la fecha y el usuario) y se puede revertir.
           </Typography>
           <Table size="small" stickyHeader sx={{
-            "& thead th": { bgcolor: "#F4F6F8", zIndex: 2, fontSize: 12, lineHeight: 1.2, px: 0.75 },
+            width: "auto",
+            "& thead th": { bgcolor: "#F4F6F8", zIndex: 2, fontSize: 12, lineHeight: 1.2, px: 1, whiteSpace: "nowrap" },
+            "& tbody td": { whiteSpace: "nowrap" },
             // Compacto para que toda la historia quepa a lo ancho sin deslizar.
             "& tbody td": { fontSize: 12.5, px: 0.75, py: 0.4 },
             "& .MuiChip-root": { height: 20, fontSize: 11 }, "& .MuiChip-label": { px: 0.75 },
@@ -373,13 +374,13 @@ const EstadoCuentaPage = () => {
               <TableRow>
                 <TableCell rowSpan={2}>Período</TableCell>
                 <TableCell rowSpan={2}>Ingreso</TableCell>
-                <TableCell rowSpan={2} align="right">Pensión completa</TableCell>
-                <TableCell colSpan={gruposUsados.length + 1} align="center" sx={{ borderLeft: "1px solid #DDE3EA", borderRight: "1px solid #DDE3EA" }}>Descuentos</TableCell>
-                <TableCell rowSpan={2} align="right">Monto generado</TableCell>
-                <TableCell rowSpan={2} align="right">Recibido en el mes</TableCell><TableCell rowSpan={2} align="right">Abonado a la deuda</TableCell><TableCell rowSpan={2} align="right">Saldo</TableCell><TableCell rowSpan={2}>Estado</TableCell><TableCell rowSpan={2}>Tipo</TableCell>
+                <TableCell rowSpan={2} align="right">Pensión</TableCell>
+                <TableCell colSpan={gruposUsados.length + 1} align="center" sx={{ height: 28, py: 0.5, borderLeft: "1px solid #DDE3EA", borderRight: "1px solid #DDE3EA" }}>Descuentos</TableCell>
+                <TableCell rowSpan={2} align="right">Monto<br />generado</TableCell>
+                <TableCell rowSpan={2} align="right">Recibido<br />en el mes</TableCell><TableCell rowSpan={2} align="right">Abonado<br />a la deuda</TableCell><TableCell rowSpan={2} align="right">Saldo</TableCell><TableCell rowSpan={2}>Estado</TableCell><TableCell rowSpan={2}>Tipo</TableCell>
                 {canEdit(user) && <TableCell rowSpan={2} align="center">Ajustar</TableCell>}
               </TableRow>
-              <TableRow sx={{ "& th": { top: 37, fontSize: 12, color: "text.secondary", py: 0.5 } }}>
+              <TableRow sx={{ "& th": { top: 28, fontSize: 12, color: "text.secondary", py: 0.5 } }}>
                 {gruposUsados.map((g, k) => (
                   <TableCell key={g.campo} align="right" sx={k === 0 ? { borderLeft: "1px solid #DDE3EA" } : undefined}>{g.titulo}</TableCell>
                 ))}
@@ -393,8 +394,9 @@ const EstadoCuentaPage = () => {
                   <TableRow key={d.id} sx={{ bgcolor: `${color}14` }}>
                     <TableCell sx={{ whiteSpace: "nowrap", fontWeight: d.ingreso && d.ingreso !== "PENSIÓN" ? 700 : 400 }}>{fmtPeriodo(d.periodo)}</TableCell>
                     <TableCell>
-                      <Chip size="small" variant="outlined" label={d.ingreso || "PENSIÓN"}
-                        sx={{ fontSize: 11, height: 20, ...(d.ingreso && d.ingreso !== "PENSIÓN" ? { borderColor: "#6A1B9A", color: "#6A1B9A", fontWeight: 700 } : { color: "text.secondary" }) }} />
+                      {d.ingreso && d.ingreso !== "PENSIÓN"
+                        ? <Chip size="small" variant="outlined" label={d.ingreso} sx={{ borderColor: "#6A1B9A", color: "#6A1B9A", fontWeight: 700 }} />
+                        : <Typography component="span" sx={{ fontSize: 12, color: "text.secondary" }}>Pensión</Typography>}
                     </TableCell>
                     <TableCell align="right">{d.ingreso && d.ingreso !== "PENSIÓN" ? "—" : fmtQ(d.pensionCompleta)}</TableCell>
                     {gruposUsados.map((g, k) => {
@@ -426,8 +428,14 @@ const EstadoCuentaPage = () => {
                       ) : fmtQ(d.montoPagado)}
                     </TableCell>
                     <TableCell align="right">{fmtQ(d.saldo)}</TableCell>
-                    <TableCell><Chip size="small" label={d.enProceso ? "EN PROCESO" : d.esDeuda ? d.estado : "HISTORIA"} sx={{ bgcolor: color, color: "#fff" }} /></TableCell>
-                    <TableCell sx={{ fontSize: "11.5px !important", lineHeight: 1.2 }}>{d.tipoPago}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const nombre = d.enProceso ? "EN PROCESO" : d.esDeuda ? d.estado : "HISTORIA";
+                        const sigla = { PENDIENTE: "PEN", PARCIAL: "PAR", PAGADA: "PAG", PAGADO: "PAG", CANCELADA: "CAN", "EN PROCESO": "PRO", HISTORIA: "HIS" }[nombre] || nombre.slice(0, 3);
+                        return <Tooltip title={nombre} arrow><Chip size="small" label={sigla} sx={{ bgcolor: color, color: "#fff", minWidth: 40, fontWeight: 700 }} /></Tooltip>;
+                      })()}
+                    </TableCell>
+                    <TableCell sx={{ fontSize: "11.5px !important" }}>{String(d.tipoPago || "").replace("PROPORCIONAL", "Prop.").replace("COMPLETADO", "Completado").replace("COMPLETO", "Completo").replace("SIN PAGO", "Sin pago")}</TableCell>
                     {canEdit(user) && (
                       <TableCell align="center" sx={{ py: 0 }}>
                         <Box sx={{ display: "flex", justifyContent: "center", flexWrap: "nowrap" }}>

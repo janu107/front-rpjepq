@@ -126,8 +126,9 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
                 <>
                 {datos.meses.some((m) => m.porCrear) && (
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Los meses <b>SE CREA AL CERRAR</b> ya se le deben (desde enero 2023 o desde que falleció, lo que sea después) y quedan registrados
+                    Los meses <b>SE CREA AL CERRAR</b> ya se le deben (desde febrero 2023 o desde que falleció, lo que sea después) y quedan registrados
                     al cerrar la próxima planilla; lo que se le paga se abona al mes más antiguo.
+                    {datos.meses.some((m) => m.recibidoFuera) && <> En viudez, los meses anteriores ya recibieron el {datos.mensual?.porcentajePlanilla ?? 50}% fuera del sistema (columna Pagado): se le debe el resto.</>}
                   </Typography>
                 )}
                 <Table size="small">
@@ -139,7 +140,13 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
                       <TableRow key={m.periodo}>
                         <TableCell>{fmtPer(m.periodo)}</TableCell>
                         <TableCell align="right">{fmtQ(m.debe)}</TableCell>
-                        <TableCell align="right">{fmtQ(m.pagado)}</TableCell>
+                        <TableCell align="right">
+                          {m.recibidoFuera || (Number(m.pagado) > 0 && !m.pagadoCon) ? (
+                            <Tooltip arrow title="Recibido fuera del sistema (pagado con el código del fallecido)">
+                              <span style={{ borderBottom: "1px dotted #999", cursor: "help" }}>{fmtQ(m.pagado)}</span>
+                            </Tooltip>
+                          ) : fmtQ(m.pagado)}
+                        </TableCell>
                         <TableCell align="right" sx={{ fontWeight: 700 }}>{fmtQ(m.pendiente)}</TableCell>
                         <TableCell><Chip size="small" color={COLOR_ESTADO[m.estado] || "default"} label={m.estado} /></TableCell>
                         <TableCell>{m.pagadoCon ? m.pagadoCon.split(", ").map(fmtPer).join(", ") : "—"}</TableCell>
