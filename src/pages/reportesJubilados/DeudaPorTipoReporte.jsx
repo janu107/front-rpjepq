@@ -21,7 +21,8 @@ const ENDPOINT = "/jubilados-reportes/deuda-por-tipo";
 const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtN = (n) => Number(n || 0).toLocaleString("es-GT");
 const MES3 = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
-const fmtPeriodo = (p) => { const s = String(p || ""); return s.length === 6 ? `${MES3[Number(s.slice(4, 6)) - 1]} ${s.slice(0, 4)}` : s; };
+const nombrePrest = (p) => { const s = String(p || ""); const m = Number(s.slice(4, 6)); return s.length === 6 && m === 13 ? `AGUINALDO ${s.slice(0, 4)}` : s.length === 6 && m === 14 ? `BONO 14 ${s.slice(0, 4)}` : null; };
+const fmtPeriodo = (p) => { const s = String(p || ""); return nombrePrest(s) || (s.length === 6 ? `${MES3[Number(s.slice(4, 6)) - 1]} ${s.slice(0, 4)}` : s); };
 
 const DetalleTipo = ({ filas, onJubilado }) => {
   const [pagina, setPagina] = useState(0);

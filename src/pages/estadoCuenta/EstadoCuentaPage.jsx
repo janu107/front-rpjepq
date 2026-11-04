@@ -28,7 +28,8 @@ const VERDE = "#4CAF50";
 const AMARILLO = "#FF9800";
 
 const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmtPeriodo = (p) => { const s = String(p); return s.length === 6 ? `${s.slice(4, 6)}/${s.slice(0, 4)}` : s; };
+const nombrePrest = (p) => { const s = String(p || ""); const m = Number(s.slice(4, 6)); return s.length === 6 && m === 13 ? `AGUINALDO ${s.slice(0, 4)}` : s.length === 6 && m === 14 ? `BONO 14 ${s.slice(0, 4)}` : null; };
+const fmtPeriodo = (p) => { const s = String(p); return nombrePrest(s) || (s.length === 6 ? `${s.slice(4, 6)}/${s.slice(0, 4)}` : s); };
 
 const AZUL = "#1976D2";
 const VERDE_AZUL = "#00897B";
@@ -358,12 +359,14 @@ const EstadoCuentaPage = () => {
             <b> EN PROCESO</b>: planilla generada que aún no se cierra.
             <b> CANCELADA</b>: mes de la deuda que se pagó fuera del sistema (toda la deuda en Fallecimientos, o un mes con el botón ✓).
             <b> Ajustar</b> (lápiz): corrige los descuentos de un mes de la carga histórica (por ejemplo, el último mes de un préstamo con saldo menor a la cuota).
+            <b> AGUINALDO / BONO 14</b> (columna Ingreso): del jubilado fallecido, al 100% (proporcional a los días vividos del período, o completo si el período ya había terminado y no se le pagó); se suman a la deuda que cobra el cónyuge.
             <b> ✓ Marcar pagado</b>: un mes que ya se pagó fuera del sistema (por ejemplo, enero 2023); se confirma con un clic (queda la fecha y el usuario) y se puede revertir.
           </Typography>
           <Table size="small" stickyHeader sx={{ "& thead th": { bgcolor: "#F4F6F8", zIndex: 2 } }}>
             <TableHead>
               <TableRow>
                 <TableCell rowSpan={2}>Período</TableCell>
+                <TableCell rowSpan={2}>Ingreso</TableCell>
                 <TableCell rowSpan={2} align="right">Pensión completa</TableCell>
                 <TableCell colSpan={gruposUsados.length + 1} align="center" sx={{ borderLeft: "1px solid #DDE3EA", borderRight: "1px solid #DDE3EA" }}>Descuentos</TableCell>
                 <TableCell rowSpan={2} align="right">Monto generado</TableCell>
@@ -382,8 +385,12 @@ const EstadoCuentaPage = () => {
                 const color = colorEstadoDeuda(d);
                 return (
                   <TableRow key={d.id} sx={{ bgcolor: `${color}14` }}>
-                    <TableCell>{fmtPeriodo(d.periodo)}</TableCell>
-                    <TableCell align="right">{fmtQ(d.pensionCompleta)}</TableCell>
+                    <TableCell sx={{ whiteSpace: "nowrap", fontWeight: d.ingreso && d.ingreso !== "PENSIÓN" ? 700 : 400 }}>{fmtPeriodo(d.periodo)}</TableCell>
+                    <TableCell>
+                      <Chip size="small" variant="outlined" label={d.ingreso || "PENSIÓN"}
+                        sx={{ fontSize: 11, height: 20, ...(d.ingreso && d.ingreso !== "PENSIÓN" ? { borderColor: "#6A1B9A", color: "#6A1B9A", fontWeight: 700 } : { color: "text.secondary" }) }} />
+                    </TableCell>
+                    <TableCell align="right">{d.ingreso && d.ingreso !== "PENSIÓN" ? "—" : fmtQ(d.pensionCompleta)}</TableCell>
                     {gruposUsados.map((g, k) => {
                       const v = Number(d.desglose?.[g.campo] || 0);
                       return (
@@ -417,7 +424,7 @@ const EstadoCuentaPage = () => {
                     <TableCell>{d.tipoPago}</TableCell>
                     {canEdit(user) && (
                       <TableCell align="center" sx={{ py: 0 }}>
-                        {d.esDeuda && !d.enProceso && (
+                        {d.esDeuda && !d.enProceso && (!d.ingreso || d.ingreso === "PENSIÓN") && (
                           <Tooltip title="Corregir los descuentos de este mes">
                             <IconButton size="small" onClick={() => abrirAjuste(d.periodo)}><EditIcon fontSize="small" /></IconButton>
                           </Tooltip>

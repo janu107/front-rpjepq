@@ -12,7 +12,8 @@ import axiosClient from "../../api/axiosClient";
 const PRIMARIO = "#1F4E79";
 const MES3 = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
 const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmtPer = (p) => { const s = String(p || ""); return s.length === 6 ? `${MES3[Number(s.slice(4, 6)) - 1]} ${s.slice(0, 4)}` : s; };
+const nombrePrest = (p) => { const s = String(p || ""); const m = Number(s.slice(4, 6)); return s.length === 6 && m === 13 ? `AGUINALDO ${s.slice(0, 4)}` : s.length === 6 && m === 14 ? `BONO 14 ${s.slice(0, 4)}` : null; };
+const fmtPer = (p) => { const s = String(p || ""); return nombrePrest(s) || (s.length === 6 ? `${MES3[Number(s.slice(4, 6)) - 1]} ${s.slice(0, 4)}` : s); };
 const fmtFecha = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
 const COLOR_ESTADO = { PAGADA: "success", PARCIAL: "warning", PENDIENTE: "error", "SE CREA AL CERRAR": "default" };
 const CONCEPTO = { "COBRO DEUDA DEL FALLECIDO": "Cobro de la deuda del fallecido", "LIQUIDACION ORFANDAD": "Liquidación (cumplió 18)" };
@@ -92,7 +93,7 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
                   <Dato etiqueta="Pagado" valor={fmtQ(df.pagado)} />
                   <Dato etiqueta="Falta" valor={fmtQ(df.pendiente)} fuerte />
                   <Dato etiqueta="Cobrado por ella" valor={fmtQ(df.cobradoPorBeneficiaria)} />
-                  <Dato etiqueta="Cuota mensual" valor={fmtQ(df.cuotaMensual)} />
+                  <Dato etiqueta={df.formaCobro?.modo === "CONVENIO" ? "Cuota mensual (convenio)" : `Cuota mensual (${df.formaCobro?.porcentaje ?? 50}%)`} valor={fmtQ(df.cuotaMensual)} />
                   <Dato etiqueta="Meses para terminar (aprox.)" valor={df.mesesParaTerminar ?? "—"} />
                   <Dato etiqueta="Próximo mes a abonar" valor={df.proximoMes ? fmtPer(df.proximoMes) : "—"} />
                   <Dato etiqueta="Meses pendientes" valor={df.mesesPendientes} />

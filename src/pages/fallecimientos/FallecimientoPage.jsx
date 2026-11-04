@@ -4,6 +4,7 @@ import UndoIcon from "@mui/icons-material/Undo";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import BadgeIcon from "@mui/icons-material/Badge";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import HandshakeIcon from "@mui/icons-material/Handshake";
 import {
   Alert, Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, Grid, InputLabel, MenuItem, Paper, Radio, RadioGroup, Select, Stack,
   Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography
@@ -32,6 +33,39 @@ const FallecimientoPage = () => {
   const [form, setForm] = useState({ fechaFallecimiento: "", noDefuncion: "", metodoPago: "PAGO_NORMAL", observaciones: "" });
   const [guardando, setGuardando] = useState(false);
   const { user } = useAuth();
+
+  // --- Forma de cobro de la deuda del fallecido (porcentaje o convenio) ---
+  const [cobro, setCobro] = useState(null); // { id, nombre, datos, modo, cuota, documento, autorizadoPor, fechaInicio, observaciones }
+  const [guardandoCobro, setGuardandoCobro] = useState(false);
+  const abrirCobro = async (id, nombre, modoInicial) => {
+    try {
+      const { data } = await axiosClient.get(`/jubilados/${id}/forma-cobro`);
+      const d = data.data;
+      if (!d.conyuge) { Swal.fire("Sin cónyuge", "El fallecido no tiene esposa o esposo activo: no hay a quién cobrarle la deuda.", "info"); return; }
+      const c = d.convenio;
+      setCobro({
+        id, nombre, datos: d, modo: modoInicial || d.modo,
+        cuota: c ? String(c.cuota) : "", documento: c?.documento || "", autorizadoPor: c?.autorizadoPor || "JUNTA_DIRECTIVA",
+        fechaInicio: c?.fechaInicio ? String(c.fechaInicio).slice(0, 10) : hoy(), observaciones: ""
+      });
+    } catch (e) { Swal.fire("Error", e.response?.data?.message || "No fue posible cargar la forma de cobro.", "error"); }
+  };
+  const guardarCobro = async () => {
+    setGuardandoCobro(true);
+    try {
+      const body = cobro.modo === "CONVENIO"
+        ? { modo: "CONVENIO", cuota: Number(cobro.cuota), documento: cobro.documento, autorizadoPor: cobro.autorizadoPor, fechaInicio: cobro.fechaInicio, observaciones: cobro.observaciones }
+        : { modo: "PORCENTAJE", observaciones: cobro.observaciones };
+      const { data } = await axiosClient.put(`/jubilados/${cobro.id}/forma-cobro`, body);
+      const rec = data.data?.planillasRecalculadas || [];
+      setCobro(null);
+      cargarFallecidos();
+      Swal.fire({ icon: "success", title: "Forma de cobro guardada",
+        html: `${body.modo === "CONVENIO" ? `El cónyuge cobrará <b>${fmtQ(body.cuota)}</b> al mes hasta saldar la deuda.` : "El cónyuge cobrará como se le pagaba al fallecido (porcentaje)."}${rec.length ? `<br>Se recalculó la planilla ${rec.join(", ")}.` : "<br>Aplica desde la próxima planilla que se genere."}` });
+    } catch (e) {
+      Swal.fire("Error", e.response?.data?.message || "No fue posible guardar.", "error");
+    } finally { setGuardandoCobro(false); }
+  };
 
   // --- Fallecimientos ya registrados: corregir o revertir ---
   const [fallecidos, setFallecidos] = useState([]);
@@ -114,6 +148,9 @@ const FallecimientoPage = () => {
     const partes = [];
     if (a.proporcional) partes.push(`<b>${per(a.mes)}</b> se calculó proporcional a <b>${a.dias} de 30 días</b>: se le debía ${fmtQ(a.proporcional.liquido)} (recibido ${fmtQ(a.proporcional.recibido)}).`);
     if (a.mesesBorrados?.length) partes.push(`Se quitaron de su deuda los meses posteriores: <b>${a.mesesBorrados.map(per).join(", ")}</b>.`);
+    if (a.prestaciones?.length) {
+      partes.push(`Se agregó a su deuda (la cobra el cónyuge): ${a.prestaciones.map((x) => `<b>${x.prestacion}</b> ${x.completo ? "completo" : "proporcional"} ${x.dias} días = ${fmtQ(x.monto)}`).join("; ")}.`);
+    }
     (a.avisos || []).forEach((x) => partes.push(x));
     return partes.length ? `<br><br>${partes.join("<br>")}` : "";
   };
@@ -190,11 +227,10 @@ const FallecimientoPage = () => {
       const n = data.data?.beneficiariosActivados ?? beneficiarios.length;
       await Swal.fire({ icon: "success", title: "Listo", html: `Fallecimiento registrado. ${n} beneficiarios activados.${textoAjuste(data.data?.ajuste)}` });
       cargarFallecidos();
-      if (form.metodoPago === "CONVENIO") {
-        navigate("/convenios", { state: { tipo: "jubilado", id: jub.id, nombre } });
-        return;
-      }
+      const idFallecido = jub.id;
       setJub(null); setBeneficiarios([]); setDeuda(0);
+      // Convenio: se define de una vez la cuota mensual.
+      if (form.metodoPago === "CONVENIO") abrirCobro(idFallecido, nombre, "CONVENIO");
     } catch (error) {
       Swal.fire("Error", error.response?.data?.message || "No fue posible registrar el fallecimiento.", "error");
     } finally { setGuardando(false); }
@@ -275,7 +311,7 @@ const FallecimientoPage = () => {
                   <FormControl>
                     <Typography variant="caption" color="text.secondary">Método pago deuda</Typography>
                     <RadioGroup row value={form.metodoPago} onChange={setF("metodoPago")}>
-                      <FormControlLabel value="PAGO_NORMAL" control={<Radio />} label="Pago normal 50%" />
+                      <FormControlLabel value="PAGO_NORMAL" control={<Radio />} label="Por porcentaje" />
                       <FormControlLabel value="CONVENIO" control={<Radio />} label="Convenio" />
                     </RadioGroup>
                   </FormControl>
@@ -347,6 +383,8 @@ const FallecimientoPage = () => {
                       <>
                         <Chip size="small" color="error" variant="outlined" label={`${fmtQ(f.deudaPendiente)} pendiente`} />
                         <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>{f.mesesPendientes} {f.mesesPendientes === 1 ? "mes" : "meses"} · la cobra el cónyuge</Typography>
+                        <Chip size="small" variant="outlined" color={f.cuotaConvenio ? "secondary" : "default"} sx={{ mt: 0.5 }}
+                          label={f.cuotaConvenio ? `Convenio · ${fmtQ(f.cuotaConvenio)}/mes` : "Por porcentaje"} />
                       </>
                     ) : <Chip size="small" color="success" variant="outlined" label={f.enServicio ? "Sin deuda (en servicio)" : "Saldada"} />}
                   </TableCell>
@@ -357,6 +395,9 @@ const FallecimientoPage = () => {
                   </TableCell>
                   <TableCell align="right" sx={{ "& .MuiButton-root": { whiteSpace: "nowrap" }, minWidth: 220 }}>
                     <Button size="small" startIcon={<ReceiptLongIcon />} onClick={() => navigate("/estado-cuenta", { state: { id: f.id } })}>Estado de cuenta</Button>
+                    {!f.cancelacion && !f.enServicio && f.deudaPendiente > 0 && (
+                      <Button size="small" color="secondary" startIcon={<HandshakeIcon />} onClick={() => abrirCobro(f.id, f.nombre)}>Forma de cobro</Button>
+                    )}
                     {!f.cancelacion && f.deudaPendiente > 0 && (
                       <Button size="small" color="success" startIcon={<TaskAltIcon />}
                         onClick={() => setCancelar({ id: f.id, nombre: f.nombre, deuda: f.deudaPendiente, meses: f.mesesPendientes, fecha: hoy(), documento: "", observaciones: "" })}>
@@ -444,6 +485,70 @@ const FallecimientoPage = () => {
           <Button onClick={() => setCancelar(null)}>Cancelar</Button>
           <Button variant="contained" color="success" onClick={guardarCancelacion}
             disabled={!cancelar?.fecha || !String(cancelar?.documento || "").trim()}>Registrar pago</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!cobro} onClose={() => setCobro(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Forma de cobro de la deuda — {cobro?.nombre}</DialogTitle>
+        <DialogContent dividers>
+          {cobro && (() => {
+            const d = cobro.datos;
+            const cuota = Number(cobro.cuota || 0);
+            const meses = (q) => (q > 0 ? Math.ceil(d.pendiente / q) : null);
+            return (
+              <Stack spacing={1.5}>
+                <Typography variant="body2">
+                  La cobra <b>{d.conyuge.nombre}</b> ({d.conyuge.parentesco}). Deuda pendiente: <b>{fmtQ(d.pendiente)}</b>.
+                </Typography>
+                <RadioGroup value={cobro.modo} onChange={(e) => setCobro((c) => ({ ...c, modo: e.target.value }))}>
+                  <FormControlLabel value="PORCENTAJE" control={<Radio />} label={
+                    <span>Por porcentaje (como se le pagaba al fallecido): {d.porcentaje}% de su último líquido {fmtQ(d.ultimoLiquido)} = <b>{fmtQ(d.cuotaPorcentaje)}</b>/mes{meses(d.cuotaPorcentaje) ? ` · ≈ ${meses(d.cuotaPorcentaje)} meses` : ""}</span>
+                  } />
+                  <FormControlLabel value="CONVENIO" control={<Radio />} label="Por convenio: una cuota mensual fija acordada" />
+                </RadioGroup>
+                {cobro.modo === "CONVENIO" && (
+                  <Grid container spacing={1.5}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField label="Cuota mensual (Q) *" type="number" size="small" fullWidth value={cobro.cuota}
+                        inputProps={{ min: 0, step: "0.01" }} onChange={(e) => setCobro((c) => ({ ...c, cuota: e.target.value }))}
+                        helperText={cuota > 0 ? `≈ ${meses(cuota)} meses para saldar` : " "} />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <CampoFecha label="Desde (fecha de inicio) *" value={cobro.fechaInicio} onChange={(v) => setCobro((c) => ({ ...c, fechaInicio: v }))} />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField label="No. documento del convenio *" size="small" fullWidth value={cobro.documento} inputProps={{ maxLength: 100 }}
+                        onChange={(e) => setCobro((c) => ({ ...c, documento: e.target.value }))} />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField select label="Autorizado por *" size="small" fullWidth value={cobro.autorizadoPor}
+                        onChange={(e) => setCobro((c) => ({ ...c, autorizadoPor: e.target.value }))}>
+                        <MenuItem value="JUNTA_DIRECTIVA">Junta directiva</MenuItem>
+                        <MenuItem value="JUEZ">Juez</MenuItem>
+                        <MenuItem value="ACUERDO_INTERNO">Acuerdo interno</MenuItem>
+                      </TextField>
+                    </Grid>
+                  </Grid>
+                )}
+                <TextField label="Observaciones" size="small" fullWidth multiline rows={2} value={cobro.observaciones}
+                  onChange={(e) => setCobro((c) => ({ ...c, observaciones: e.target.value }))} />
+                {d.convenio && (
+                  <Alert severity="info">
+                    Convenio vigente: {fmtQ(d.convenio.cuota)}/mes desde {fmtFecha(d.convenio.fechaInicio)} · doc. {d.convenio.documento}.
+                    {cobro.modo === "CONVENIO" ? " Al guardar se reemplaza por el nuevo." : " Al guardar se cancela y vuelve a porcentaje."}
+                  </Alert>
+                )}
+                <Alert severity="warning" variant="outlined">Aplica desde la planilla que se genere; si hay una planilla de jubilados generada sin cerrar, se recalcula.</Alert>
+              </Stack>
+            );
+          })()}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCobro(null)}>Cancelar</Button>
+          <Button variant="contained" onClick={guardarCobro}
+            disabled={guardandoCobro || !cobro || (cobro.modo === "CONVENIO" && (!(Number(cobro.cuota) > 0) || !cobro.documento.trim() || !cobro.fechaInicio))}>
+            Guardar
+          </Button>
         </DialogActions>
       </Dialog>
 
