@@ -284,7 +284,7 @@ const PrestacionesJubiladosPage = () => {
         subtitle="Bono 14 y Aguinaldo — jubilados normales, beneficiarios y amparistas, sin descuentos ni deuda histórica"
       />
 
-      <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <Paper elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)}>
           {TIPOS.map((t) => <Tab key={t.key} label={t.label} />)}
         </Tabs>
@@ -296,7 +296,7 @@ const PrestacionesJubiladosPage = () => {
       </Alert>
 
       {canCreate(user) && (
-        <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+        <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5 }}>
             Nueva planilla de {tipo.label} — Jubilados
           </Typography>
@@ -325,7 +325,7 @@ const PrestacionesJubiladosPage = () => {
       )}
 
       {canGeneratePayroll(user) && (
-        <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+        <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5 }}>{tipo.titulo}</Typography>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={4}>
@@ -380,7 +380,7 @@ const PrestacionesJubiladosPage = () => {
         </Paper>
       )}
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31,78,95,0.08)" }}>
             <TableRow>
@@ -451,7 +451,7 @@ const PrestacionesJubiladosPage = () => {
             {TABS_DETALLE.map((t) => <Tab key={t} value={t} label={t} />)}
           </Tabs>
 
-          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
             <Table size="small">
               <TableHead sx={{ bgcolor: "rgba(31,78,95,0.08)" }}>
                 <TableRow>

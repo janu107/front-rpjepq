@@ -36,7 +36,7 @@ const LogoRegimenUploader = () => {
   };
 
   return (
-    <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+    <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2.5} alignItems={{ sm: "center" }}>
         <Box sx={{ width: 96, height: 96, border: "1px dashed #c8d4da", borderRadius: 2, display: "grid", placeItems: "center", overflow: "hidden" }}>
           <LogoRegimen key={version} sx={{ maxWidth: 88, maxHeight: 88 }} />

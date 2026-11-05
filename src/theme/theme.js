@@ -1,8 +1,17 @@
 import { createTheme } from "@mui/material/styles";
 
-const theme = createTheme({
+// Tema claro y oscuro. Los colores de superficie y bordes que usan las pantallas
+// van como colores del tema (fondo.suave, borde, marca) para que cambien con el modo.
+export const crearTema = (modo = "claro") => {
+  const oscuro = modo === "oscuro";
+  return createTheme({
   palette: {
-    primary: {
+    mode: oscuro ? "dark" : "light",
+    fondo: { suave: oscuro ? "#1b2a31" : "#f3f6f8", fuerte: oscuro ? "#22343c" : "#e8eef1" },
+    borde: oscuro ? "#2e434c" : "#dde3ea",
+    marca: { main: oscuro ? "#7cc4d4" : "#1f4e5f" },
+    divider: oscuro ? "#2e434c" : "rgba(0, 0, 0, 0.12)",
+    primary: oscuro ? { main: "#5fb1c2", dark: "#3e8d9e", light: "#8fd0dd", contrastText: "#0d181d" } : {
       main: "#1f5d6b",
       dark: "#123f4b",
       light: "#4f8895",
@@ -21,11 +30,11 @@ const theme = createTheme({
     error: {
       main: "#b94141"
     },
-    background: {
+    background: oscuro ? { default: "#0f1a1f", paper: "#16242b" } : {
       default: "#f3f6f8",
       paper: "#ffffff"
     },
-    text: {
+    text: oscuro ? { primary: "#e3ebef", secondary: "#9fb2bc" } : {
       primary: "#24333b",
       secondary: "#60717b"
     }
@@ -70,7 +79,7 @@ const theme = createTheme({
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderBottomColor: "#e5ebef"
+          borderBottomColor: oscuro ? "#2a3c44" : "#e5ebef"
         }
       }
     },
@@ -90,6 +99,8 @@ const theme = createTheme({
       }
     }
   }
-});
+  });
+};
 
+const theme = crearTema("claro");
 export default theme;

@@ -34,7 +34,7 @@ const EstadoBadge = ({ estado }) => {
 };
 
 const InfoCard = ({ label, value, currency = false, highlight = false }) => (
-  <Paper elevation={0} sx={{ p: 2, border: "1px solid #dde3ea", textAlign: "center", bgcolor: highlight ? "#e3f2fd" : "white" }}>
+  <Paper elevation={0} sx={{ p: 2, border: (t) => `1px solid ${t.palette.borde}`, textAlign: "center", bgcolor: highlight ? "#e3f2fd" : "white" }}>
     <Typography variant="body2" color="text.secondary">{label}</Typography>
     <Typography variant="h6" fontWeight={highlight ? 700 : 400} color={highlight ? "primary.main" : "text.primary"}>
       {currency ? money(value) : (value ?? "-")}
@@ -347,10 +347,10 @@ const DetallePlanillaTrabajadoresPage = () => {
 
           {/* Tabla de empleados candidatos */}
           {buscadorEmp}
-          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", mb: 3 }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}`, mb: 3 }}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: "#f5f7fa" }}>
+                <TableRow sx={{ bgcolor: "fondo.suave" }}>
                   <TableCell>Empleado</TableCell>
                   <TableCell>Puesto</TableCell>
                   <TableCell align="right">Salario base</TableCell>
@@ -452,10 +452,10 @@ const DetallePlanillaTrabajadoresPage = () => {
 
           {buscadorEmp}
 
-          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: "#f5f7fa" }}>
+                <TableRow sx={{ bgcolor: "fondo.suave" }}>
                   <TableCell>Empleado</TableCell>
                   <TableCell>Puesto</TableCell>
                   <TableCell align="center">Días</TableCell>

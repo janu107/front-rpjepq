@@ -36,7 +36,7 @@ const EstadoBadge = ({ estado }) => {
 };
 
 const InfoCard = ({ label, value, currency = false, highlight = false }) => (
-  <Paper elevation={0} sx={{ p: 2, border: "1px solid #dde3ea", textAlign: "center", bgcolor: highlight ? "#e3f2fd" : "white" }}>
+  <Paper elevation={0} sx={{ p: 2, border: (t) => `1px solid ${t.palette.borde}`, textAlign: "center", bgcolor: highlight ? "#e3f2fd" : "white" }}>
     <Typography variant="body2" color="text.secondary">{label}</Typography>
     <Typography variant="h6" fontWeight={highlight ? 700 : 400} color={highlight ? "primary.main" : "text.primary"}>
       {currency ? money(value) : (value ?? "-")}
@@ -381,10 +381,10 @@ const DetallePlanillaPensionadosPage = () => {
             <Grid item xs={6} sm={3}><InfoCard label="Porcentaje de pago" value={`${preview?.porcentajePago ?? 0}%`} /></Grid>
           </Grid>
 
-          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", mb: 3 }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}`, mb: 3 }}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: "#f5f7fa" }}>
+                <TableRow sx={{ bgcolor: "fondo.suave" }}>
                   <TableCell>Jubilado</TableCell>
                   <TableCell>Fecha jubilación</TableCell>
                   <TableCell align="right">Pensión base</TableCell>
@@ -508,10 +508,10 @@ const DetallePlanillaPensionadosPage = () => {
             InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
           />
 
-          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: "#f5f7fa" }}>
+                <TableRow sx={{ bgcolor: "fondo.suave" }}>
                   <TableCell>Jubilado</TableCell>
                   <TableCell align="right">Pensión teórica</TableCell>
                   <TableCell align="right">Pago corriente</TableCell>
@@ -714,10 +714,10 @@ const DetallePlanillaPensionadosPage = () => {
                 <Grid item xs={6} sm={3}><InfoCard label="Deuda pendiente" value={estadoCuentaDialog.data.deudaPendienteTotal} currency highlight /></Grid>
               </Grid>
               <Divider sx={{ mb: 2 }} />
-              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+              <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "#f5f7fa" }}>
+                    <TableRow sx={{ bgcolor: "fondo.suave" }}>
                       <TableCell>Período</TableCell>
                       <TableCell align="right">Original</TableCell>
                       <TableCell align="right">Pagado</TableCell>

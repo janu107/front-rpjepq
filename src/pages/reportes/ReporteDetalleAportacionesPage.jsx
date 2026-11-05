@@ -125,7 +125,7 @@ const ReporteDetalleAportacionesPage = () => {
   };
 
   const selector = (
-    <Paper elevation={0} className="no-print" sx={{ p: 2, border: "1px solid #dde3ea" }}>
+    <Paper elevation={0} className="no-print" sx={{ p: 2, border: (t) => `1px solid ${t.palette.borde}` }}>
       <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>Empleado EPQ</Typography>
       <Autocomplete
         options={empleados}
@@ -161,7 +161,7 @@ const ReporteDetalleAportacionesPage = () => {
     <Paper
       elevation={0}
       sx={{
-        p: 2, border: "1px solid #dde3ea", bgcolor: "rgba(31,78,95,0.04)",
+        p: 2, border: (t) => `1px solid ${t.palette.borde}`, bgcolor: "rgba(31,78,95,0.04)",
         "@media print": { border: "1px solid #bbb", bgcolor: "transparent", p: 1 }
       }}
     >

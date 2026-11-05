@@ -179,10 +179,10 @@ const PlanillasPensionadosPage = () => {
         InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
       />
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ bgcolor: "#f5f7fa" }}>
+            <TableRow sx={{ bgcolor: "fondo.suave" }}>
               <TableCell>Tipo</TableCell>
               <TableCell>Número</TableCell>
               <TableCell>Fecha Inicio</TableCell>

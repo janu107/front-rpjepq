@@ -200,7 +200,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
           : "Nóminas en formato oficio, estados de cuenta y resúmenes en carta"}
       />
 
-      <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <Paper elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Tabs value={Math.min(posicion, visibles.length - 1)} onChange={(_, v) => setPosicion(v)} variant="scrollable" scrollButtons="auto">
           {visibles.map((i) => <Tab key={i} label={PESTANAS[i]} />)}
         </Tabs>
@@ -214,7 +214,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
             asignada aparece como <b>SIN AREA</b>. Elija un área para imprimir solo esa (su nombre sale al
             centro del encabezado) o deje <b>Todas</b> para ver cada área por separado.
           </Alert>
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={5}>
                 {selectorPlanilla(TIPO_EMPLEADOS, idSueldos, setIdSueldos, "Planilla de empleados de régimen")}
@@ -256,7 +256,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
       {tab === 1 && (
         <Stack spacing={2}>
           <Alert severity="info">Formato oficio, con horas normales y dobles. Elija un área para imprimir solo esa, o Todas para verlas agrupadas.</Alert>
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={7}>
                 {selectorPlanilla(TIPO_TIEMPO_EXTRA, idExtra, setIdExtra, "Planilla de tiempo extraordinario")}
@@ -283,7 +283,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
       {tab === 2 && (
         <Stack spacing={2}>
           <Alert severity="info">Tamaño carta, vertical. Incluye la tabla de amortización del préstamo.</Alert>
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={9}>
                 <Autocomplete
@@ -331,7 +331,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
             Tamaño carta, vertical. Muestra el total por área y el desglose por concepto
             (sueldos, tiempo extra, bono 14, aguinaldo y bono vacacional) según la fecha de pago de cada planilla.
           </Alert>
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={4}>
                 <FormControl fullWidth>
@@ -372,7 +372,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
             Formato oficio. Es un corte <b>mensual</b>: si amplía el rango a varios meses, un mismo
             préstamo aparecerá una vez por cada cuota del período.
           </Alert>
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={4}>
                 <TextField fullWidth type="date" label="Desde" InputLabelProps={{ shrink: true }}
@@ -405,7 +405,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
             vejez, viudez…) con su subtotal; al elegir uno, sale solo ese tipo. Lo que el cónyuge cobra de la deuda
             de un jubilado fallecido va en la pestaña <b>Nómina deuda fallecidos</b>.
           </Alert>
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={5}>
                 {selectorPlanilla(TIPOS_JUBILADOS, idNomJub, setIdNomJub, "Planilla de jubilados")}
@@ -434,7 +434,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
             forma de cobro (porcentaje o convenio), saldo anterior, pago del mes, saldo y meses que se abonan.
             Se genera y cierra con la planilla de jubilados del mes; la nómina de jubilados no incluye estos pagos.
           </Alert>
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={6}>
                 {selectorPlanilla(TIPOS_JUBILADOS, idDeudaFall, setIdDeudaFall, "Planilla de jubilados")}
@@ -464,7 +464,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
             Tamaño carta. Pensiones por tipo de jubilación y remesas por destino (bancos, judicial, asociación…).
             Con un tipo elegido, el resumen cubre solo esos jubilados.
           </Alert>
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={5}>
                 {selectorPlanilla(TIPOS_JUBILADOS, idResJub, setIdResJub, "Planilla de jubilados")}
@@ -500,7 +500,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
                 ? "Tamaño carta. Totales a depositar por tipo de jubilación y por banco, con el total general."
                 : "Tamaño carta. Listado de depósitos por banco y tipo de jubilación (código, nombre, cuenta y monto), con \"Van / Vienen\" entre hojas y totales. A los menores se les deposita a la tutora."}
             </Alert>
-            <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+            <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
               <Grid container spacing={2} alignItems="center">
                 <Grid item xs={12} md={4}>
                   {selectorPlanilla(TIPO_PENSIONADOS, v.id, (id) => { setV({ ...v, id, banco: "" }); cargarBancos(id); }, "Planilla de jubilados (AAAAMM)")}

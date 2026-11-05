@@ -31,7 +31,7 @@ const ReportTable = ({ columns, rows, search, searchKeys }) => {
   const visibles = filtered.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
 
   return (
-    <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
+    <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}`, overflow: "hidden" }}>
       <Table size="small">
         <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
           <TableRow>
@@ -248,7 +248,7 @@ const ReportesRegimenPage = ({ soloAportaciones = false }) => {
           {loadingDetalle ? (
             <Typography align="center" sx={{ py: 3 }}>Cargando...</Typography>
           ) : (
-            <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+            <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
               <Table size="small">
                 <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
                   <TableRow>

@@ -374,7 +374,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
                 <li>Si el empleado <b>ya tiene aporte en esa fecha</b> (período ya cargado), se <b>omite</b>; los demás sí se graban.</li>
               </Box>
               <Typography variant="subtitle2" sx={{ fontWeight: 800, mt: 2, mb: 0.5 }}>Ejemplo (primera hoja del Excel)</Typography>
-              <Table size="small" sx={{ maxWidth: 420, border: "1px solid #dde3ea" }}>
+              <Table size="small" sx={{ maxWidth: 420, border: (t) => `1px solid ${t.palette.borde}` }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "#1f4e5f", "& th": { color: "#fff", fontWeight: 700 } }}>
                     <TableCell>Fila</TableCell><TableCell>ID EMPLEADO</TableCell><TableCell>FECHA</TableCell><TableCell align="right">MONTO</TableCell>
@@ -439,7 +439,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
           </Paper>
         )}
 
-        <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
+        <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}`, overflow: "hidden" }}>
           <Table size="small">
             <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
               <TableRow>
@@ -483,7 +483,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
               rowsPerPageOptions={[15, 30, 60]}
               labelRowsPerPage="Registros por página"
               labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-              sx={{ borderTop: "1px solid #dde3ea" }}
+              sx={{ borderTop: (t) => `1px solid ${t.palette.borde}` }}
             />
           )}
         </TableContainer>
@@ -524,7 +524,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
         InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
       />
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}`, overflow: "hidden" }}>
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
             <TableRow>
@@ -565,7 +565,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
             rowsPerPageOptions={[20, 50, 100]}
             labelRowsPerPage="Registros por página"
             labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-            sx={{ borderTop: "1px solid #dde3ea" }}
+            sx={{ borderTop: (t) => `1px solid ${t.palette.borde}` }}
           />
         )}
       </TableContainer>
@@ -649,7 +649,7 @@ const AportacionesPage = ({ detailOnly = false }) => {
               )}
               {editingDetalle && <Button onClick={() => { setEditingDetalle(null); setDetalleForm({ fechaPago: "", valor: "" }); }}>Cancelar edicion</Button>}
             </Stack>
-            <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+            <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
               <Table size="small">
                 <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
                   <TableRow><TableCell>Codigo empleado</TableCell><TableCell>Nombre</TableCell><TableCell>Valor</TableCell><TableCell>Fecha</TableCell><TableCell align="right">Acciones</TableCell></TableRow>

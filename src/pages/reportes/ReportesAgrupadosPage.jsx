@@ -11,7 +11,7 @@ const ReportesAgrupadosPage = ({ pestanas }) => {
 
   return (
     <Stack spacing={2}>
-      <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }} className="no-print">
+      <Paper elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }} className="no-print">
         <Tabs value={indice} onChange={(_, i) => setParams({ tab: pestanas[i].clave })} variant="scrollable" scrollButtons="auto">
           {pestanas.map((p) => <Tab key={p.clave} label={p.label} />)}
         </Tabs>

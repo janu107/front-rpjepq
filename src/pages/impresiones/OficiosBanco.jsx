@@ -87,7 +87,7 @@ const OficiosBanco = ({ selectorPlanilla, tipoPlanilla, descargar, descargando }
         las firmas que cambie quedan guardados en este equipo.
       </Alert>
 
-      <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+      <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={4}>
             {selectorPlanilla(tipoPlanilla, id, (v) => { setId(v); setBanco(""); setTipo(""); }, "Planilla de jubilados (AAAAMM)")}
@@ -126,7 +126,7 @@ const OficiosBanco = ({ selectorPlanilla, tipoPlanilla, descargar, descargando }
 
       {datos && (
         <>
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Oficios que se imprimen ({oficios.length})</Typography>
             {oficios.length === 0 ? (
               <Typography variant="body2" color="text.secondary">No hay depósitos a cuenta para este filtro.</Typography>
@@ -159,7 +159,7 @@ const OficiosBanco = ({ selectorPlanilla, tipoPlanilla, descargar, descargando }
             )}
           </Paper>
 
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Datos del banco</Typography>
             <Stack spacing={1.5}>
               {Object.keys(bancos).filter((b) => !banco || b === banco).map((b) => (
@@ -175,7 +175,7 @@ const OficiosBanco = ({ selectorPlanilla, tipoPlanilla, descargar, descargando }
             </Stack>
           </Paper>
 
-          <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Firmas del oficio</Typography>
             <Typography variant="caption" color="text.secondary">Se proponen el Presidente y el Tesorero de la Junta Administradora. Deje vacía la que no use.</Typography>
             <Grid container spacing={1.5} sx={{ mt: 0.5 }}>

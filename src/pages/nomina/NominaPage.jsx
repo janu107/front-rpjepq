@@ -30,7 +30,7 @@ const NominaTable = ({ type, rows, config, onNew, onEdit, onDelete, search, setS
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between">
         <TextField placeholder="Buscar" value={search} onChange={(e) => setSearch(e.target.value)} sx={{ maxWidth: 420 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} />
       </Stack>
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Table><TableHead><TableRow><TableCell>Planilla</TableCell><TableCell>Persona</TableCell><TableCell>Tipo</TableCell><TableCell>Valor</TableCell><TableCell>Dias</TableCell><TableCell>Puesto</TableCell><TableCell>Area</TableCell></TableRow></TableHead>
           <TableBody>{filtered.map((row) => <TableRow key={row.id} hover><TableCell>{row.numeroPlanilla}</TableCell><TableCell>{row.empleadoNombre || row.jubiladoNombre}</TableCell><TableCell>{row[config.typeLabel]}</TableCell><TableCell>Q {Number(row.valor).toFixed(2)}</TableCell><TableCell>{row.diasTrabajados}</TableCell><TableCell>{row.puesto}</TableCell><TableCell>{row.area}</TableCell></TableRow>)}</TableBody>
         </Table>
@@ -124,7 +124,7 @@ const NominaPage = () => {
   return (
     <Stack spacing={2.5}>
       <Box><Typography variant="h5">Consulta Nómina</Typography><Typography color="text.secondary">Consulta de ingresos, descuentos y resumen por planilla</Typography></Box>
-      <Paper elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
+      <Paper elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}`, overflow: "hidden" }}>
         <Tabs
           value={tab}
           onChange={(event, value) => setTab(value)}
@@ -150,7 +150,7 @@ const NominaPage = () => {
         {tab === 1 && <NominaTable user={user} type="descuento" rows={descuentos} config={{ typeLabel: "tipoDescuentoNombre" }} onNew={() => openNew("descuentos")} onEdit={(r) => openEdit("descuentos", r)} onDelete={(r) => remove("descuentos", r)} search={searchDescuentos} setSearch={setSearchDescuentos} />}
       </Box>
       <Box role="tabpanel" id="nomina-panel-2" aria-labelledby="nomina-tab-2" hidden={tab !== 2}>
-        {tab === 2 && <Stack spacing={2}><FormControl sx={{ maxWidth: 420 }}><InputLabel>Planilla</InputLabel><Select label="Planilla" value={resumenPlanilla} onChange={(e) => setResumenPlanilla(e.target.value)}>{(options.planillas || []).map((p) => <MenuItem key={p.id} value={p.id}>Planilla {p.numero} - {p.tipoPlanillaNombre}</MenuItem>)}</Select></FormControl><Button variant="contained" onClick={consultarResumen} sx={{ maxWidth: 220 }}>Consultar resumen</Button>{resumen && <Grid container spacing={2}>{[["Total ingresos", resumen.totalIngresos], ["Total descuentos", resumen.totalDescuentos], ["Liquido", resumen.liquido], ["Cantidad ingresos", resumen.cantidadIngresos], ["Cantidad descuentos", resumen.cantidadDescuentos]].map(([label, value]) => <Grid item xs={12} md={4} key={label}><Paper elevation={0} sx={{ p: 3, border: "1px solid #dde3ea" }}><Typography color="text.secondary">{label}</Typography><Typography variant="h6">{typeof value === "number" ? value.toFixed ? value.toFixed(2) : value : value}</Typography></Paper></Grid>)}</Grid>}</Stack>}
+        {tab === 2 && <Stack spacing={2}><FormControl sx={{ maxWidth: 420 }}><InputLabel>Planilla</InputLabel><Select label="Planilla" value={resumenPlanilla} onChange={(e) => setResumenPlanilla(e.target.value)}>{(options.planillas || []).map((p) => <MenuItem key={p.id} value={p.id}>Planilla {p.numero} - {p.tipoPlanillaNombre}</MenuItem>)}</Select></FormControl><Button variant="contained" onClick={consultarResumen} sx={{ maxWidth: 220 }}>Consultar resumen</Button>{resumen && <Grid container spacing={2}>{[["Total ingresos", resumen.totalIngresos], ["Total descuentos", resumen.totalDescuentos], ["Liquido", resumen.liquido], ["Cantidad ingresos", resumen.cantidadIngresos], ["Cantidad descuentos", resumen.cantidadDescuentos]].map(([label, value]) => <Grid item xs={12} md={4} key={label}><Paper elevation={0} sx={{ p: 3, border: (t) => `1px solid ${t.palette.borde}` }}><Typography color="text.secondary">{label}</Typography><Typography variant="h6">{typeof value === "number" ? value.toFixed ? value.toFixed(2) : value : value}</Typography></Paper></Grid>)}</Grid>}</Stack>}
       </Box>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md"><DialogTitle>{editing ? "Editar" : "Nuevo"} {isIngreso ? "ingreso" : "descuento"}</DialogTitle><DialogContent><Stack spacing={2} sx={{ mt: 1 }}>

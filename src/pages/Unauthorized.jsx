@@ -4,7 +4,7 @@ import { Link as RouterLink } from "react-router-dom";
 
 const Unauthorized = () => (
   <Box minHeight="60vh" display="flex" alignItems="center" justifyContent="center">
-    <Paper elevation={0} sx={{ p: 4, border: "1px solid #dde3ea", maxWidth: 460, textAlign: "center" }}>
+    <Paper elevation={0} sx={{ p: 4, border: (t) => `1px solid ${t.palette.borde}`, maxWidth: 460, textAlign: "center" }}>
       <Stack spacing={2} alignItems="center">
         <LockIcon color="primary" sx={{ fontSize: 46 }} />
         <Typography variant="h5">Acceso restringido</Typography>

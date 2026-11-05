@@ -150,7 +150,7 @@ const NominaTiempoExtraPage = () => {
       <PageHeader title="Nómina de Tiempo Extra" subtitle="Generación de planilla tipo 3 (horas extra)" />
 
       {canCreate(user) && (
-        <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+        <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5 }}>Nueva planilla de tiempo extra</Typography>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={3}><TextField label="Número (YYYYMM)" value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value.replace(/\D/g, "").slice(0, 6) })} fullWidth /></Grid>
@@ -162,7 +162,7 @@ const NominaTiempoExtraPage = () => {
         </Paper>
       )}
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31,78,95,0.08)" }}>
             <TableRow>
@@ -233,7 +233,7 @@ const NominaTiempoExtraPage = () => {
             </Stack>
           )}
 
-          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
             <Table size="small">
               <TableHead sx={{ bgcolor: "rgba(31,78,95,0.08)" }}>
                 <TableRow>

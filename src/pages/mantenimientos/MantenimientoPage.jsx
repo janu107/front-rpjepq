@@ -847,7 +847,7 @@ const MantenimientoPage = ({
                 {editingSalaryIndex !== null && <Button sx={{ ml: 1 }} onClick={() => { setEditingSalaryIndex(null); setSalaryForm({ tipoIngreso: "", salario: "" }); }}>Cancelar edicion</Button>}
               </Grid>
               <Grid item xs={12}>
-                <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+                <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
                   <Table size="small">
                     <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
                       <TableRow><TableCell>Codigo</TableCell><TableCell>Tipo ingreso</TableCell><TableCell>Salario</TableCell><TableCell align="right">Acciones</TableCell></TableRow>

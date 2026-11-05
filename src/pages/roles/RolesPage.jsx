@@ -79,7 +79,7 @@ const RolesPage = () => {
         El <b>superusuario</b> tiene todo, incluidos usuarios, roles, auditoría y respaldos.
       </Alert>
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -142,8 +142,8 @@ const RolesPage = () => {
                       const vs = pantallas.filter((p) => p.grupo === g);
                       const iguales = vs.every((p) => Number(editar.permisos[p.clave] || 0) === Number(editar.permisos[vs[0].clave] || 0));
                       return [
-                        <TableRow key={`g-${g}`} sx={{ bgcolor: "#EEF3F6" }}>
-                          <TableCell sx={{ fontWeight: 800, color: "#1F4E5F" }}>{g} <Typography component="span" variant="caption" color="text.secondary">(todo el grupo)</Typography></TableCell>
+                        <TableRow key={`g-${g}`} sx={{ bgcolor: "fondo.suave" }}>
+                          <TableCell sx={{ fontWeight: 800, color: "marca.main" }}>{g} <Typography component="span" variant="caption" color="text.secondary">(todo el grupo)</Typography></TableCell>
                           {niveles.map((n) => (
                             <TableCell key={n.nivel} align="center">
                               <Radio size="small" checked={iguales && Number(editar.permisos[vs[0].clave] || 0) === n.nivel} onChange={() => grupoA(g, n.nivel)} />

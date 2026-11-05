@@ -71,7 +71,7 @@ const AuditoriaPage = () => {
         <Typography color="text.secondary">Historial de acciones importantes del sistema</Typography>
       </Box>
 
-      <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+      <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={2.4}><TextField label="Usuario" value={filters.usuario} onChange={(e) => setFilters({ ...filters, usuario: e.target.value })} fullWidth /></Grid>
           <Grid item xs={12} md={2.4}><TextField label="Modulo" value={filters.modulo} onChange={(e) => setFilters({ ...filters, modulo: e.target.value.toUpperCase() })} fullWidth /></Grid>
@@ -85,7 +85,7 @@ const AuditoriaPage = () => {
         </Stack>
       </Paper>
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Table size="small">
           <TableHead>
             <TableRow>

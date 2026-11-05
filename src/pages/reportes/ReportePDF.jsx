@@ -183,7 +183,7 @@ const ReportePDF = ({
 
       {/* ── Filtros (ocultos al imprimir) ── */}
       {showFilters && (
-        <Paper elevation={0} className="no-print" sx={{ p: 2, border: "1px solid #dde3ea" }}>
+        <Paper elevation={0} className="no-print" sx={{ p: 2, border: (t) => `1px solid ${t.palette.borde}` }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
             <FilterListIcon fontSize="small" color="primary" />
             <Typography variant="subtitle2" fontWeight={700}>Filtros</Typography>
@@ -236,8 +236,8 @@ const ReportePDF = ({
       ) : (
         <Box
           sx={{
-            bgcolor: "white", p: { xs: 2, md: 3 },
-            border: "1px solid #dde3ea", borderRadius: 2,
+            bgcolor: "background.paper", p: { xs: 2, md: 3 },
+            border: (t) => `1px solid ${t.palette.borde}`, borderRadius: 2,
             boxShadow: "0 2px 18px rgba(20,63,75,0.06)",
             "@media print": { border: "none", boxShadow: "none", p: 0, borderRadius: 0 }
           }}
@@ -245,10 +245,10 @@ const ReportePDF = ({
           {/* Encabezado institucional */}
           <Box sx={{ position: "relative", textAlign: "center", mb: 3, pb: 2, borderBottom: "2px solid #1f4e5f", "@media print": { mb: 2, pb: 1 } }}>
             <LogoRegimen sx={{ position: "absolute", left: 0, top: 0, height: { xs: 44, md: 64 } }} />
-            <Typography sx={{ fontWeight: 900, fontSize: { xs: "0.82rem", md: "0.95rem" }, color: "#1f4e5f", letterSpacing: 0.5, textTransform: "uppercase" }}>
+            <Typography sx={{ fontWeight: 900, fontSize: { xs: "0.82rem", md: "0.95rem" }, color: "marca.main", letterSpacing: 0.5, textTransform: "uppercase" }}>
               Régimen de Pensiones y Jubilaciones
             </Typography>
-            <Typography sx={{ fontWeight: 900, fontSize: { xs: "0.82rem", md: "0.95rem" }, color: "#1f4e5f", letterSpacing: 0.5, textTransform: "uppercase" }}>
+            <Typography sx={{ fontWeight: 900, fontSize: { xs: "0.82rem", md: "0.95rem" }, color: "marca.main", letterSpacing: 0.5, textTransform: "uppercase" }}>
               del Personal de la Empresa Portuaria Quetzal
             </Typography>
             <Typography sx={{ fontWeight: 700, fontSize: { xs: "0.92rem", md: "1.08rem" }, color: "#2e7d91", mt: 1, letterSpacing: 0.3 }}>
@@ -276,12 +276,12 @@ const ReportePDF = ({
           <TableContainer sx={{ maxWidth: anchoTabla || "none", mx: anchoTabla ? "auto" : 0, "@media print": { overflow: "visible" } }}>
             <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
               <TableHead>
-                <TableRow sx={{ bgcolor: "#1f4e5f", "@media print": { bgcolor: "#e8ecef" } }}>
-                  <TableCell sx={{ color: "white", fontWeight: 800, fontSize: "0.72rem", width: 38, py: 1, "@media print": { color: "#1f4e5f", bgcolor: "#e8ecef", fontSize: "8pt", py: 0.5 } }}>
+                <TableRow sx={{ bgcolor: "#1f4e5f", "@media print": { bgcolor: "fondo.fuerte" } }}>
+                  <TableCell sx={{ color: "white", fontWeight: 800, fontSize: "0.72rem", width: 38, py: 1, "@media print": { color: "marca.main", bgcolor: "fondo.fuerte", fontSize: "8pt", py: 0.5 } }}>
                     No.
                   </TableCell>
                   {columns.map((col) => (
-                    <TableCell key={col.key} sx={{ color: "white", fontWeight: 800, fontSize: "0.72rem", py: 1, width: col.width, "@media print": { color: "#1f4e5f", bgcolor: "#e8ecef", fontWeight: 700, fontSize: "8pt", py: 0.5 } }}>
+                    <TableCell key={col.key} sx={{ color: "white", fontWeight: 800, fontSize: "0.72rem", py: 1, width: col.width, "@media print": { color: "marca.main", bgcolor: "fondo.fuerte", fontWeight: 700, fontSize: "8pt", py: 0.5 } }}>
                       {col.label}
                     </TableCell>
                   ))}
@@ -290,8 +290,8 @@ const ReportePDF = ({
               <TableBody>
                 {grupos.map(([grupo, filasGrupo]) => [
                   grupo !== null && (
-                    <TableRow key={`g-${grupo}`} sx={{ bgcolor: "#e8eef1", "@media print": { bgcolor: "#e8eef1" } }}>
-                      <TableCell colSpan={columns.length + 1} sx={{ fontWeight: 900, color: "#1f4e5f", fontSize: "0.8rem", py: 0.75, "@media print": { fontSize: "8.5pt" } }}>
+                    <TableRow key={`g-${grupo}`} sx={{ bgcolor: "fondo.fuerte", "@media print": { bgcolor: "fondo.fuerte" } }}>
+                      <TableCell colSpan={columns.length + 1} sx={{ fontWeight: 900, color: "marca.main", fontSize: "0.8rem", py: 0.75, "@media print": { fontSize: "8.5pt" } }}>
                         {grupo} <Typography component="span" variant="caption" color="text.secondary">· {filasGrupo.length} registro(s)</Typography>
                       </TableCell>
                     </TableRow>
@@ -312,7 +312,7 @@ const ReportePDF = ({
                       <TableRow key={`s-${grupo}`} sx={{ borderTop: "1.5px solid #1f4e5f" }}>
                         <TableCell sx={{ py: 0.75 }} />
                         {columns.map((col, k) => (
-                          <TableCell key={col.key} sx={{ fontWeight: 800, color: "#1f4e5f", fontSize: "0.75rem", py: 0.75, "@media print": { fontSize: "8pt" } }}>
+                          <TableCell key={col.key} sx={{ fontWeight: 800, color: "marca.main", fontSize: "0.75rem", py: 0.75, "@media print": { fontSize: "8pt" } }}>
                             {k === 0 ? `Subtotal ${grupo}` : (sub[col.key] ?? "")}
                           </TableCell>
                         ))}

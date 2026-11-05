@@ -310,7 +310,7 @@ const PrestacionesPage = () => {
         subtitle="Bono 14 · Aguinaldo · Bono Vacacional (sin descuentos de IGSS ni ISR)"
       />
 
-      <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <Paper elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)} variant="scrollable" scrollButtons="auto">
           {TIPOS.map((t) => <Tab key={t.key} label={t.label} />)}
         </Tabs>
@@ -319,7 +319,7 @@ const PrestacionesPage = () => {
       <Alert severity="info">{tipo.baseLegal}</Alert>
 
       {canCreate(user) && (
-        <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+        <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5 }}>
             Nueva planilla de {tipo.label}
           </Typography>
@@ -348,7 +348,7 @@ const PrestacionesPage = () => {
       )}
 
       {canGeneratePayroll(user) && (
-        <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+        <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5 }}>{tipo.titulo}</Typography>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={4}>
@@ -420,7 +420,7 @@ const PrestacionesPage = () => {
         </Paper>
       )}
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31,78,95,0.08)" }}>
             <TableRow>
@@ -491,7 +491,7 @@ const PrestacionesPage = () => {
             </Button>
           </Stack>
 
-          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
             <Table size="small">
               <TableHead sx={{ bgcolor: "rgba(31,78,95,0.08)" }}>
                 <TableRow>

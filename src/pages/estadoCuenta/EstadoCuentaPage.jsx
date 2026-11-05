@@ -328,7 +328,7 @@ const EstadoCuentaPage = () => {
               <Box>
                 <Button size="small" startIcon={<AddIcon />} onClick={() => setAjuste((a) => ({ ...a, descuentos: [...a.descuentos, { tipo: 9, valor: "" }] }))}>Agregar descuento</Button>
               </Box>
-              <Box sx={{ p: 1.5, bgcolor: "#F4F6F8", borderRadius: 1.5 }}>
+              <Box sx={{ p: 1.5, bgcolor: "fondo.suave", borderRadius: 1.5 }}>
                 <Grid container spacing={1}>
                   <Dato label="Total descuentos" valor={fmtQ(totalAjuste)} />
                   <Dato label="Líquido (se le debe)" valor={fmtQ(liquidoAjuste)} />
@@ -363,7 +363,7 @@ const EstadoCuentaPage = () => {
           </Typography>
           <Table size="small" stickyHeader sx={{
             width: "auto",
-            "& thead th": { bgcolor: "#F4F6F8", zIndex: 2, fontSize: 12, lineHeight: 1.2, px: 1, whiteSpace: "nowrap" },
+            "& thead th": { bgcolor: "fondo.suave", zIndex: 2, fontSize: 12, lineHeight: 1.2, px: 1, whiteSpace: "nowrap" },
             "& tbody td": { whiteSpace: "nowrap" },
             // Compacto para que toda la historia quepa a lo ancho sin deslizar.
             "& tbody td": { fontSize: 12.5, px: 0.75, py: 0.4 },
@@ -375,16 +375,16 @@ const EstadoCuentaPage = () => {
                 <TableCell rowSpan={2}>Período</TableCell>
                 <TableCell rowSpan={2}>Ingreso</TableCell>
                 <TableCell rowSpan={2} align="right">Pensión</TableCell>
-                <TableCell colSpan={gruposUsados.length + 1} align="center" sx={{ height: 28, py: 0.5, borderLeft: "1px solid #DDE3EA", borderRight: "1px solid #DDE3EA" }}>Descuentos</TableCell>
+                <TableCell colSpan={gruposUsados.length + 1} align="center" sx={{ height: 28, py: 0.5, borderLeft: (t) => `1px solid ${t.palette.borde}`, borderRight: (t) => `1px solid ${t.palette.borde}` }}>Descuentos</TableCell>
                 <TableCell rowSpan={2} align="right">Monto<br />generado</TableCell>
                 <TableCell rowSpan={2} align="right">Recibido<br />en el mes</TableCell><TableCell rowSpan={2} align="right">Abonado<br />a la deuda</TableCell><TableCell rowSpan={2} align="right">Saldo</TableCell><TableCell rowSpan={2}>Estado</TableCell><TableCell rowSpan={2}>Tipo</TableCell>
                 {canEdit(user) && <TableCell rowSpan={2} align="center">Ajustar</TableCell>}
               </TableRow>
               <TableRow sx={{ "& th": { top: 28, fontSize: 12, color: "text.secondary", py: 0.5 } }}>
                 {gruposUsados.map((g, k) => (
-                  <TableCell key={g.campo} align="right" sx={k === 0 ? { borderLeft: "1px solid #DDE3EA" } : undefined}>{g.titulo}</TableCell>
+                  <TableCell key={g.campo} align="right" sx={k === 0 ? { borderLeft: (t) => `1px solid ${t.palette.borde}` } : undefined}>{g.titulo}</TableCell>
                 ))}
-                <TableCell align="right" sx={{ fontWeight: 700, borderRight: "1px solid #DDE3EA", ...(gruposUsados.length === 0 ? { borderLeft: "1px solid #DDE3EA" } : {}) }}>Total</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, borderRight: (t) => `1px solid ${t.palette.borde}`, ...(gruposUsados.length === 0 ? { borderLeft: (t) => `1px solid ${t.palette.borde}` } : {}) }}>Total</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -402,12 +402,12 @@ const EstadoCuentaPage = () => {
                     {gruposUsados.map((g, k) => {
                       const v = Number(d.desglose?.[g.campo] || 0);
                       return (
-                        <TableCell key={g.campo} align="right" sx={{ color: v > 0 ? "inherit" : "text.disabled", ...(k === 0 ? { borderLeft: "1px solid #DDE3EA" } : {}) }}>
+                        <TableCell key={g.campo} align="right" sx={{ color: v > 0 ? "inherit" : "text.disabled", ...(k === 0 ? { borderLeft: (t) => `1px solid ${t.palette.borde}` } : {}) }}>
                           {v > 0 ? fmtQ(v) : "—"}
                         </TableCell>
                       );
                     })}
-                    <TableCell align="right" sx={{ fontWeight: 600, borderRight: "1px solid #DDE3EA", ...(gruposUsados.length === 0 ? { borderLeft: "1px solid #DDE3EA" } : {}) }}>
+                    <TableCell align="right" sx={{ fontWeight: 600, borderRight: (t) => `1px solid ${t.palette.borde}`, ...(gruposUsados.length === 0 ? { borderLeft: (t) => `1px solid ${t.palette.borde}` } : {}) }}>
                       {d.descuentos > 0 ? (
                         <Tooltip title={(d.detalleDescuentos || "Pensión − monto generado").split(" | ").map((t) => <div key={t}>{t}</div>)} arrow>
                           <span style={{ borderBottom: "1px dotted #999", cursor: "help" }}>{fmtQ(d.descuentos)}</span>

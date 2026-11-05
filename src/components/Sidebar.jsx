@@ -161,7 +161,7 @@ const MenuItem = ({ item, level = 0, pathname, onNavigate }) => {
             borderRadius: 2,
             my: 0.45,
             pl,
-            color: active ? "primary.contrastText" : "rgba(255,255,255,0.82)",
+            color: active ? "#ffffff" : "rgba(255,255,255,0.82)",
             bgcolor: active ? "rgba(255,255,255,0.12)" : "transparent",
             transition: "transform 160ms ease, background-color 160ms ease, color 160ms ease",
             "&:hover": {
@@ -203,7 +203,7 @@ const MenuItem = ({ item, level = 0, pathname, onNavigate }) => {
         transition: "transform 160ms ease, background-color 160ms ease, color 160ms ease",
         "&.active": {
           bgcolor: "rgba(255,255,255,0.16)",
-          color: "primary.contrastText",
+          color: "#ffffff",
           boxShadow: "inset 3px 0 0 #d99a4f"
         },
         "&.Mui-disabled": {
@@ -230,7 +230,7 @@ const SidebarContent = ({ onNavigate }) => {
     <Box
       sx={{
         height: "100%",
-        color: "primary.contrastText",
+        color: "#ffffff",
         background: "linear-gradient(180deg, #123f4b 0%, #164c59 52%, #0f3540 100%)",
         overflowY: "auto"
       }}

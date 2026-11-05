@@ -242,7 +242,7 @@ const OtrosDescuentosPage = () => {
               <TextField label="Motivo *" value={form.motivo} onChange={(e) => setForm((f) => ({ ...f, motivo: e.target.value.toUpperCase() }))} fullWidth />
             </Grid>
             <Grid item xs={12}>
-              <Box sx={{ p: 1.5, bgcolor: "#F4F6F8", borderRadius: 1 }}>
+              <Box sx={{ p: 1.5, bgcolor: "fondo.suave", borderRadius: 1 }}>
                 <Typography variant="body2">
                   Se descontará <b>{money(form.valor)}</b> a <b>{personaSel ? `${personaSel.codigo} — ${personaSel.nombre}` : "—"}</b> en la
                   <b> {APLICA.find((a) => a.valor === form.tipoManejo)?.planilla} {form.periodo}{nombrePeriodo(form.periodo) ? ` (${nombrePeriodo(form.periodo)})` : ""}</b>.

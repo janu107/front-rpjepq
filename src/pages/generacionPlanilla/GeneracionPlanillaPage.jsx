@@ -25,7 +25,7 @@ const money = (value) => `Q ${Number(value || 0).toFixed(2)}`;
 const PreviewTable = ({ title, rows, type }) => (
   <Stack spacing={1.5}>
     <Typography variant="h6">{title}</Typography>
-    <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+    <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
       <Table size="small">
         <TableHead>
           <TableRow>
@@ -61,7 +61,7 @@ const PreviewTable = ({ title, rows, type }) => (
 
 const SummaryCard = ({ label, value, currency = false }) => (
   <Grid item xs={12} sm={6} md={4}>
-    <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea", height: "100%" }}>
+    <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}`, height: "100%" }}>
       <Typography color="text.secondary" variant="body2">{label}</Typography>
       <Typography variant="h6">{currency ? money(value) : value || 0}</Typography>
     </Paper>
@@ -187,7 +187,7 @@ const GeneracionPlanillaPage = () => {
         <Typography color="text.secondary">Generacion automatica de ingresos y descuentos</Typography>
       </Box>
 
-      <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+      <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>

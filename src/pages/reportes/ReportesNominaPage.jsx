@@ -16,7 +16,7 @@ const formatDate = (value) => (value ? new Date(value).toLocaleDateString("es-GT
 
 const SummaryCard = ({ label, value, currency = false }) => (
   <Grid item xs={12} sm={6} md={3}>
-    <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea", height: "100%" }}>
+    <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}`, height: "100%" }}>
       <Typography color="text.secondary" variant="body2">{label}</Typography>
       <Typography variant="h6">{currency ? money(value) : value || 0}</Typography>
     </Paper>
@@ -48,7 +48,7 @@ const DetailTable = ({ title, rows, search, setSearch, type, onExport }) => {
         />
         <Button variant="outlined" startIcon={<TableViewIcon />} onClick={onExport}>Exportar Excel</Button>
       </Stack>
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -157,7 +157,7 @@ const ReportesNominaPage = () => {
         <Typography color="text.secondary">Consulta y exportacion de planillas generadas</Typography>
       </Box>
 
-      <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+      <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }}>
           <FormControl sx={{ minWidth: { xs: "100%", md: 360 } }}>
             <InputLabel>Planilla</InputLabel>
@@ -185,7 +185,7 @@ const ReportesNominaPage = () => {
         <SummaryCard label="Cantidad jubilados" value={resumen.cantidadJubilados} />
       </Grid>
 
-      <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <Paper elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Tabs value={tab} onChange={(event, value) => setTab(value)}>
           <Tab label="Resumen" />
           <Tab label="Ingresos" />
@@ -194,7 +194,7 @@ const ReportesNominaPage = () => {
       </Paper>
 
       {tab === 0 && (
-        <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
+        <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}` }}>
           <Grid container spacing={2}>
             {[
               ["Numero planilla", resumen.numeroPlanilla],

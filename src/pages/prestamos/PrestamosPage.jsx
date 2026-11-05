@@ -387,7 +387,7 @@ const PrestamosPage = ({ detailOnly = false }) => {
         )}
       />
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}`, overflow: "hidden" }}>
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
             <TableRow><TableCell>Codigo</TableCell><TableCell>Codigo empleado</TableCell><TableCell>Contrato</TableCell><TableCell>Aportacion</TableCell><TableCell>Monto</TableCell><TableCell>Cuota</TableCell><TableCell>Estado</TableCell><TableCell align="right">Acciones</TableCell></TableRow>
@@ -405,7 +405,7 @@ const PrestamosPage = ({ detailOnly = false }) => {
             rowsPerPageOptions={[15, 30, 60]}
             labelRowsPerPage="Registros por página"
             labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-            sx={{ borderTop: "1px solid #dde3ea" }}
+            sx={{ borderTop: (t) => `1px solid ${t.palette.borde}` }}
           />
         )}
       </TableContainer>
@@ -496,9 +496,9 @@ const PrestamosPage = ({ detailOnly = false }) => {
                 </Box>
               </Box>
             )}
-            <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", flex: 1, minHeight: 0, overflow: "auto" }}>
+            <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}`, flex: 1, minHeight: 0, overflow: "auto" }}>
               <Table size="small" stickyHeader>
-                <TableHead sx={{ "& th": { bgcolor: "#EAF0F2" } }}>
+                <TableHead sx={{ "& th": { bgcolor: "fondo.suave" } }}>
                   <TableRow>
                     <TableCell>No. cuota</TableCell><TableCell>Fecha pago</TableCell><TableCell align="right">Cuota nivelada</TableCell>
                     <TableCell align="right">Amortizacion</TableCell><TableCell align="right">Intereses</TableCell>
@@ -541,7 +541,7 @@ const PrestamosPage = ({ detailOnly = false }) => {
                   rowsPerPageOptions={[15, 30, 60]}
                   labelRowsPerPage="Registros por página"
                   labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-                  sx={{ borderTop: "1px solid #dde3ea" }}
+                  sx={{ borderTop: (t) => `1px solid ${t.palette.borde}` }}
                 />
               )}
             </TableContainer>

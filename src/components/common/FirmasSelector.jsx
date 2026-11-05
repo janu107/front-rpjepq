@@ -41,7 +41,7 @@ const FirmasSelector = ({ grupo, onChange, titulo = "Firmas del documento", clas
   }, [sel, lista]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Paper elevation={0} className={className} sx={{ p: 2, border: "1px solid #dde3ea" }}>
+    <Paper elevation={0} className={className} sx={{ p: 2, border: (t) => `1px solid ${t.palette.borde}` }}>
       <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>{titulo}</Typography>
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} flexWrap="wrap" useFlexGap>
         {ROLES_FIRMA.map((r) => (

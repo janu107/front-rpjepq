@@ -61,7 +61,7 @@ const DataTable = ({
         elevation={0}
         sx={{
           display: { xs: "none", md: "block" },
-          border: "1px solid #dde3ea",
+          border: (t) => `1px solid ${t.palette.borde}`,
           overflow: "hidden",
           boxShadow: "0 14px 40px rgba(31, 78, 95, 0.06)"
         }}
@@ -113,13 +113,13 @@ const DataTable = ({
 
       <Stack spacing={1.5} sx={{ display: { xs: "flex", md: "none" } }}>
         {loading && (
-          <Paper elevation={0} sx={{ p: 3, border: "1px solid #dde3ea", textAlign: "center" }}>
+          <Paper elevation={0} sx={{ p: 3, border: (t) => `1px solid ${t.palette.borde}`, textAlign: "center" }}>
             <CircularProgress size={24} />
           </Paper>
         )}
 
         {!loading && filteredRows.length === 0 && (
-          <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+          <Paper elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
             <EmptyState message={emptyMessage} />
           </Paper>
         )}
@@ -130,7 +130,7 @@ const DataTable = ({
             elevation={0}
             sx={{
               p: 2,
-              border: "1px solid #dde3ea",
+              border: (t) => `1px solid ${t.palette.borde}`,
               boxShadow: "0 12px 30px rgba(31, 78, 95, 0.08)",
               transition: "transform 180ms ease, box-shadow 180ms ease",
               "&:active": { transform: "scale(0.995)" }
@@ -185,7 +185,7 @@ const DataTable = ({
           rowsPerPageOptions={opcionesPorPagina}
           labelRowsPerPage="Registros por página"
           labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-          sx={{ borderTop: "1px solid #dde3ea" }}
+          sx={{ borderTop: (t) => `1px solid ${t.palette.borde}` }}
         />
       )}
     </Stack>

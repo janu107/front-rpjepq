@@ -46,14 +46,14 @@ const fmtCorto = (n) => {
 const per = (p) => { const s = String(p || ""); return s.length === 6 ? `${MES3[Number(s.slice(4, 6)) - 1]} ${s.slice(2, 4)}` : s; };
 
 const Tarjeta = ({ children, sx }) => (
-  <Paper elevation={0} sx={{ p: { xs: 2, md: 2.5 }, border: `1px solid ${BORDE}`, borderRadius: 3, height: "100%", ...sx }}>{children}</Paper>
+  <Paper elevation={0} sx={{ p: { xs: 2, md: 2.5 }, border: (t) => `1px solid ${t.palette.borde}`, borderRadius: 3, height: "100%", ...sx }}>{children}</Paper>
 );
 
 const Titulo = ({ titulo, subtitulo, accion }) => (
   <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
     <Box>
-      <Typography sx={{ fontWeight: 800, fontSize: 16, color: "#1d2a31" }}>{titulo}</Typography>
-      {subtitulo && <Typography variant="body2" sx={{ color: TEXTO_2 }}>{subtitulo}</Typography>}
+      <Typography sx={{ fontWeight: 800, fontSize: 16, color: "text.primary" }}>{titulo}</Typography>
+      {subtitulo && <Typography variant="body2" sx={{ color: "text.secondary" }}>{subtitulo}</Typography>}
     </Box>
     {accion}
   </Stack>
@@ -63,17 +63,17 @@ const Kpi = ({ icono, etiqueta, valor, detalle, to }) => (
   <Paper
     component={to ? RouterLink : "div"} to={to} elevation={0}
     sx={{
-      p: 2.25, border: `1px solid ${BORDE}`, borderRadius: 3, height: "100%", display: "block", color: "inherit", textDecoration: "none",
+      p: 2.25, border: (t) => `1px solid ${t.palette.borde}`, borderRadius: 3, height: "100%", display: "block", color: "inherit", textDecoration: "none",
       transition: "border-color 160ms ease, box-shadow 160ms ease",
       "&:hover": to ? { borderColor: MARCA_2, boxShadow: "0 10px 28px rgba(20,63,75,0.10)" } : undefined
     }}
   >
     <Stack direction="row" spacing={1.25} alignItems="center">
-      <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: SUAVE, color: MARCA, display: "grid", placeItems: "center" }}>{icono}</Box>
-      <Typography variant="body2" sx={{ color: TEXTO_2, fontWeight: 600 }}>{etiqueta}</Typography>
+      <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: "fondo.fuerte", color: "marca.main", display: "grid", placeItems: "center" }}>{icono}</Box>
+      <Typography variant="body2" sx={{ color: "text.secondary", fontWeight: 600 }}>{etiqueta}</Typography>
     </Stack>
-    <Typography sx={{ mt: 1.25, fontSize: 28, fontWeight: 800, color: "#1d2a31", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>{valor}</Typography>
-    {detalle && <Typography variant="body2" sx={{ mt: 0.5, color: TEXTO_2 }}>{detalle}</Typography>}
+    <Typography sx={{ mt: 1.25, fontSize: 28, fontWeight: 800, color: "text.primary", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>{valor}</Typography>
+    {detalle && <Typography variant="body2" sx={{ mt: 0.5, color: "text.secondary" }}>{detalle}</Typography>}
   </Paper>
 );
 
@@ -91,12 +91,12 @@ const Columnas = ({ datos, alto = 230, etiquetaX, valorTexto, resaltar }) => {
   const barra = Math.min(34, banda * 0.62);
   const y = (v) => m.arr + h - (v / tope) * h;
   return (
-    <Box sx={{ position: "relative" }}>
+    <Box sx={{ position: "relative", color: "marca.main", "& .ejes": { color: "text.secondary" }, "& .rejilla": { stroke: (t) => t.palette.borde } }}>
       <svg viewBox={`0 0 ${ancho} ${alto}`} width="100%" role="img" style={{ display: "block", overflow: "visible" }}>
         {[0, 1, 2, 3, 4].map((i) => (
           <g key={i}>
-            <line x1={m.izq} x2={ancho - m.der} y1={y(paso * i)} y2={y(paso * i)} stroke="#eef1f3" />
-            <text x={m.izq - 8} y={y(paso * i) + 4} textAnchor="end" fontSize="11" fill={TEXTO_2}>{fmtCorto(paso * i)}</text>
+            <line className="rejilla" x1={m.izq} x2={ancho - m.der} y1={y(paso * i)} y2={y(paso * i)} />
+            <text className="ejes" x={m.izq - 8} y={y(paso * i) + 4} textAnchor="end" fontSize="11" fill="currentColor">{fmtCorto(paso * i)}</text>
           </g>
         ))}
         {datos.map((d, i) => {
@@ -111,15 +111,15 @@ const Columnas = ({ datos, alto = 230, etiquetaX, valorTexto, resaltar }) => {
               {alt > 0 && (
                 <path
                   d={`M${x},${y(0)} V${y(d.valor) + r} Q${x},${y(d.valor)} ${x + r},${y(d.valor)} H${x + barra - r} Q${x + barra},${y(d.valor)} ${x + barra},${y(d.valor) + r} V${y(0)} Z`}
-                  fill={es ? "#fff" : MARCA} stroke={es ? MARCA : "none"} strokeWidth={es ? 2 : 0} strokeDasharray={es ? "4 3" : undefined}
+                  fill={es ? "transparent" : "currentColor"} stroke={es ? "currentColor" : "none"} strokeWidth={es ? 2 : 0} strokeDasharray={es ? "4 3" : undefined}
                   opacity={hover === null || sel ? 1 : 0.55}
                 />
               )}
-              <text x={m.izq + banda * i + banda / 2} y={alto - 8} textAnchor="middle" fontSize="11" fill={TEXTO_2}>{etiquetaX(d)}</text>
+              <text className="ejes" x={m.izq + banda * i + banda / 2} y={alto - 8} textAnchor="middle" fontSize="11" fill="currentColor">{etiquetaX(d)}</text>
             </g>
           );
         })}
-        <line x1={m.izq} x2={ancho - m.der} y1={y(0)} y2={y(0)} stroke="#c9d2d8" />
+        <line className="rejilla" x1={m.izq} x2={ancho - m.der} y1={y(0)} y2={y(0)} />
       </svg>
       {hover !== null && (
         <Box sx={{
@@ -143,13 +143,13 @@ const BarrasH = ({ datos }) => {
       {datos.map((d) => (
         <Box key={d.etiqueta}>
           <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: "#1d2a31" }}>{d.etiqueta}</Typography>
-            <Typography variant="body2" sx={{ color: TEXTO_2, fontVariantNumeric: "tabular-nums" }}>
-              <b style={{ color: "#1d2a31" }}>{fmtN(d.valor)}</b> · {Math.round((d.valor / total) * 100)}%
+            <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }}>{d.etiqueta}</Typography>
+            <Typography variant="body2" sx={{ color: "text.secondary", fontVariantNumeric: "tabular-nums" }}>
+              <b style={{ color: "text.primary" }}>{fmtN(d.valor)}</b> · {Math.round((d.valor / total) * 100)}%
             </Typography>
           </Stack>
-          <Box sx={{ height: 10, bgcolor: "#eef1f3", borderRadius: 5, overflow: "hidden" }} title={`${d.etiqueta}: ${fmtN(d.valor)}`}>
-            <Box sx={{ width: `${(d.valor / max) * 100}%`, height: "100%", bgcolor: MARCA, borderRadius: 5 }} />
+          <Box sx={{ height: 10, bgcolor: "fondo.suave", borderRadius: 5, overflow: "hidden" }} title={`${d.etiqueta}: ${fmtN(d.valor)}`}>
+            <Box sx={{ width: `${(d.valor / max) * 100}%`, height: "100%", bgcolor: "primary.main", borderRadius: 5 }} />
           </Box>
         </Box>
       ))}
@@ -166,11 +166,11 @@ const Pendiente = ({ nivel, titulo, detalle, to }) => {
   const n = NIVEL[nivel];
   return (
     <Stack component={to ? RouterLink : "div"} to={to} direction="row" spacing={1.5} alignItems="center"
-      sx={{ p: 1.25, borderRadius: 2, color: "inherit", textDecoration: "none", "&:hover": to ? { bgcolor: "#f5f8f9" } : undefined }}>
+      sx={{ p: 1.25, borderRadius: 2, color: "inherit", textDecoration: "none", "&:hover": to ? { bgcolor: "fondo.suave" } : undefined }}>
       <Box sx={{ width: 32, height: 32, borderRadius: "50%", bgcolor: n.fondo, color: n.color, display: "grid", placeItems: "center", flex: "none" }}>{n.icono}</Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2" sx={{ fontWeight: 700, color: "#1d2a31" }}>{titulo}</Typography>
-        {detalle && <Typography variant="caption" sx={{ color: TEXTO_2 }}>{detalle}</Typography>}
+        <Typography variant="body2" sx={{ fontWeight: 700, color: "text.primary" }}>{titulo}</Typography>
+        {detalle && <Typography variant="caption" sx={{ color: "text.secondary" }}>{detalle}</Typography>}
       </Box>
       {to && <ArrowForwardIcon fontSize="small" sx={{ color: "#9aa7af" }} />}
     </Stack>
@@ -201,12 +201,12 @@ const InicioUsuario = ({ user }) => {
       </Box>
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }, gap: 2 }}>
         {grupos.map((g) => (
-          <Paper key={g.text} elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea", borderRadius: 3 }}>
-            <Typography sx={{ fontWeight: 800, color: "#1F4E5F", mb: 1 }}>{g.text}</Typography>
+          <Paper key={g.text} elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}`, borderRadius: 3 }}>
+            <Typography sx={{ fontWeight: 800, color: "marca.main", mb: 1 }}>{g.text}</Typography>
             <Stack spacing={0.5}>
               {g.children.map((c) => (
                 <Box key={c.path} component={RouterLink} to={c.path}
-                  sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "text.primary", p: 1, borderRadius: 2, "&:hover": { bgcolor: "#F2F6F8" } }}>
+                  sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "text.primary", p: 1, borderRadius: 2, "&:hover": { bgcolor: "fondo.suave" } }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{c.text}</Typography>
                   <ArrowForwardIcon fontSize="small" color="action" />
                 </Box>
@@ -318,7 +318,7 @@ const PanelGeneral = () => {
         <Box>
           <Tarjeta>
             <Titulo titulo="Nómina de jubilados" subtitulo="Neto pagado por planilla, últimos 12 meses (la punteada está generada, sin cerrar)"
-              accion={<Chip size="small" component={RouterLink} clickable to="/planillas-pensionados" label="Ver planillas" sx={{ bgcolor: SUAVE, color: MARCA, fontWeight: 700 }} />} />
+              accion={<Chip size="small" component={RouterLink} clickable to="/planillas-pensionados" label="Ver planillas" sx={{ bgcolor: "fondo.fuerte", color: "marca.main", fontWeight: 700 }} />} />
             {!d ? <Skeleton variant="rounded" height={230} /> : (
               <Columnas
                 datos={d.planillas.jubilados.map((p) => ({ clave: p.numero, valor: p.neto, p }))}
@@ -343,7 +343,7 @@ const PanelGeneral = () => {
           <Tarjeta>
             <Titulo titulo={`Aportes EPQ ${d?.aportes?.anio || ""}`}
               subtitulo={d ? `${fmtQ(d.aportes.actual)} en el año · promedio ${fmtCorto(varAportes.promedio)} por mes · ${d.aportes.anio - 1}: ${fmtCorto(d.aportes.anterior)}` : " "}
-              accion={<Chip size="small" component={RouterLink} clickable to="/aportaciones-dashboard" label="Ver detalle" sx={{ bgcolor: SUAVE, color: MARCA, fontWeight: 700 }} />} />
+              accion={<Chip size="small" component={RouterLink} clickable to="/aportaciones-dashboard" label="Ver detalle" sx={{ bgcolor: "fondo.fuerte", color: "marca.main", fontWeight: 700 }} />} />
             {!d ? <Skeleton variant="rounded" height={210} /> : (
               <Columnas alto={210}
                 datos={d.aportes.porMes.map((v, i) => ({ clave: i, valor: v }))}
@@ -365,18 +365,18 @@ const PanelGeneral = () => {
 
       {/* Accesos rápidos */}
       <Box>
-        <Typography sx={{ fontWeight: 800, fontSize: 16, color: "#1d2a31", mb: 1.25 }}>Accesos rápidos</Typography>
+        <Typography sx={{ fontWeight: 800, fontSize: 16, color: "text.primary", mb: 1.25 }}>Accesos rápidos</Typography>
         <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, 1fr)", lg: "repeat(6, 1fr)" } }}>
           {ACCESOS.map((a) => (
             <Box key={a.to}>
               <Paper component={RouterLink} to={a.to} elevation={0} sx={{
-                p: 1.75, height: "100%", display: "block", border: `1px solid ${BORDE}`, borderRadius: 3, color: "inherit", textDecoration: "none",
+                p: 1.75, height: "100%", display: "block", border: (t) => `1px solid ${t.palette.borde}`, borderRadius: 3, color: "inherit", textDecoration: "none",
                 transition: "transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease",
                 "&:hover": { transform: "translateY(-2px)", borderColor: MARCA_2, boxShadow: "0 10px 28px rgba(20,63,75,0.10)" }
               }}>
-                <Box sx={{ color: MARCA, mb: 0.75 }}>{a.icono}</Box>
-                <Typography sx={{ fontWeight: 700, fontSize: 14, color: "#1d2a31" }}>{a.titulo}</Typography>
-                <Typography variant="caption" sx={{ color: TEXTO_2 }}>{a.detalle}</Typography>
+                <Box sx={{ color: "marca.main", mb: 0.75 }}>{a.icono}</Box>
+                <Typography sx={{ fontWeight: 700, fontSize: 14, color: "text.primary" }}>{a.titulo}</Typography>
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>{a.detalle}</Typography>
               </Paper>
             </Box>
           ))}

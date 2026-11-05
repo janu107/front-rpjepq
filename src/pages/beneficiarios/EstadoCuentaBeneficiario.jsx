@@ -125,7 +125,7 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
               </Alert>
             )}
             {df && !df.canceladaFuera && (
-              <Box sx={{ p: 2, border: "1px solid #dde3ea", borderRadius: 1.5 }}>
+              <Box sx={{ p: 2, border: (t) => `1px solid ${t.palette.borde}`, borderRadius: 1.5 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800, color: PRIMARIO }}>Deuda del fallecido (la cobra el cónyuge)</Typography>
                 <Grid container spacing={2} sx={{ mt: 0.5 }}>
                   <Dato etiqueta="Total de la deuda" valor={fmtQ(df.total)} />
@@ -215,7 +215,7 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
                     <Dato etiqueta="Deuda desde 2023" valor={fmtQ(suma("debe"))} />
                     <Dato etiqueta="Pendiente" valor={fmtQ(suma("saldo"))} fuerte />
                   </Grid>
-                  <Box sx={{ maxHeight: 300, overflowY: "auto", border: "1px solid #dde3ea", borderRadius: 1 }}>
+                  <Box sx={{ maxHeight: 300, overflowY: "auto", border: (t) => `1px solid ${t.palette.borde}`, borderRadius: 1 }}>
                     <Table size="small" stickyHeader>
                       <TableHead>
                         <TableRow>

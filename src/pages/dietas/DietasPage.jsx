@@ -46,7 +46,7 @@ const ChequePreview = ({ nombre, monto, noDocumento, banco, fechaPago }) => {
         VISTA PREVIA DEL CHEQUE (formato provisional)
       </Typography>
       <Box sx={{
-        mt: 0.75, p: 2.5, borderRadius: 1.5, border: "1px solid #C9D3DD",
+        mt: 0.75, p: 2.5, borderRadius: 1.5, border: (t) => `1px solid ${t.palette.borde}`,
         background: "linear-gradient(135deg, #F3F8FB 0%, #E8F1F6 100%)", fontFamily: "Helvetica, Arial, sans-serif"
       }}>
         <Stack direction="row" justifyContent="space-between">
@@ -59,7 +59,7 @@ const ChequePreview = ({ nombre, monto, noDocumento, banco, fechaPago }) => {
             <Typography sx={{ fontSize: 10, color: "text.secondary" }}>PÁGUESE A LA ORDEN DE:</Typography>
             <Typography sx={{ fontWeight: 800, fontSize: 15, borderBottom: "1px solid #7A8794", pb: 0.25 }}>{String(nombre || "").toUpperCase()}</Typography>
           </Box>
-          <Box sx={{ border: "1.5px solid #222", px: 1.5, py: 0.5, bgcolor: "#fff", minWidth: 120, textAlign: "right" }}>
+          <Box sx={{ border: "1.5px solid #222", px: 1.5, py: 0.5, bgcolor: "background.paper", minWidth: 120, textAlign: "right" }}>
             <Typography sx={{ fontWeight: 800, fontSize: 16 }}>**{montoQ(monto)}**</Typography>
           </Box>
         </Stack>
@@ -288,7 +288,7 @@ const SesionesTab = ({ user, miembros }) => {
         </Stack>
         {canCreate(user) && <Button variant="contained" startIcon={<ReceiptLongIcon />} onClick={openCreate}>Nueva sesión</Button>}
       </Stack>
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31,78,95,0.08)" }}>
             <TableRow>
@@ -377,7 +377,7 @@ const SesionesTab = ({ user, miembros }) => {
               ) : (
                 <Box>
                   {miembrosVisibles.length > 0 && (
-                    <Grid container sx={{ borderBottom: "1px solid #dde3ea", mb: 0.5, display: { xs: "none", md: "flex" } }}>
+                    <Grid container sx={{ borderBottom: (t) => `1px solid ${t.palette.borde}`, mb: 0.5, display: { xs: "none", md: "flex" } }}>
                       <Grid item md={6}><Typography variant="caption" sx={{ fontWeight: 800, color: "text.secondary", letterSpacing: 0.8 }}>TITULARES</Typography></Grid>
                       <Grid item md={6}><Typography variant="caption" sx={{ fontWeight: 800, color: "text.secondary", letterSpacing: 0.8 }}>SUPLENTES</Typography></Grid>
                     </Grid>
@@ -544,7 +544,7 @@ const PagosTab = ({ user, parIsr, bancos }) => {
 
   return (
     <Stack spacing={2}>
-      <Paper elevation={0} sx={{ p: 2, border: "1px solid #dde3ea" }}>
+      <Paper elevation={0} sx={{ p: 2, border: (t) => `1px solid ${t.palette.borde}` }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={6} md={2}>
             <FormControl fullWidth>
@@ -586,7 +586,7 @@ const PagosTab = ({ user, parIsr, bancos }) => {
         </Stack>
       </Paper>
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Table size="small">
           <TableHead sx={{ bgcolor: "rgba(31,78,95,0.08)" }}>
             <TableRow>
@@ -600,7 +600,7 @@ const PagosTab = ({ user, parIsr, bancos }) => {
               <Fragment key={g.titulo || "unico"}>
                 {g.titulo && (
                   <TableRow>
-                    <TableCell colSpan={8} sx={{ bgcolor: "#F4F6F8", fontWeight: 800, color: "#1F4E5F", letterSpacing: 0.5 }}>
+                    <TableCell colSpan={8} sx={{ bgcolor: "fondo.suave", fontWeight: 800, color: "marca.main", letterSpacing: 0.5 }}>
                       {g.titulo} <Typography component="span" variant="body2" color="text.secondary">· {g.filas.length} miembro(s)</Typography>
                     </TableCell>
                   </TableRow>
@@ -697,7 +697,7 @@ const PagosTab = ({ user, parIsr, bancos }) => {
           {detalle.pago && (
             <Stack spacing={1}>
               <Typography variant="body2" color="text.secondary">{detalle.pago.juntaPuesto} · Periodo {detalle.pago.periodo || "—"} · Estado {detalle.pago.estado}</Typography>
-              <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+              <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
                 <Table size="small">
                   <TableHead><TableRow><TableCell>Acta</TableCell><TableCell>Fecha</TableCell><TableCell>Estado</TableCell><TableCell align="right">Valor</TableCell></TableRow></TableHead>
                   <TableBody>

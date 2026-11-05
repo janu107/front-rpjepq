@@ -28,10 +28,10 @@ const DetalleTipo = ({ filas, onJubilado }) => {
   const [pagina, setPagina] = useState(0);
   const visibles = filas.slice(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA);
   return (
-    <Box sx={{ m: 1.5, ml: 6, border: "1px solid #E3E8EE", borderRadius: 1, bgcolor: "#fff" }}>
+    <Box sx={{ m: 1.5, ml: 6, border: (t) => `1px solid ${t.palette.borde}`, borderRadius: 1, bgcolor: "background.paper" }}>
       <Table size="small">
         <TableHead>
-          <TableRow sx={{ "& th": { bgcolor: "#F4F6F8", fontWeight: 600 } }}>
+          <TableRow sx={{ "& th": { bgcolor: "fondo.suave", fontWeight: 600 } }}>
             <TableCell>Código</TableCell><TableCell>Jubilado</TableCell><TableCell>DPI</TableCell>
             <TableCell align="right">Meses</TableCell><TableCell>Desde</TableCell><TableCell>Hasta</TableCell>
             <TableCell align="right">Saldo</TableCell>
@@ -165,7 +165,7 @@ const DeudaPorTipoReporte = ({ onJubilado }) => {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell colSpan={5} sx={{ p: 0, bgcolor: "#FAFBFC", borderBottom: abierto ? undefined : "none" }}>
+                    <TableCell colSpan={5} sx={{ p: 0, bgcolor: "fondo.suave", borderBottom: abierto ? undefined : "none" }}>
                       <Collapse in={abierto} unmountOnExit>
                         <DetalleTipo filas={t.detalle} onJubilado={onJubilado} />
                       </Collapse>
@@ -174,7 +174,7 @@ const DeudaPorTipoReporte = ({ onJubilado }) => {
                 </Fragment>
               );
             })}
-            <TableRow sx={{ "& td": { fontWeight: 800, bgcolor: "#EEF2F6" } }}>
+            <TableRow sx={{ "& td": { fontWeight: 800, bgcolor: "fondo.suave" } }}>
               <TableCell>TOTAL</TableCell>
               <TableCell align="right">{fmtN(totalJub)}</TableCell>
               <TableCell align="right">{fmtN(totalMeses)}</TableCell>

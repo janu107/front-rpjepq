@@ -11,6 +11,12 @@ body {
     linear-gradient(180deg, #f7fafb 0%, #eef3f6 100%);
 }
 
+body[data-modo="oscuro"] {
+  background:
+    radial-gradient(circle at top right, rgba(95, 177, 194, 0.08), transparent 34rem),
+    linear-gradient(180deg, #0f1a1f 0%, #0c1519 100%);
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -48,6 +54,11 @@ a {
 
   main { width: 100% !important; margin-left: 0 !important; }
   body { background: white !important; }
+  /* Al imprimir, siempre fondo blanco y letra negra (también en modo oscuro). */
+  body[data-modo="oscuro"], body[data-modo="oscuro"] main, body[data-modo="oscuro"] .MuiPaper-root, body[data-modo="oscuro"] .MuiBox-root {
+    background: white !important; color: #000 !important;
+  }
+  body[data-modo="oscuro"] .MuiTypography-root, body[data-modo="oscuro"] .MuiTableCell-root { color: #000 !important; }
   .MuiContainer-root { padding: 0 !important; max-width: none !important; }
 
   .MuiTableContainer-root { overflow: visible !important; border: none !important; box-shadow: none !important; background: transparent !important; }

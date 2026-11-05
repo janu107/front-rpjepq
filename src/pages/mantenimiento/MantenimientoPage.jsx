@@ -17,7 +17,7 @@ import LogoRegimenUploader from "./LogoRegimenUploader";
 
 const StatCard = ({ label, value }) => (
   <Grid item xs={12} sm={6} md={4}>
-    <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea", height: "100%" }}>
+    <Paper elevation={0} sx={{ p: 2.5, border: (t) => `1px solid ${t.palette.borde}`, height: "100%" }}>
       <Typography color="text.secondary" variant="body2">{label}</Typography>
       <Typography variant="h6">{value || "N/A"}</Typography>
     </Paper>
@@ -144,7 +144,7 @@ const MantenimientoPage = () => {
     <Stack spacing={2.5}>
       <PageHeader title="Mantenimiento" subtitle="Backups, restauracion, monitoreo y logs del sistema" />
       <LogoRegimenUploader />
-      <Paper elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+      <Paper elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
         <Tabs value={tab} onChange={(event, value) => setTab(value)} variant="scrollable" scrollButtons="auto">
           <Tab label="Estado del sistema" />
           <Tab label="Backups" />
@@ -174,13 +174,13 @@ const MantenimientoPage = () => {
             <Button variant="outlined" startIcon={<RefreshIcon />} onClick={loadBackups}>Refrescar</Button>
           </Stack>
           <Typography color="text.secondary">Backups: {backupStatus?.cantidadBackups || 0} | Ultimo: {backupStatus?.ultimoBackup || "N/A"}</Typography>
-          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
             <Table size="small"><TableHead><TableRow><TableCell>Archivo</TableCell><TableCell>Tamano</TableCell><TableCell>Fecha</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
               <TableBody>{backups.map((item) => <TableRow key={item.nombre}><TableCell>{item.nombre}</TableCell><TableCell>{item.tamano}</TableCell><TableCell>{new Date(item.fechaCreacion).toLocaleString("es-GT")}</TableCell><TableCell align="right"><Button startIcon={<CloudDownloadIcon />} onClick={() => download(item.nombre)}>Descargar</Button><Button color="error" startIcon={<DeleteIcon />} onClick={() => eliminar(item.nombre)}>Eliminar</Button></TableCell></TableRow>)}</TableBody>
             </Table>
           </TableContainer>
           <Typography variant="h6">Historial</Typography>
-          <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea" }}>
+          <TableContainer component={Paper} elevation={0} sx={{ border: (t) => `1px solid ${t.palette.borde}` }}>
             <Table size="small"><TableHead><TableRow><TableCell>Fecha</TableCell><TableCell>Archivo</TableCell><TableCell>Tipo</TableCell><TableCell>Accion</TableCell><TableCell>Usuario</TableCell></TableRow></TableHead>
               <TableBody>{historial.map((item) => <TableRow key={item.id}><TableCell>{new Date(item.fecha).toLocaleString("es-GT")}</TableCell><TableCell>{item.nombreArchivo}</TableCell><TableCell>{item.tipo}</TableCell><TableCell>{item.accion}</TableCell><TableCell>{item.usuario}</TableCell></TableRow>)}</TableBody>
             </Table>
@@ -189,7 +189,7 @@ const MantenimientoPage = () => {
       )}
 
       {tab === 2 && (
-        <Paper elevation={0} sx={{ p: 3, border: "1px solid #dde3ea" }}>
+        <Paper elevation={0} sx={{ p: 3, border: (t) => `1px solid ${t.palette.borde}` }}>
           <Stack spacing={2}>
             <Typography variant="h6">Restauracion de base de datos</Typography>
             <Typography color="error">Esta accion puede reemplazar informacion actual de la base de datos.</Typography>
@@ -207,7 +207,7 @@ const MantenimientoPage = () => {
         <Stack spacing={2}>
           <Button variant="outlined" startIcon={<RefreshIcon />} onClick={loadLogs} sx={{ alignSelf: "flex-start" }}>Refrescar logs</Button>
           {[["app.log", appLog], ["error.log", errorLog]].map(([name, lines]) => (
-            <Paper key={name} elevation={0} sx={{ p: 2, border: "1px solid #dde3ea" }}>
+            <Paper key={name} elevation={0} sx={{ p: 2, border: (t) => `1px solid ${t.palette.borde}` }}>
               <Typography variant="h6">{name}</Typography>
               <Box component="pre" sx={{ whiteSpace: "pre-wrap", maxHeight: 340, overflow: "auto", bgcolor: "#111827", color: "#e5e7eb", p: 2, borderRadius: 1 }}>
                 {lines.join("\n") || "Sin registros"}
