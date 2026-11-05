@@ -18,8 +18,10 @@ import {
   Paper,
   Select,
   Stack,
+  Alert,
   Table,
   TableBody,
+  TablePagination,
   TableCell,
   TableContainer,
   TableHead,
@@ -34,7 +36,9 @@ import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
 import { useAuth } from "../../context/AuthContext";
-import { canCreate, canDelete, canEdit } from "../../utils/permissions";
+import { canCreate, canEdit, isAdmin } from "../../utils/permissions";
+
+const fmtFechaCat = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "");
 
 // Valores controlados de parametros de planilla (Version IV)
 const ESTADO_PLANILLA_OPTIONS = ["GRABADO", "GENERADO", "APROBADO"];
@@ -65,6 +69,7 @@ const catalogConfigs = [
   },
   {
     key: "manejo-administracion",
+    soloLectura: "Este catálogo lo usa todo el sistema: es de solo consulta (no se crea, edita ni borra).",
     label: "Manejo administracion",
     codeKey: "id",
     searchFields: ["descripcion"],
@@ -142,6 +147,8 @@ const catalogConfigs = [
   },
   {
     key: "parametro-general",
+    sinBorrar: true,
+    unico: true,
     label: "Parametro general",
     codeKey: "id",
     searchFields: ["nombreEmpresa", "nit", "correo"],
@@ -173,13 +180,23 @@ const catalogConfigs = [
     key: "parametro-planilla",
     label: "Parametro planilla",
     codeKey: "id",
-    searchFields: ["numero", "frecuencia", "estado", "tipoPlanillaNombre"],
+    // Se crean, generan y cierran desde Nóminas; aquí solo se corrigen número y fechas
+    // mientras la planilla no esté cerrada.
+    soloEditar: true,
+    aviso: "Las planillas se crean, generan y cierran desde Nóminas. Aquí puede corregir el número y las fechas mientras la planilla no esté CERRADA (si ya está generada, vuelva a generarla para recalcular).",
+    editableSi: (r) => String(r.estadoProceso || "").toUpperCase() !== "CERRADA",
+    camposEdicion: ["numero", "fechaInicio", "fechaFinal", "fechaPago"],
+    filtroTipo: true,
+    searchFields: ["numero", "frecuencia", "estado", "estadoProceso", "tipoPlanillaNombre", "tipoPlanillaDescripcion"],
     columns: [
       { key: "numero", label: "Numero" },
       { key: "tipoPlanilla", label: "Tipo planilla",
         render: (r) => Number(r.tipoPlanilla) === 1 ? "REGIMEN (1)" : Number(r.tipoPlanilla) === 2 ? "JUBILADOS (2)" : (r.tipoPlanillaDescripcion || r.tipoPlanillaNombre || "-") },
+      { key: "fechaInicio", label: "Período", render: (r) => `${fmtFechaCat(r.fechaInicio)} al ${fmtFechaCat(r.fechaFinal)}` },
+      { key: "fechaPago", label: "Pago", render: (r) => fmtFechaCat(r.fechaPago) },
       { key: "frecuencia", label: "Frecuencia" },
-      { key: "estado", label: "Estado" }
+      { key: "estado", label: "Estado" },
+      { key: "estadoProceso", label: "Proceso" }
     ],
     fields: [
       { key: "tipoPlanilla", label: "Tipo planilla", required: true, type: "select", source: "tiposPlanilla" },
@@ -225,6 +242,9 @@ const CatalogosPage = () => {
   const navigate = useNavigate();
   const [records, setRecords] = useState([]);
   const [search, setSearch] = useState("");
+  const [tipoFiltro, setTipoFiltro] = useState("");
+  const [pagina, setPagina] = useState(0);
+  const [porPagina, setPorPagina] = useState(25);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [form, setForm] = useState({});
@@ -267,19 +287,34 @@ const CatalogosPage = () => {
 
   useEffect(() => {
     setSearch("");
+    setTipoFiltro("");
+    setPagina(0);
     loadRecords();
     if (["puestos", "parametro-planilla", "tipo-planilla", "firma-planilla"].includes(config.key)) {
       loadDependencies();
     }
   }, [config.key]);
 
+  const etiquetaTipo = (r) => (Number(r.tipoPlanilla) === 1 ? "REGIMEN (1)" : Number(r.tipoPlanilla) === 2 ? "JUBILADOS (2)" : (r.tipoPlanillaDescripcion || r.tipoPlanillaNombre || "-"));
+  const tiposEnLista = useMemo(() => (config.filtroTipo
+    ? [...new Map(records.map((r) => [String(r.tipoPlanilla), etiquetaTipo(r)])).entries()].sort((a, b) => Number(a[0]) - Number(b[0]))
+    : []), [records, config]);
   const filteredRecords = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return records;
-    return records.filter((record) =>
-      config.searchFields.some((field) => String(record[field] || "").toLowerCase().includes(term))
-    );
-  }, [records, search, config]);
+    return records.filter((record) => {
+      if (config.filtroTipo && tipoFiltro && String(record.tipoPlanilla) !== tipoFiltro) return false;
+      if (!term) return true;
+      return config.searchFields.some((field) => String(record[field] || "").toLowerCase().includes(term));
+    });
+  }, [records, search, config, tipoFiltro]);
+  useEffect(() => { setPagina(0); }, [search, tipoFiltro]);
+  const paginaRecords = filteredRecords.slice(pagina * porPagina, pagina * porPagina + porPagina);
+  const puedeCrear = !config.soloLectura && !config.soloEditar && canCreate(user) && !(config.unico && records.length > 0);
+  const puedeEditar = !config.soloLectura && canEdit(user);
+  // Borrar: solo el superusuario, y nunca en los catálogos que no se borran.
+  const puedeBorrar = !config.soloLectura && !config.soloEditar && !config.sinBorrar && isAdmin(user);
+  // Campos del formulario: al editar, algunos catálogos solo permiten corregir ciertos campos.
+  const camposForm = editingRecord && config.camposEdicion ? config.fields.filter((f) => config.camposEdicion.includes(f.key)) : config.fields;
 
   const openCreateDialog = () => {
     setEditingRecord(null);
@@ -303,7 +338,7 @@ const CatalogosPage = () => {
   };
 
   const validateForm = () => {
-    const missing = config.fields.find((field) => field.required && String(form[field.key] ?? "").trim() === "");
+    const missing = camposForm.find((field) => field.required && String(form[field.key] ?? "").trim() === "");
     if (missing) {
       return `El campo ${missing.label} es obligatorio.`;
     }
@@ -436,10 +471,17 @@ const CatalogosPage = () => {
             )
           }}
         />
-        {canCreate(user) && <Button type="button" variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
+        {config.filtroTipo && (
+          <TextField select size="medium" label="Tipo de planilla" value={tipoFiltro} onChange={(e) => setTipoFiltro(e.target.value)} sx={{ minWidth: 240 }}>
+            <MenuItem value="">Todos</MenuItem>
+            {tiposEnLista.map(([id, nombre]) => <MenuItem key={id} value={id}>{nombre}</MenuItem>)}
+          </TextField>
+        )}
+        {puedeCrear && <Button type="button" variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog}>
           Nuevo
         </Button>}
       </Stack>
+      {(config.soloLectura || config.aviso) && <Alert severity="info">{config.soloLectura || config.aviso}</Alert>}
 
       <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
         <Table size="small">
@@ -450,31 +492,31 @@ const CatalogosPage = () => {
                 <TableCell key={column.key} sx={{ fontWeight: 800, color: "text.secondary" }}>{column.label}</TableCell>
               ))}
               <TableCell sx={{ fontWeight: 800, color: "text.secondary" }}>Creacion</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 800, color: "text.secondary" }}>Acciones</TableCell>
+              {(puedeEditar || puedeBorrar) && <TableCell align="right" sx={{ fontWeight: 800, color: "text.secondary" }}>Acciones</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredRecords.map((record) => (
+            {paginaRecords.map((record) => (
               <TableRow key={record.id} hover>
                 <TableCell>{record[config.codeKey] ?? record.id}</TableCell>
                 {config.columns.map((column) => (
                   <TableCell key={column.key}>{column.render ? column.render(record) : record[column.key]}</TableCell>
                 ))}
                 <TableCell>{record.usuarioCreacion || ""}</TableCell>
-                <TableCell align="right">
+                {(puedeEditar || puedeBorrar) && <TableCell align="right">
                   <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                  {canEdit(user) && <Tooltip title="Editar">
+                  {puedeEditar && (!config.editableSi || config.editableSi(record)) && <Tooltip title="Editar">
                     <IconButton color="primary" size="small" aria-label="Editar catalogo" onClick={() => openEditDialog(record)}>
                       <EditIcon />
                     </IconButton>
                   </Tooltip>}
-                  {canDelete(user) && <Tooltip title="Eliminar">
+                  {puedeBorrar && <Tooltip title="Eliminar">
                     <IconButton color="primary" size="small" aria-label="Eliminar catalogo" onClick={() => handleDelete(record)}>
                       <DeleteIcon />
                     </IconButton>
                   </Tooltip>}
                   </Stack>
-                </TableCell>
+                </TableCell>}
               </TableRow>
             ))}
             {filteredRecords.length === 0 && (
@@ -486,6 +528,10 @@ const CatalogosPage = () => {
             )}
           </TableBody>
         </Table>
+        <TablePagination component="div" count={filteredRecords.length} page={pagina} rowsPerPage={porPagina}
+          onPageChange={(_, p) => setPagina(p)} onRowsPerPageChange={(e) => { setPorPagina(Number(e.target.value)); setPagina(0); }}
+          rowsPerPageOptions={[10, 25, 50, 100]} labelRowsPerPage="Registros por página"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`} />
       </TableContainer>
 
       <Dialog
@@ -498,7 +544,7 @@ const CatalogosPage = () => {
         <DialogTitle>{editingRecord ? "Editar registro" : "Nuevo registro"}</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            {config.fields.map((field) => (
+            {camposForm.map((field) => (
               <Grid item xs={12} md={field.fullWidth ? 12 : 6} key={field.key}>
                 {renderField(field)}
               </Grid>

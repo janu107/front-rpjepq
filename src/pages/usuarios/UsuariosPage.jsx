@@ -77,7 +77,7 @@ const UsuariosPage = () => {
     { key: "nombre", label: "Nombre" },
     { key: "correo", label: "Correo" },
     { key: "estado", label: "Estado", render: (user) => <StatusChip value={user.estado} /> },
-    { key: "rol", label: "Rol", render: (user) => (user.roles?.length ? user.roles.map((r) => <RoleChip key={r} value={r} />) : <RoleChip value={user.rol} />) },
+    { key: "rol", label: "Permisos", render: (user) => (user.roles?.length ? user.roles.map((r) => <RoleChip key={r} value={r} />) : <RoleChip value={user.rol} />) },
     { key: "fechaInicio", label: "Fecha inicio", render: (user) => formatDate(user.fechaInicio) }
   ];
 
@@ -109,7 +109,6 @@ const UsuariosPage = () => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo)) return "Ingrese un correo valido.";
     if (!form.fechaInicio) return "La fecha de inicio es obligatoria.";
     if (!estados.includes(form.estado)) return "Estado no permitido.";
-    if (!roles.includes(form.rol)) return "Rol no permitido.";
     if (!editingUser && form.contrasena.length < 8) return "La contrasena debe tener al menos 8 caracteres.";
     return null;
   };
@@ -127,13 +126,13 @@ const UsuariosPage = () => {
           nombre: form.nombre,
           correo: form.correo,
           estado: form.estado,
-          fechaInicio: form.fechaInicio,
-          rol: form.rol
+          fechaInicio: form.fechaInicio
         });
         Swal.fire("Listo", "Usuario actualizado correctamente.", "success");
       } else {
-        await axiosClient.post("/usuarios", form);
-        Swal.fire("Listo", "Usuario creado correctamente.", "success");
+        const { rol: _sinRol, ...nuevo } = form;
+        await axiosClient.post("/usuarios", nuevo);
+        Swal.fire("Usuario creado", "Ahora asígnele sus permisos en Administración › Roles y permisos (mientras tanto no tiene acceso a ningún módulo).", "success");
       }
 
       setDialogOpen(false);
@@ -245,12 +244,9 @@ const UsuariosPage = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Rol</InputLabel>
-                <Select label="Rol" value={form.rol} onChange={(event) => setForm({ ...form, rol: event.target.value })}>
-                  {roles.map((rol) => <MenuItem key={rol} value={rol}>{rol}</MenuItem>)}
-                </Select>
-              </FormControl>
+              <Typography variant="body2" color="text.secondary" sx={{ pt: 1 }}>
+                Qué puede hacer en cada módulo se asigna en <b>Administración › Roles y permisos</b>.
+              </Typography>
             </Grid>
           </Grid>
         </DialogContent>

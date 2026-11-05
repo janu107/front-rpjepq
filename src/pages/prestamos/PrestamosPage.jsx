@@ -1,16 +1,18 @@
 import AddIcon from "@mui/icons-material/Add";
 import CalculateIcon from "@mui/icons-material/Calculate";
+import DownloadIcon from "@mui/icons-material/Download";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import SearchIcon from "@mui/icons-material/Search";
 import {
-  Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
+  Alert, Autocomplete, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, Grid, IconButton,
   InputAdornment, InputLabel, MenuItem, Paper, Select, Stack, Table, TableBody, TableCell,
   TableContainer, TableHead, TablePagination, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
@@ -22,6 +24,20 @@ const MANEJO_EPQ_ID = 4;
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "");
 // Montos con separador de millares (es-GT): 12,823.36
 const money = (v) => `Q ${Number(v || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fechaDMY = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "");
+// Montos con separador de miles mientras no se está escribiendo en el campo.
+const sinComas = (v) => String(v ?? "").replace(/,/g, "");
+const conMiles = (v) => (String(v ?? "").trim() === "" || Number.isNaN(Number(sinComas(v)))
+  ? String(v ?? "") : Number(sinComas(v)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const CampoMonto = ({ label, value, onChange }) => {
+  const [enfocado, setEnfocado] = useState(false);
+  return (
+    <TextField size="small" label={label} fullWidth value={enfocado ? sinComas(value) : conMiles(value)}
+      inputProps={{ inputMode: "decimal", style: { textAlign: "right" } }}
+      onFocus={() => setEnfocado(true)} onBlur={() => setEnfocado(false)}
+      onChange={(e) => onChange(e.target.value.replace(/[^0-9.-]/g, ""))} />
+  );
+};
 const initialForm = { idAportacion: "", noContrato: "", montoAutorizado: "", cuotaNivelada: "", plazoMeses: "", fechaInicio: "", fechaFin: "", totalPagar: "", tasaInteres: "", estado: "ACTIVO" };
 const initialDetalle = { fechaPago: "", descuentoNominaAportacion: 0, cuotaNivelada: "", amortizacion: "", intereses: "", saldo: "", mora: 0, seguro: 0 };
 
@@ -51,6 +67,41 @@ const PrestamosPage = ({ detailOnly = false }) => {
   const [editingDetalle, setEditingDetalle] = useState(null);
   const [saldo, setSaldo] = useState(0);
   const [totalPagado, setTotalPagado] = useState(0);
+
+  // ---- Carga masiva de pagos (Excel): código empleado, fecha pago, monto descontado ----
+  const archivoRef = useRef(null);
+  const [ayudaCarga, setAyudaCarga] = useState(false);
+  const descargarPlantilla = async () => {
+    try {
+      const resp = await axiosClient.get("/prestamos/carga-masiva/plantilla", { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([resp.data]));
+      const a = document.createElement("a");
+      a.href = url; a.download = "plantilla_pagos_prestamos.xlsx";
+      document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+    } catch { Swal.fire("Error", "No fue posible descargar la plantilla.", "error"); }
+  };
+  const subirExcel = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("archivo", file);
+    try {
+      const { data } = await axiosClient.post("/prestamos/carga-masiva", fd);
+      const r = data.data || {};
+      const errores = r.errores || [];
+      await Swal.fire({
+        title: "Carga de pagos procesada", icon: errores.length ? "warning" : "success", width: 640,
+        html: `Filas leídas: <b>${r.totalFilas ?? 0}</b><br>Pagos grabados: <b>${r.grabados ?? 0}</b><br>Con error: <b>${errores.length}</b>`
+          + (r.prestamosSaldados?.length ? `<br>Préstamos saldados (quedan CANCELADOS): <b>${r.prestamosSaldados.join(", ")}</b>` : "")
+          + (errores.length ? `<hr style="margin:8px 0"><div style="text-align:left;max-height:240px;overflow:auto">${errores.slice(0, 40).map((e) => `Fila ${e.fila}${e.codigo ? ` (${e.codigo})` : ""}: ${e.error}`).join("<br>")}</div>` : "")
+      });
+      loadPrestamos();
+      if (selected && detailOpen) loadDetalle(selected);
+    } catch (error) {
+      Swal.fire("Error", error.response?.data?.message || "No fue posible procesar el archivo.", "error");
+    }
+  };
 
   const loadPrestamos = async () => {
     const { data } = await axiosClient.get("/prestamos");
@@ -115,9 +166,15 @@ const PrestamosPage = ({ detailOnly = false }) => {
   const ultimaPaginaDet = Math.max(0, Math.ceil(detalle.length / rppDet) - 1);
   const paginaDet = Math.min(pageDet, ultimaPaginaDet);
   const desplazamientoDet = paginaDet * rppDet;
+  // Del pago más reciente al más viejo; el No. de cuota sigue contando desde el primero.
+  const detalleOrdenado = useMemo(() => {
+    const asc = [...detalle].sort((a, b) => String(a.fechaPago).localeCompare(String(b.fechaPago)) || Number(a.id) - Number(b.id))
+      .map((d, i) => ({ ...d, _num: i + 1 }));
+    return asc.reverse();
+  }, [detalle]);
   const detallePaginadoPrestamo = useMemo(
-    () => detalle.slice(desplazamientoDet, desplazamientoDet + rppDet),
-    [detalle, desplazamientoDet, rppDet]
+    () => detalleOrdenado.slice(desplazamientoDet, desplazamientoDet + rppDet),
+    [detalleOrdenado, desplazamientoDet, rppDet]
   );
 
   // En modo edición incluir el aportante actual aunque ya tenga préstamo activo
@@ -210,17 +267,30 @@ const PrestamosPage = ({ detailOnly = false }) => {
     await loadDetalle(item);
   };
 
+  const [montoDesc, setMontoDesc] = useState("");
+  const calcularPagoForm = async () => {
+    try {
+      const { data } = await axiosClient.post(`/prestamos/${selected.id}/detalle/calcular`, { fechaPago: detalleForm.fechaPago, monto: sinComas(montoDesc) });
+      const p = data.data;
+      setDetalleForm((f) => ({ ...f, descuentoNominaAportacion: p.descuentoNominaAportacion, cuotaNivelada: p.cuotaNivelada, amortizacion: p.amortizacion,
+        intereses: p.intereses, saldo: p.saldo, mora: p.mora, seguro: p.seguro }));
+    } catch (e) { Swal.fire("Error", e.response?.data?.message || "No fue posible calcular el pago.", "error"); }
+  };
+
   const saveDetalle = async () => {
     try {
+      // Los montos se envían sin separador de miles.
+      const datos = Object.fromEntries(Object.entries(detalleForm).map(([k, v]) => [k, k === "fechaPago" ? v : sinComas(v)]));
       if (editingDetalle) {
-        await axiosClient.put(`/prestamos/detalle/${editingDetalle.id}`, detalleForm);
+        await axiosClient.put(`/prestamos/detalle/${editingDetalle.id}`, datos);
         Swal.fire("Listo", "Pago actualizado correctamente.", "success");
       } else {
-        await axiosClient.post(`/prestamos/${selected.id}/detalle`, detalleForm);
+        await axiosClient.post(`/prestamos/${selected.id}/detalle`, datos);
         Swal.fire("Listo", "Pago agregado correctamente.", "success");
       }
       setDetalleForm(initialDetalle);
       setEditingDetalle(null);
+      setMontoDesc("");
       loadDetalle(selected);
     } catch (error) {
       Swal.fire("Error", error.response?.data?.message || "No fue posible guardar el pago.", "error");
@@ -255,8 +325,43 @@ const PrestamosPage = ({ detailOnly = false }) => {
           <Typography variant="h5">{detailOnly ? "Detalle Prestamos" : "Prestamos"}</Typography>
           <Typography color="text.secondary">Control de prestamos y pagos</Typography>
         </Box>
-        {!detailOnly && canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nuevo prestamo</Button>}
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+          {canCreate(user) && <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => setAyudaCarga(true)}>Carga masiva de pagos (Excel)</Button>}
+          {!detailOnly && canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nuevo prestamo</Button>}
+        </Stack>
+        <input ref={archivoRef} type="file" accept=".xlsx" hidden onChange={subirExcel} />
       </Stack>
+
+      <Dialog open={ayudaCarga} onClose={() => setAyudaCarga(false)} fullWidth maxWidth="md">
+        <DialogTitle>Carga masiva de pagos de préstamos (Excel)</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>Condiciones del archivo</Typography>
+          <Box component="ol" sx={{ m: 0, pl: 2.5, "& li": { mb: 0.5 } }}>
+            <li>Excel <b>.xlsx</b> de máximo <b>5 MB</b>; se lee la <b>primera hoja</b>. Fila 1 con los encabezados <b>CODIGO EMPLEADO</b>, <b>FECHA PAGO</b> y <b>MONTO DESCONTADO</b>.</li>
+            <li><b>CODIGO EMPLEADO</b>: código del empleado EPQ. Debe tener <b>un</b> préstamo VIGENTE o ATRASADO.</li>
+            <li><b>FECHA PAGO</b>: fecha del descuento (30/11/2026). Puede haber varias fechas; <b>un pago por préstamo por mes</b>.</li>
+            <li><b>MONTO DESCONTADO</b>: lo que realmente se descontó (cuota + seguro), aunque sea <b>menor o mayor que la cuota</b>. Puede ser 0.</li>
+            <li>Se rechazan las filas de un mes que el préstamo ya tiene o anteriores a su último pago; las demás sí se graban.</li>
+          </Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, mt: 2, mb: 0.5 }}>Lo que calcula el sistema en cada pago</Typography>
+          <Box component="ul" sx={{ m: 0, pl: 2.5, "& li": { mb: 0.5 } }}>
+            <li><b>Seguro</b>: el del último pago del préstamo (se cobra primero). Cuota pagada = monto descontado − seguro.</li>
+            <li><b>Intereses</b> = saldo anterior × tasa anual ÷ 12. <b>Amortización</b> = cuota pagada − intereses (si no alcanza queda negativa y el saldo sube).</li>
+            <li><b>Saldo</b> = saldo anterior − amortización. Si llega a 0, el préstamo queda CANCELADO.</li>
+            <li><b>Mora</b> = (cuota nivelada − cuota pagada) × 2% × días del mes, anotada aparte. Si paga de más, mora 0 y el extra abona a capital.</li>
+          </Box>
+          <Alert severity="info" sx={{ mt: 2 }}>
+            Ejemplo: cuota Q2,000.00, seguro Q185.00 y se descontaron <b>Q1,685.00</b> → cuota pagada Q1,500.00; faltaron Q500.00 →
+            mora del mes (30 días) = 500 × 2% × 30 = <b>Q300.00</b>.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button startIcon={<DownloadIcon />} onClick={descargarPlantilla}>Descargar plantilla</Button>
+          <Box sx={{ flex: 1 }} />
+          <Button onClick={() => setAyudaCarga(false)}>Cancelar</Button>
+          <Button variant="contained" startIcon={<UploadFileIcon />} onClick={() => { setAyudaCarga(false); archivoRef.current?.click(); }}>Elegir archivo</Button>
+        </DialogActions>
+      </Dialog>
 
       <Autocomplete
         freeSolo
@@ -346,10 +451,11 @@ const PrestamosPage = ({ detailOnly = false }) => {
         <DialogActions><Button onClick={() => setDialogOpen(false)}>Cancelar</Button><Button variant="contained" onClick={savePrestamo}>Guardar</Button></DialogActions>
       </Dialog>
 
-      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} fullWidth maxWidth="lg">
+      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} fullWidth maxWidth="lg" PaperProps={{ sx: { height: "90vh" } }}>
         <DialogTitle>Detalle de prestamo</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+        {/* Alto fijo: la tabla se desplaza por dentro y la ventana no cambia de tamaño. */}
+        <DialogContent sx={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <Stack spacing={2} sx={{ mt: 1, flex: 1, minHeight: 0 }}>
             <Box>
               <Typography variant="h6">
                 Total pagado: {money(totalPagado)} &nbsp;|&nbsp; Saldo actual: {money(saldo)}
@@ -363,10 +469,36 @@ const PrestamosPage = ({ detailOnly = false }) => {
                 &nbsp;·&nbsp; Cuotas registradas <b>{detalle.length}</b>
               </Typography>
             </Box>
-            {canCreate(user) && <Grid container spacing={2}><Grid item xs={12} md={2}><TextField label="Fecha pago" type="date" value={detalleForm.fechaPago} onChange={(e) => setDetalleForm({ ...detalleForm, fechaPago: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Cuota" type="number" value={detalleForm.cuotaNivelada} onChange={(e) => setDetalleForm({ ...detalleForm, cuotaNivelada: e.target.value })} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Amortizacion" type="number" value={detalleForm.amortizacion} onChange={(e) => setDetalleForm({ ...detalleForm, amortizacion: e.target.value })} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Intereses" type="number" value={detalleForm.intereses} onChange={(e) => setDetalleForm({ ...detalleForm, intereses: e.target.value })} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Saldo" type="number" value={detalleForm.saldo} onChange={(e) => setDetalleForm({ ...detalleForm, saldo: e.target.value })} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Mora" type="number" value={detalleForm.mora} onChange={(e) => setDetalleForm({ ...detalleForm, mora: e.target.value })} fullWidth /></Grid><Grid item xs={12} md={2}><TextField label="Seguro" type="number" value={detalleForm.seguro} onChange={(e) => setDetalleForm({ ...detalleForm, seguro: e.target.value })} fullWidth /></Grid><Grid item xs={12}><Button variant="contained" onClick={saveDetalle}>{editingDetalle ? "Actualizar pago" : "Agregar pago"}</Button>{editingDetalle && <Button sx={{ ml: 1 }} onClick={() => { setEditingDetalle(null); setDetalleForm(initialDetalle); }}>Cancelar edicion</Button>}</Grid></Grid>}
-            <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", overflow: "hidden" }}>
-              <Table size="small">
-                <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
+            {canCreate(user) && (
+              <Box>
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
+                  <Box sx={{ width: 220 }}>
+                    <CampoMonto label="Monto descontado" value={montoDesc} onChange={setMontoDesc} />
+                  </Box>
+                  <Button variant="outlined" startIcon={<CalculateIcon />} onClick={calcularPagoForm} disabled={!!editingDetalle || !detalleForm.fechaPago || montoDesc === ""}>
+                    Calcular el pago
+                  </Button>
+                  <Typography variant="caption" color="text.secondary">Con la fecha y lo descontado, calcula seguro, intereses, amortización, saldo y mora (puede ajustarlos antes de guardar).</Typography>
+                </Stack>
+                {/* Los 7 campos en una sola línea. */}
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "1.2fr repeat(6, 1fr)" }, gap: 1.5 }}>
+                  <TextField size="small" label="Fecha pago" type="date" value={detalleForm.fechaPago} onChange={(e) => setDetalleForm({ ...detalleForm, fechaPago: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
+                  <CampoMonto label="Cuota" value={detalleForm.cuotaNivelada} onChange={(v) => setDetalleForm({ ...detalleForm, cuotaNivelada: v })} />
+                  <CampoMonto label="Amortización" value={detalleForm.amortizacion} onChange={(v) => setDetalleForm({ ...detalleForm, amortizacion: v })} />
+                  <CampoMonto label="Intereses" value={detalleForm.intereses} onChange={(v) => setDetalleForm({ ...detalleForm, intereses: v })} />
+                  <CampoMonto label="Saldo" value={detalleForm.saldo} onChange={(v) => setDetalleForm({ ...detalleForm, saldo: v })} />
+                  <CampoMonto label="Mora" value={detalleForm.mora} onChange={(v) => setDetalleForm({ ...detalleForm, mora: v })} />
+                  <CampoMonto label="Seguro" value={detalleForm.seguro} onChange={(v) => setDetalleForm({ ...detalleForm, seguro: v })} />
+                </Box>
+                <Box sx={{ mt: 1.5 }}>
+                  <Button variant="contained" onClick={saveDetalle}>{editingDetalle ? "Actualizar pago" : "Agregar pago"}</Button>
+                  {editingDetalle && <Button sx={{ ml: 1 }} onClick={() => { setEditingDetalle(null); setDetalleForm(initialDetalle); }}>Cancelar edicion</Button>}
+                </Box>
+              </Box>
+            )}
+            <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #dde3ea", flex: 1, minHeight: 0, overflow: "auto" }}>
+              <Table size="small" stickyHeader>
+                <TableHead sx={{ "& th": { bgcolor: "#EAF0F2" } }}>
                   <TableRow>
                     <TableCell>No. cuota</TableCell><TableCell>Fecha pago</TableCell><TableCell align="right">Cuota nivelada</TableCell>
                     <TableCell align="right">Amortizacion</TableCell><TableCell align="right">Intereses</TableCell>
@@ -377,8 +509,8 @@ const PrestamosPage = ({ detailOnly = false }) => {
                 <TableBody>
                   {detallePaginadoPrestamo.map((d, i) => (
                     <TableRow key={d.id} hover>
-                      <TableCell>{desplazamientoDet + i + 1}</TableCell>
-                      <TableCell>{formatDate(d.fechaPago)}</TableCell>
+                      <TableCell>{d._num}</TableCell>
+                      <TableCell>{fechaDMY(d.fechaPago)}</TableCell>
                       <TableCell align="right">{money(d.cuotaNivelada)}</TableCell>
                       <TableCell align="right">{money(d.amortizacion)}</TableCell>
                       <TableCell align="right">{money(d.intereses)}</TableCell>

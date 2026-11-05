@@ -10,7 +10,7 @@ import Swal from "sweetalert2";
 import axiosClient from "../../api/axiosClient";
 import PageHeader from "../../components/common/PageHeader";
 import OficiosBanco from "./OficiosBanco";
-import { firmasParaImprimir } from "../../utils/firmas";
+import FirmasSelector from "../../components/common/FirmasSelector";
 
 // Impresiones formales (mejoras 14-18). Cada pestaña arma los parámetros y pide
 // el PDF al backend, que es quien maqueta el formato oficio / carta.
@@ -32,6 +32,9 @@ const FIRMAS_INICIALES = [
   { nombre: "", cargo: "", rol: "Autorizado por" },
   { nombre: "", cargo: "", rol: "Autorizado por" }
 ];
+
+// Grupo de firmas (Catálogos › Firmas de planilla, "Aplica a") de cada pestaña.
+const MANEJO_TAB = { 0: 1, 1: 1, 2: 4, 3: 1, 4: 4, 5: 2, 6: 2, 7: 2, 8: 2, 9: 2, 10: 2 };
 
 const TIPO_EMPLEADOS = 1;
 const TIPO_TIEMPO_EXTRA = 3;
@@ -57,18 +60,8 @@ const ImpresionesPage = ({ grupo = "general" }) => {
   const [prestamos, setPrestamos] = useState([]);
   const [descargando, setDescargando] = useState(false);
 
-  const [firmas, setFirmas] = useState(FIRMAS_INICIALES);
-  // Firmas del catálogo: empleados del régimen (manejo 1) o jubilados (manejo 2).
-  const [firmasCatalogo, setFirmasCatalogo] = useState([]);
-  useEffect(() => {
-    let vivo = true;
-    firmasParaImprimir(grupo === "jubilacion" ? 2 : 1).then((l) => {
-      if (!vivo) return;
-      setFirmasCatalogo(l);
-      setFirmas(l.length ? l : FIRMAS_INICIALES);
-    });
-    return () => { vivo = false; };
-  }, [grupo]);
+  // Firmas del documento (selector común; cada pestaña preselecciona las de su grupo).
+  const [firmas, setFirmas] = useState([]);
 
   const [opciones, setOpciones] = useState({ areas: [], tiposJubilacion: [] });
   const [idSueldos, setIdSueldos] = useState("");
@@ -143,36 +136,7 @@ const ImpresionesPage = ({ grupo = "general" }) => {
     }
   };
 
-  const setFirma = (i, campo) => (e) => {
-    const copia = [...firmas];
-    copia[i] = { ...copia[i], [campo]: e.target.value };
-    setFirmas(copia);
-  };
-
-  const editorFirmas = (
-    <Paper elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea" }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>Firmas del documento</Typography>
-      <Typography variant="caption" color="text.secondary">
-        Se imprimen al pie de las nóminas. {firmasCatalogo.length
-          ? "Vienen de Catálogos › Firmas de planilla; puede cambiarlas solo para esta impresión."
-          : "Regístrelas en Catálogos › Firmas de planilla para que aparezcan solas, o escríbalas aquí. Déjelas vacías para firmar sobre líneas en blanco."}
-      </Typography>
-      {firmasCatalogo.length > 0 && (
-        <Box sx={{ mt: 0.5 }}><Button size="small" onClick={() => setFirmas(firmasCatalogo)}>Volver a las firmas del catálogo</Button></Box>
-      )}
-      <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
-        {firmas.map((f, i) => (
-          <Grid item xs={12} md={3} key={f.rol + i}>
-            <Stack spacing={1}>
-              <TextField size="small" label="Rol" value={f.rol} onChange={setFirma(i, "rol")} />
-              <TextField size="small" label="Nombre" value={f.nombre} onChange={setFirma(i, "nombre")} />
-              <TextField size="small" label="Cargo" value={f.cargo} onChange={setFirma(i, "cargo")} />
-            </Stack>
-          </Grid>
-        ))}
-      </Grid>
-    </Paper>
-  );
+  const editorFirmas = <FirmasSelector key={`firmas-${MANEJO_TAB[tab] || 0}`} grupo={MANEJO_TAB[tab]} onChange={setFirmas} />;
 
   // Selector de planilla editable: se puede escribir (número, tipo o fecha) y la
   // lista se va filtrando, además de desplegarla como antes.

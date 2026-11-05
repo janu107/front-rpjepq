@@ -14,6 +14,9 @@ const roleColor = {
 
 const RoleChip = ({ value }) => {
   const label = String(value || "SIN ROL").toUpperCase();
+  // Permiso de módulo "JUBILADOS:OPERA" -> "JUBILADOS · OPERA".
+  const [modulo, nivel] = label.split(":");
+  if (nivel) return <Chip label={`${modulo.replace(/_/g, " ")} · ${nivel}`} color={nivel === "TOTAL" ? "success" : nivel === "OPERA" ? "secondary" : "default"} size="small" variant="outlined" />;
   return <Chip label={label} color={roleColor[label] || "default"} size="small" />;
 };
 

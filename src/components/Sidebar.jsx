@@ -129,7 +129,7 @@ const items = [
   }
 ];
 
-const filterByRole = (entries, user) => entries
+export const filterByRole = (entries, user) => entries
   .filter((item) => !item.roles || puedeEntrar(user, item.path, item.roles))
   .map((item) => ({
     ...item,
@@ -289,4 +289,5 @@ const Sidebar = ({ drawerWidth, mobileOpen, onClose }) => {
   );
 };
 
+export { items as MENU_ITEMS };
 export default Sidebar;

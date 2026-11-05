@@ -1,12 +1,14 @@
 import {
-  Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Grid,
-  LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography
+  Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Grid,
+  LinearProgress, MenuItem, Radio, RadioGroup, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography
 } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
 import axiosClient from "../../api/axiosClient";
+import { useAuth } from "../../context/AuthContext";
+import { canEdit } from "../../utils/permissions";
 
 // Estado de cuenta de un beneficiario (viuda o huérfano de un jubilado fallecido).
 const PRIMARIO = "#1F4E79";
@@ -16,7 +18,8 @@ const nombrePrest = (p) => { const s = String(p || ""); const m = Number(s.slice
 const fmtPer = (p) => { const s = String(p || ""); return nombrePrest(s) || (s.length === 6 ? `${MES3[Number(s.slice(4, 6)) - 1]} ${s.slice(0, 4)}` : s); };
 const fmtFecha = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
 const COLOR_ESTADO = { PAGADA: "success", PARCIAL: "warning", PENDIENTE: "error", "SE CREA AL CERRAR": "default" };
-const CONCEPTO = { "COBRO DEUDA DEL FALLECIDO": "Pago de la deuda del fallecido (nómina de deuda)", "LIQUIDACION ORFANDAD": "Liquidación (cumplió 18)" };
+const CONCEPTO = { "COBRO DEUDA DEL FALLECIDO": "Pago de la deuda del fallecido (nómina de deuda)", "LIQUIDACION ORFANDAD": "Lo atrasado (cumplió 18)" };
+const MODO_18 = { COMPLETO: "Completo, de una vez", PORCENTAJE: "Por porcentaje mensual", CONVENIO: "Por convenio" };
 
 const Dato = ({ etiqueta, valor, fuerte }) => (
   <Grid item xs={6} md={3}>
@@ -28,14 +31,37 @@ const Dato = ({ etiqueta, valor, fuerte }) => (
 const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
+  const { user } = useAuth();
 
+  const cargar = () => axiosClient.get(`/beneficiarios/${idBeneficiario}/estado-cuenta`)
+    .then(({ data }) => setDatos(data.data))
+    .catch((e) => setError(e.response?.data?.message || "No fue posible cargar el estado de cuenta."));
   useEffect(() => {
     if (!idBeneficiario) return;
     setDatos(null); setError(null);
-    axiosClient.get(`/beneficiarios/${idBeneficiario}/estado-cuenta`)
-      .then(({ data }) => setDatos(data.data))
-      .catch((e) => setError(e.response?.data?.message || "No fue posible cargar el estado de cuenta."));
+    cargar();
   }, [idBeneficiario]);
+
+  // Hijo que cumple 18: forma de cobro de lo atrasado (completo, porcentaje o convenio).
+  const [cobro18, setCobro18] = useState(null);
+  const abrirCobro18 = () => {
+    const f = datos.formaCobro18;
+    const hoy = new Date().toISOString().slice(0, 10);
+    setCobro18({ modo: f.modo, cuota: f.convenio ? String(f.convenio.cuota) : "", documento: f.convenio?.documento || "",
+      autorizadoPor: f.convenio?.autorizadoPor || "JUNTA_DIRECTIVA", fechaInicio: f.convenio?.fechaInicio ? String(f.convenio.fechaInicio).slice(0, 10) : hoy });
+  };
+  const guardarCobro18 = async () => {
+    try {
+      const body = cobro18.modo === "CONVENIO"
+        ? { modo: "CONVENIO", cuota: Number(cobro18.cuota), documento: cobro18.documento, autorizadoPor: cobro18.autorizadoPor, fechaInicio: cobro18.fechaInicio }
+        : { modo: cobro18.modo };
+      const { data } = await axiosClient.put(`/beneficiarios/${idBeneficiario}/forma-cobro`, body);
+      setCobro18(null);
+      await cargar();
+      const rec = data.data?.planillasRecalculadas || [];
+      Swal.fire({ icon: "success", title: "Forma de cobro guardada", text: rec.length ? `Se recalculó la planilla ${rec.join(", ")}.` : "Aplica desde la próxima planilla que se genere.", timer: 2500, showConfirmButton: false });
+    } catch (e) { Swal.fire("Error", e.response?.data?.message || "No fue posible guardar.", "error"); }
+  };
 
   const [descargando, setDescargando] = useState(false);
   const exportarPdf = async () => {
@@ -79,6 +105,19 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
               <Dato etiqueta="Cuenta" valor={b.pago.formaPago === "ABONO CUENTA" ? `${b.pago.banco || ""} ${b.pago.cuenta || ""}` : (b.pago.formaPago || "Sin datos de pago")} />
             </Grid>
 
+            {datos.formaCobro18 && (() => {
+              const f = datos.formaCobro18;
+              return (
+                <Alert severity={b.esMenor ? "info" : "warning"} variant="outlined"
+                  action={canEdit(user) && b.estado === "ACTIVO" && <Button size="small" onClick={abrirCobro18}>Forma de cobro</Button>}>
+                  <b>Al cumplir 18 años ({fmtFecha(f.cumple18)})</b>: ese mes se le paga proporcional a los días antes del cumpleaños y desde el
+                  mes siguiente ya no cobra orfandad. Lo que se le deba lo cobra: <b>{MODO_18[f.modo]}</b>
+                  {f.modo === "CONVENIO" && f.convenio ? ` (${fmtQ(f.convenio.cuota)}/mes, doc. ${f.convenio.documento})` : ""}
+                  {f.modo === "PORCENTAJE" ? ` (${fmtQ(f.cuotaPorcentaje)}/mes, el ${f.porcentaje}% de su monto)` : ""}.
+                  {f.pendiente > 0 ? <> Hoy se le debe <b>{fmtQ(f.pendiente)}</b>.</> : null}
+                </Alert>
+              );
+            })()}
             {df && df.canceladaFuera && (
               <Alert severity="success">
                 La deuda del fallecido (<b>{fmtQ(df.canceladaFuera.monto)}</b>, {df.canceladaFuera.meses} {df.canceladaFuera.meses === 1 ? "mes" : "meses"}) se le pagó <b>fuera del sistema</b> el{" "}
@@ -237,6 +276,50 @@ const EstadoCuentaBeneficiario = ({ idBeneficiario, onClose }) => {
           </Stack>
         )}
       </DialogContent>
+      <Dialog open={!!cobro18} onClose={() => setCobro18(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Forma de cobro al cumplir 18 — {b?.nombre}</DialogTitle>
+        <DialogContent dividers>
+          {cobro18 && datos?.formaCobro18 && (
+            <Stack spacing={1.5}>
+              <Typography variant="body2">Lo que se le debe hoy: <b>{fmtQ(datos.formaCobro18.pendiente)}</b>. ¿Cómo lo cobra?</Typography>
+              <RadioGroup value={cobro18.modo} onChange={(e) => setCobro18((c) => ({ ...c, modo: e.target.value }))}>
+                <FormControlLabel value="COMPLETO" control={<Radio />} label="Completo: todo de una vez en la planilla siguiente al cumpleaños" />
+                <FormControlLabel value="PORCENTAJE" control={<Radio />}
+                  label={`Por porcentaje: ${fmtQ(datos.formaCobro18.cuotaPorcentaje)} cada mes (el ${datos.formaCobro18.porcentaje}% de su monto) hasta saldar`} />
+                <FormControlLabel value="CONVENIO" control={<Radio />} label="Por convenio: una cuota mensual fija acordada" />
+              </RadioGroup>
+              {cobro18.modo === "CONVENIO" && (
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField label="Cuota mensual (Q) *" type="number" size="small" fullWidth value={cobro18.cuota} inputProps={{ min: 0, step: "0.01" }}
+                      onChange={(e) => setCobro18((c) => ({ ...c, cuota: e.target.value }))}
+                      helperText={Number(cobro18.cuota) > 0 && datos.formaCobro18.pendiente > 0 ? `≈ ${Math.ceil(datos.formaCobro18.pendiente / Number(cobro18.cuota))} meses` : " "} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField label="Desde *" type="date" size="small" fullWidth InputLabelProps={{ shrink: true }} value={cobro18.fechaInicio}
+                      onChange={(e) => setCobro18((c) => ({ ...c, fechaInicio: e.target.value }))} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField label="No. documento *" size="small" fullWidth value={cobro18.documento} onChange={(e) => setCobro18((c) => ({ ...c, documento: e.target.value }))} />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField select label="Autorizado por *" size="small" fullWidth value={cobro18.autorizadoPor} onChange={(e) => setCobro18((c) => ({ ...c, autorizadoPor: e.target.value }))}>
+                      <MenuItem value="JUNTA_DIRECTIVA">Junta directiva</MenuItem>
+                      <MenuItem value="JUEZ">Juez</MenuItem>
+                      <MenuItem value="ACUERDO_INTERNO">Acuerdo interno</MenuItem>
+                    </TextField>
+                  </Grid>
+                </Grid>
+              )}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCobro18(null)}>Cancelar</Button>
+          <Button variant="contained" onClick={guardarCobro18}
+            disabled={!cobro18 || (cobro18.modo === "CONVENIO" && (!(Number(cobro18.cuota) > 0) || !cobro18.documento.trim() || !cobro18.fechaInicio))}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
       <DialogActions>
         <Button startIcon={<PictureAsPdfIcon />} onClick={exportarPdf} disabled={!datos || descargando}>Exportar PDF</Button>
         <Button onClick={onClose}>Cerrar</Button>

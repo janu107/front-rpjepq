@@ -10,7 +10,7 @@ import axiosClient from "../../api/axiosClient";
 import BuscadorPersona from "../../components/common/BuscadorPersona";
 import PageHeader from "../../components/common/PageHeader";
 import { useAuth } from "../../context/AuthContext";
-import { isAdmin } from "../../utils/permissions";
+import { canDelete } from "../../utils/permissions";
 
 const PRIMARIO = "#1F4E79";
 const fmtFecha = (d) => (d ? String(d).slice(0, 10).split("-").reverse().join("/") : "");
@@ -135,7 +135,7 @@ const AmparistasPage = () => {
               <TableRow>
                 <TableCell>Expediente</TableCell><TableCell>Jubilado</TableCell><TableCell>Juzgado</TableCell>
                 <TableCell>F. Sentencia</TableCell><TableCell>F. Efectiva</TableCell>
-                {isAdmin(user) && <TableCell align="center">Acción</TableCell>}
+                {canDelete(user) && <TableCell align="center">Acción</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -146,13 +146,13 @@ const AmparistasPage = () => {
                   <TableCell>{v.juzgado}</TableCell>
                   <TableCell>{fmtFecha(v.fechaSentencia)}</TableCell>
                   <TableCell>{fmtFecha(v.fechaEfectiva)}</TableCell>
-                  {isAdmin(user) && <TableCell align="center"><Button size="small" color="error" startIcon={<AutorenewIcon />} onClick={() => revocar(v)}>Revocar</Button></TableCell>}
+                  {canDelete(user) && <TableCell align="center"><Button size="small" color="error" startIcon={<AutorenewIcon />} onClick={() => revocar(v)}>Revocar</Button></TableCell>}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         )}
-        {!isAdmin(user) && <Alert severity="info" sx={{ mt: 2 }}>Solo un ADMINISTRADOR puede revocar amparistas.</Alert>}
+        {!canDelete(user) && <Alert severity="info" sx={{ mt: 2 }}>Solo un ADMINISTRADOR puede revocar amparistas.</Alert>}
       </Paper>
     </Stack>
   );

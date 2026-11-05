@@ -9,7 +9,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import axiosClient from "../../api/axiosClient";
-import { listarFirmas, tipoFirma } from "../../utils/firmas";
+import FirmasSelector from "../../components/common/FirmasSelector";
 import LogoRegimen from "../../components/common/LogoRegimen";
 
 const today = () =>
@@ -64,27 +64,10 @@ const ReportePDF = ({
 }) => {
   const [busqueda, setBusqueda] = useState("");
   const [filterValues, setFilterValues] = useState({});
-  const [firmas, setFirmas] = useState([]);
-  const [firmaSel, setFirmaSel] = useState({ elabora: "", revisa: "", vobo: "", autoriza: "" });
-
-  // Firmas del catálogo; cada rol se preselecciona con la primera firma de su tipo.
-  useEffect(() => {
-    listarFirmas().then((lista) => {
-      setFirmas(lista);
-      setFirmaSel((prev) => {
-        const sel = { ...prev };
-        FIRMA_ROLES.forEach((r) => {
-          if (sel[r.key]) return;
-          const f = lista.find((x) => tipoFirma(x.tipo) === r.tipo);
-          if (f) sel[r.key] = f.id;
-        });
-        return sel;
-      });
-    });
-  }, []);
-  // Al pie solo van los roles con firma elegida (si no hay ninguna, líneas en blanco de los 3 básicos).
-  const rolesImpresos = FIRMA_ROLES.filter((r) => firmaSel[r.key]);
-  const rolesPie = rolesImpresos.length ? rolesImpresos : FIRMA_ROLES.filter((r) => r.key !== "vobo");
+  // Firmas elegidas en el selector común (si no hay ninguna, líneas en blanco de los 3 básicos).
+  const [firmasElegidas, setFirmasElegidas] = useState([]);
+  const rolesPie = firmasElegidas.length ? firmasElegidas
+    : [{ rol: "Elaborado por" }, { rol: "Revisado por" }, { rol: "Autorizado por" }];
 
   // La orientación de impresión vive en una regla @page global (horizontal por
   // defecto, en styles.css). Como @page no se puede acotar a un elemento, el
@@ -107,7 +90,6 @@ const ReportePDF = ({
     setIniciado(true);
   }, [rows, filtrosIniciales, iniciado]);
 
-  const firmaById = (id) => firmas.find((f) => Number(f.id) === Number(id));
 
   const dynamicOptions = useMemo(() => {
     const opts = {};
@@ -244,26 +226,7 @@ const ReportePDF = ({
       )}
 
       {/* ── Selector de firmas (oculto al imprimir) ── */}
-      <Paper elevation={0} className="no-print" sx={{ p: 2, border: "1px solid #dde3ea" }}>
-        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>Firmas del reporte</Typography>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} flexWrap="wrap" useFlexGap>
-          {FIRMA_ROLES.map((rol) => (
-            <FormControl key={rol.key} size="small" sx={{ minWidth: 220 }}>
-              <InputLabel>{rol.label}</InputLabel>
-              <Select
-                label={rol.label}
-                value={firmaSel[rol.key] || ""}
-                onChange={(e) => setFirmaSel((prev) => ({ ...prev, [rol.key]: e.target.value }))}
-              >
-                <MenuItem value=""><em>Sin asignar</em></MenuItem>
-                {firmas.map((f) => (
-                  <MenuItem key={f.id} value={f.id}>{f.nombre}{f.puesto ? ` — ${f.puesto}` : ""}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          ))}
-        </Stack>
-      </Paper>
+      <FirmasSelector className="no-print" titulo="Firmas del reporte" onChange={setFirmasElegidas} />
 
       {/* ── Documento formal (visible en pantalla y al imprimir) ── */}
       {loading ? (
@@ -398,19 +361,18 @@ const ReportePDF = ({
 
           {/* Firmas */}
           <Box sx={{ mt: 5, pt: 3, borderTop: "1px dashed #bbb", display: "grid", gridTemplateColumns: `repeat(${rolesPie.length}, 1fr)`, gap: 3, "@media print": { mt: 3, pt: 2 } }}>
-            {rolesPie.map((rol) => {
-              const firma = firmaById(firmaSel[rol.key]);
+            {rolesPie.map((firma) => {
               return (
-                <Box key={rol.key} sx={{ textAlign: "center" }}>
+                <Box key={firma.rol} sx={{ textAlign: "center" }}>
                   <Typography variant="body2" fontWeight={700} sx={{ minHeight: 42, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-                    {firma ? firma.nombre : " "}
+                    {firma.nombre || " "}
                   </Typography>
                   <Box sx={{ borderBottom: "1px solid #333", mb: 0.75, mx: 2 }} />
                   <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-                    {rol.label}
+                    {firma.rol}
                   </Typography>
                   <Typography variant="caption" display="block" color="text.secondary">
-                    {firma ? firma.puesto : " "}
+                    {firma.cargo || " "}
                   </Typography>
                   <Box sx={{ height: 12 }} />
                 </Box>

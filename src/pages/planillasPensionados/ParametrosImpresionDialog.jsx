@@ -4,7 +4,7 @@ import {
   MenuItem, Select, Stack, TextField, Typography
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { firmasParaImprimir } from "../../utils/firmas";
+import FirmasSelector from "../../components/common/FirmasSelector";
 
 const FIRMAS_INICIALES = [
   { rol: "Elaborado por", nombre: "", cargo: "" },
@@ -18,13 +18,11 @@ const FIRMAS_INICIALES = [
 // sistema: se piden aquí y se envían con la impresión.
 const ParametrosImpresionDialog = ({ open, titulo, tipos = [], onClose, onImprimir, imprimiendo }) => {
   const [tipoJubilacion, setTipoJubilacion] = useState("");
-  const [firmas, setFirmas] = useState(FIRMAS_INICIALES);
+  const [firmas, setFirmas] = useState([]);
 
   useEffect(() => {
     if (!open) return;
     setTipoJubilacion("");
-    // Firmas de jubilados del catálogo (Catálogos › Firmas de planilla).
-    firmasParaImprimir(2).then((l) => { if (l.length) setFirmas(l); });
   }, [open]);
 
   const setFirma = (i, campo) => (e) => {
@@ -46,23 +44,7 @@ const ParametrosImpresionDialog = ({ open, titulo, tipos = [], onClose, onImprim
             </Select>
           </FormControl>
 
-          <div>
-            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Firmas del documento</Typography>
-            <Typography variant="caption" color="text.secondary">
-              Vienen de Catálogos › Firmas de planilla (jubilados); puede cambiarlas para esta impresión. Déjelas vacías para firmar sobre líneas en blanco.
-            </Typography>
-            <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
-              {firmas.map((f, i) => (
-                <Grid item xs={12} md={3} key={i}>
-                  <Stack spacing={1}>
-                    <TextField size="small" label="Rol" value={f.rol} onChange={setFirma(i, "rol")} />
-                    <TextField size="small" label="Nombre" value={f.nombre} onChange={setFirma(i, "nombre")} />
-                    <TextField size="small" label="Cargo" value={f.cargo} onChange={setFirma(i, "cargo")} />
-                  </Stack>
-                </Grid>
-              ))}
-            </Grid>
-          </div>
+          {open && <FirmasSelector grupo={2} onChange={setFirmas} />}
         </Stack>
       </DialogContent>
       <DialogActions>

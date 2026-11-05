@@ -21,7 +21,7 @@ import BuscadorPersona from "../../components/common/BuscadorPersona";
 import CampoFecha from "../../components/common/CampoFecha";
 import PageHeader from "../../components/common/PageHeader";
 import { useAuth } from "../../context/AuthContext";
-import { isAdmin } from "../../utils/permissions";
+import { canDelete } from "../../utils/permissions";
 
 const PRIMARIO = "#1F4E79";
 const fmtQ = (n) => `Q${Number(n || 0).toLocaleString("es-GT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -441,7 +441,7 @@ const FallecimientoPage = () => {
                               ...(f.cancelacion ? [{
                                 titulo: "Revertir pago fuera del sistema", icono: <UndoIcon fontSize="small" />, color: "warning",
                                 ayuda: "Se registró por error: la deuda vuelve a quedar pendiente y el cónyuge vuelve a cobrarla.",
-                                motivo: isAdmin(user) ? null : "Solo un administrador puede revertirlo.",
+                                motivo: canDelete(user) ? null : "Necesita nivel Total en Jubilados (o ser administrador).",
                                 onClick: () => revertirCancelacion(f)
                               }] : [{
                                 titulo: "Registrar deuda pagada fuera del sistema", icono: <TaskAltIcon fontSize="small" />, color: "success",
@@ -463,7 +463,7 @@ const FallecimientoPage = () => {
                             ...(f.enServicio ? [] : [{
                               titulo: "Revertir fallecimiento", icono: <PersonOffIcon fontSize="small" />, color: "error",
                               ayuda: "Se registró por error: vuelve a ser jubilado activo y sus beneficiarios a REGISTRADO.",
-                              motivo: !f.editable ? "Ya se pagó a sus beneficiarios en una planilla cerrada." : isAdmin(user) ? null : "Solo un administrador puede revertirlo.",
+                              motivo: !f.editable ? "Ya se pagó a sus beneficiarios en una planilla cerrada." : canDelete(user) ? null : "Necesita nivel Total en Jubilados (o ser administrador).",
                               onClick: () => revertir(f)
                             }])
                           ]

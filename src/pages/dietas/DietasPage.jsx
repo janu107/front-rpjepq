@@ -22,7 +22,7 @@ import PageHeader from "../../components/common/PageHeader";
 import StatusChip from "../../components/common/StatusChip";
 import { useAuth } from "../../context/AuthContext";
 import { numeroALetras } from "../../utils/numeroALetras";
-import { canCreate, canEdit, isAdmin } from "../../utils/permissions";
+import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const money = (v) => `Q ${Number(v || 0).toFixed(2)}`;
 const currentPeriodo = () => new Date().toISOString().slice(0, 7);
@@ -320,7 +320,7 @@ const SesionesTab = ({ user, miembros }) => {
                     {canEdit(user) && row.estado === "ACTIVA" && row.asistentes > 0 && (
                       <Tooltip title="Aprobar (congela la asistencia)"><IconButton size="small" color="success" onClick={() => aprobar(row)}><CheckCircleIcon /></IconButton></Tooltip>
                     )}
-                    {isAdmin(user) && row.estado === "APROBADA" && (
+                    {canDelete(user) && row.estado === "APROBADA" && (
                       <Tooltip title="Reabrir (solo administrador)"><IconButton size="small" color="warning" onClick={() => reabrir(row)}><LockOpenIcon /></IconButton></Tooltip>
                     )}
                     {canEdit(user) && row.estado === "ACTIVA" && (

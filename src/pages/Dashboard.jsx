@@ -15,6 +15,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 import axiosClient from "../api/axiosClient";
+import { MENU_ITEMS, filterByRole } from "../components/Sidebar";
+import { useAuth } from "../context/AuthContext";
+import { hasRole } from "../utils/permissions";
 
 // ============================================================================
 // Panel principal: indicadores del régimen, nómina de jubilados de los últimos
@@ -186,7 +189,44 @@ const ACCESOS = [
 const saludo = () => { const h = new Date().getHours(); return h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches"; };
 const hoyLargo = () => { const d = new Date(); return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`; };
 
+// Inicio para usuarios con ventanas puntuales (sin el panel general del sistema):
+// accesos directos a sus ventanas.
+const InicioUsuario = ({ user }) => {
+  const grupos = filterByRole(MENU_ITEMS, user).filter((g) => g.children?.length);
+  return (
+    <Stack spacing={2.5}>
+      <Box>
+        <Typography variant="h5" sx={{ fontWeight: 800 }}>{saludo()}{user?.nombre ? `, ${user.nombre}` : ""}</Typography>
+        <Typography color="text.secondary">{hoyLargo()} · Estas son las ventanas a las que tiene acceso.</Typography>
+      </Box>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }, gap: 2 }}>
+        {grupos.map((g) => (
+          <Paper key={g.text} elevation={0} sx={{ p: 2.5, border: "1px solid #dde3ea", borderRadius: 3 }}>
+            <Typography sx={{ fontWeight: 800, color: "#1F4E5F", mb: 1 }}>{g.text}</Typography>
+            <Stack spacing={0.5}>
+              {g.children.map((c) => (
+                <Box key={c.path} component={RouterLink} to={c.path}
+                  sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", color: "text.primary", p: 1, borderRadius: 2, "&:hover": { bgcolor: "#F2F6F8" } }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{c.text}</Typography>
+                  <ArrowForwardIcon fontSize="small" color="action" />
+                </Box>
+              ))}
+            </Stack>
+          </Paper>
+        ))}
+      </Box>
+    </Stack>
+  );
+};
+
 const Dashboard = () => {
+  const { user } = useAuth();
+  // El panel general (cifras de todo el sistema) es del superusuario y de los operadores generales.
+  const panelGeneral = hasRole(user, ["ADMIN", "OPERADOR", "ADMINISTRACION"]);
+  return panelGeneral ? <PanelGeneral /> : <InicioUsuario user={user} />;
+};
+
+const PanelGeneral = () => {
   const [d, setD] = useState(null);
   const [error, setError] = useState(false);
 
