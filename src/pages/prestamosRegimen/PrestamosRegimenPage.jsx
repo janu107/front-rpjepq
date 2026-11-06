@@ -17,17 +17,23 @@ import { canCreate, canDelete, canEdit } from "../../utils/permissions";
 
 const MANEJO_EMPLEADOS = 1;
 const MANEJO_JUBILADOS = 2;
-const TIPO_PERSONA_OPTS = ["EMPLEADO", "JUBILADO"];
+// Una pantalla por tipo: Préstamos Régimen (empleados, en Proceso Régimen) y
+// Préstamos Jubilados (en Jubilados y Pensiones), cada una con su permiso.
+const CONFIG = {
+  EMPLEADO: { api: "/prestamos-regimen", titulo: "Préstamos Régimen", subtitulo: "Préstamos de los empleados del régimen", singular: "préstamo de empleado", manejo: MANEJO_EMPLEADOS },
+  JUBILADO: { api: "/prestamos-jubilados", titulo: "Préstamos Jubilados", subtitulo: "Préstamos de los jubilados y pensionados", singular: "préstamo de jubilado", manejo: MANEJO_JUBILADOS }
+};
 // ANULADO = creado por error (no cuenta en ningún cálculo); OPERADA la pone el sistema al terminar.
 const ESTADO_OPTS = ["ACTIVO", "INACTIVO", "CANCELADO", "OPERADA", "ANULADO"];
 
-const buildForm = () => ({
-  tipoPersona: "", idPersona: "", idBanco: "",
+const buildForm = (tipoPersona) => ({
+  tipoPersona, idPersona: "", idBanco: "",
   noReferencia: "", monto: "", valorMes: "", saldo: "", noCuotas: "",
   fechaInicio: "", fechaFin: "", uso: "", estado: "ACTIVO"
 });
 
-const PrestamosRegimenPage = () => {
+const PrestamosRegimenPage = ({ tipo = "EMPLEADO" }) => {
+  const cfg = CONFIG[tipo];
   const { user } = useAuth();
   const [rows, setRows] = useState([]);
   const [bancos, setBancos] = useState([]);
@@ -36,11 +42,11 @@ const PrestamosRegimenPage = () => {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
-  const [form, setForm] = useState(buildForm());
+  const [form, setForm] = useState(buildForm(tipo));
 
   const load = async () => {
     try {
-      const { data } = await axiosClient.get("/prestamos-regimen");
+      const { data } = await axiosClient.get(cfg.api);
       setRows(data.data || []);
     } catch {
       Swal.fire("Error", "No fue posible cargar los préstamos.", "error");
@@ -49,16 +55,16 @@ const PrestamosRegimenPage = () => {
 
   useEffect(() => {
     load();
+    // Solo se pide la lista de su módulo (un usuario de jubilados no lee empleados y viceversa).
     Promise.all([
       axiosClient.get("/catalogos/bancos"),
-      axiosClient.get("/empleados"),
-      axiosClient.get("/jubilados")
-    ]).then(([b, e, j]) => {
+      axiosClient.get(tipo === "JUBILADO" ? "/jubilados" : "/empleados")
+    ]).then(([b, p]) => {
       setBancos(b.data.data || []);
-      setEmpleados((e.data.data || []).filter((item) => Number(item.tipoManejo) === MANEJO_EMPLEADOS));
-      setJubilados((j.data.data || []).filter((item) => Number(item.tipoManejo) === MANEJO_JUBILADOS));
-    });
-  }, []);
+      const lista = (p.data.data || []).filter((item) => Number(item.tipoManejo) === cfg.manejo);
+      if (tipo === "JUBILADO") setJubilados(lista); else setEmpleados(lista);
+    }).catch(() => {});
+  }, [tipo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Código visible: el del empleado de régimen o el del jubilado.
   const codigoDe = (p) => p.idEmpleado ?? p.idJubilado ?? p.id;
@@ -81,11 +87,11 @@ const PrestamosRegimenPage = () => {
   const setf = (key) => (e) => setForm({ ...form, [key]: e.target.value });
   const setfUpper = (key) => (e) => setForm({ ...form, [key]: e.target.value.toUpperCase() });
 
-  const openCreate = () => { setEditingRow(null); setForm(buildForm()); setDialogOpen(true); };
+  const openCreate = () => { setEditingRow(null); setForm(buildForm(tipo)); setDialogOpen(true); };
   const openEdit = (row) => {
     setEditingRow(row);
     setForm({
-      tipoPersona: Number(row.tipoManejo) === MANEJO_JUBILADOS ? "JUBILADO" : "EMPLEADO",
+      tipoPersona: tipo,
       // id unificado: empleados usan idEmpleado, jubilados idJubilado
       idPersona: row.idPersona ?? row.idEmpleado ?? row.idJubilado,
       idBanco: row.idBanco,
@@ -103,11 +109,11 @@ const PrestamosRegimenPage = () => {
   };
 
   const handleSave = async () => {
-    if (!form.tipoPersona || !form.idPersona || !form.idBanco || !form.noReferencia || !form.monto || !form.valorMes || !form.noCuotas || !form.fechaInicio || !form.fechaFin) {
+    if (!form.idPersona || !form.idBanco || !form.noReferencia || !form.monto || !form.valorMes || !form.noCuotas || !form.fechaInicio || !form.fechaFin) {
       Swal.fire("Validacion", "Complete todos los campos obligatorios.", "warning"); return;
     }
     const payload = {
-      tipoManejo: form.tipoPersona === "JUBILADO" ? MANEJO_JUBILADOS : MANEJO_EMPLEADOS,
+      tipoManejo: cfg.manejo,
       idEmpleado: form.idPersona,
       idBanco: form.idBanco,
       noReferencia: form.noReferencia,
@@ -122,10 +128,10 @@ const PrestamosRegimenPage = () => {
     };
     try {
       if (editingRow) {
-        await axiosClient.put(`/prestamos-regimen/${editingRow.id}`, payload);
+        await axiosClient.put(`${cfg.api}/${editingRow.id}`, payload);
         Swal.fire("Listo", "Registro actualizado correctamente.", "success");
       } else {
-        await axiosClient.post("/prestamos-regimen", payload);
+        await axiosClient.post(cfg.api, payload);
         Swal.fire("Listo", "Registro creado correctamente.", "success");
       }
       setDialogOpen(false);
@@ -139,7 +145,7 @@ const PrestamosRegimenPage = () => {
     const result = await Swal.fire({ title: "Eliminar registro", text: "Esta accion no se puede deshacer.", icon: "warning", showCancelButton: true, confirmButtonText: "Si, eliminar", cancelButtonText: "Cancelar", confirmButtonColor: "#1f4e5f" });
     if (!result.isConfirmed) return;
     try {
-      await axiosClient.delete(`/prestamos-regimen/${row.id}`);
+      await axiosClient.delete(`${cfg.api}/${row.id}`);
       Swal.fire("Listo", "Registro eliminado correctamente.", "success");
       load();
     } catch (error) {
@@ -150,14 +156,14 @@ const PrestamosRegimenPage = () => {
   return (
     <Stack spacing={2.5}>
       <PageHeader
-        title="Préstamos Régimen"
-        subtitle="Mantenimiento de préstamos régimen"
+        title={cfg.titulo}
+        subtitle={cfg.subtitulo}
         actions={canCreate(user) && <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Nuevo</Button>}
       />
       <DataTable
         columns={[
           { key: "noReferencia", label: "No. Referencia" },
-          { key: "personaNombre", label: "Persona" },
+          { key: "personaNombre", label: tipo === "JUBILADO" ? "Jubilado" : "Empleado" },
           { key: "bancoNombre", label: "Banco" },
           { key: "monto", label: "Monto", render: (row) => `Q ${Number(row.monto).toFixed(2)}` },
           { key: "valorMes", label: "Valor mes", render: (row) => `Q ${Number(row.valorMes).toFixed(2)}` },
@@ -176,18 +182,10 @@ const PrestamosRegimenPage = () => {
       />
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="lg">
-        <DialogTitle>{editingRow ? "Editar préstamo régimen" : "Nuevo préstamo régimen"}</DialogTitle>
+        <DialogTitle>{editingRow ? `Editar ${cfg.singular}` : `Nuevo ${cfg.singular}`}</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Tipo persona *</InputLabel>
-                <Select label="Tipo persona *" value={form.tipoPersona} onChange={(e) => setForm({ ...form, tipoPersona: e.target.value, idPersona: "" })}>
-                  {TIPO_PERSONA_OPTS.map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12}>
               {/* Buscador por código, nombre o DPI. Con el código exacto + Tab (o Enter) se elige y se ve el nombre. */}
               <Autocomplete
                 options={personas}

@@ -5,6 +5,7 @@ import UploadFileIcon from "@mui/icons-material/UploadFile";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ListAltIcon from "@mui/icons-material/ListAlt";
+import PaymentsIcon from "@mui/icons-material/Payments";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import SearchIcon from "@mui/icons-material/Search";
 import {
@@ -51,6 +52,20 @@ const filtrarPrestamo = (opciones, { inputValue }) => {
     return terminos.every((t) => texto.includes(t));
   });
 };
+
+// Código visible del empleado EPQ (el mismo de la carga masiva).
+const codigoApo = (a) => a?.idAportacion ?? a?.codigo ?? "";
+const nombreApo = (a) => `${a?.nombre || ""} ${a?.apellido || ""}`.trim();
+// Buscador de aportante: código, nombre o DPI; el código exacto va primero.
+const filtrarAportante = (opts, { inputValue }) => {
+  const t = String(inputValue || "").trim().toLowerCase();
+  if (!t) return opts.slice(0, 50);
+  const palabras = t.split(/\s+/);
+  const lista = opts.filter((a) => palabras.every((w) => `${codigoApo(a)} ${nombreApo(a)} ${a.dpi || ""}`.toLowerCase().includes(w)));
+  const exacto = lista.filter((a) => String(codigoApo(a)).toLowerCase() === t);
+  return [...exacto, ...lista.filter((a) => String(codigoApo(a)).toLowerCase() !== t)].slice(0, 50);
+};
+const ESTADOS_SIN_PAGO = ["CANCELADO", "ANULADO"];
 
 const PrestamosPage = ({ detailOnly = false }) => {
   const { user } = useAuth();
@@ -182,7 +197,7 @@ const PrestamosPage = ({ detailOnly = false }) => {
     if (!editing) return aportaciones;
     const yaIncluido = aportaciones.some((a) => Number(a.id) === Number(editing.idAportacion));
     if (yaIncluido) return aportaciones;
-    const currentApo = { id: editing.idAportacion, nombre: editing.aportacionNombre?.split(" ")[0] || "", apellido: editing.aportacionNombre?.split(" ").slice(1).join(" ") || "", dpi: editing.aportacionDpi, tienePrestamo: true };
+    const currentApo = { id: editing.idAportacion, idAportacion: editing.aportacionCodigo, nombre: editing.aportacionNombre?.split(" ")[0] || "", apellido: editing.aportacionNombre?.split(" ").slice(1).join(" ") || "", dpi: editing.aportacionDpi, tienePrestamo: true };
     return [currentApo, ...aportaciones];
   }, [aportaciones, editing]);
 
@@ -268,6 +283,31 @@ const PrestamosPage = ({ detailOnly = false }) => {
   };
 
   const [montoDesc, setMontoDesc] = useState("");
+
+  // ---- Pago individual (como una fila de la carga masiva) ----
+  const [pagoInd, setPagoInd] = useState(null); // { prestamo, fechaPago, monto, vista, grabando }
+  const abrirPagoInd = (item) => setPagoInd({ prestamo: item, fechaPago: "", monto: "", vista: null, grabando: false });
+  const cambiarPagoInd = (campos) => setPagoInd((p) => ({ ...p, ...campos, vista: null }));
+  const verPagoInd = async () => {
+    try {
+      const { data } = await axiosClient.post(`/prestamos/${pagoInd.prestamo.id}/detalle/calcular`, { fechaPago: pagoInd.fechaPago, monto: sinComas(pagoInd.monto) });
+      setPagoInd((p) => ({ ...p, vista: data.data }));
+    } catch (e) { Swal.fire("Error", e.response?.data?.message || "No fue posible calcular el pago.", "error"); }
+  };
+  const grabarPagoInd = async () => {
+    setPagoInd((p) => ({ ...p, grabando: true }));
+    try {
+      const { data } = await axiosClient.post(`/prestamos/${pagoInd.prestamo.id}/pago-individual`, { fechaPago: pagoInd.fechaPago, monto: sinComas(pagoInd.monto) });
+      const r = data.data || {};
+      setPagoInd(null);
+      Swal.fire({ icon: "success", title: "Pago registrado",
+        html: `Contrato <b>${r.contrato}</b> · ${fechaDMY(r.fechaPago)}<br>Saldo: <b>${money(r.saldo)}</b>${Number(r.mora) > 0 ? `<br>Mora del mes: <b>${money(r.mora)}</b>` : ""}${r.saldado ? "<br><b>El préstamo quedó saldado (CANCELADO).</b>" : ""}` });
+      loadPrestamos();
+    } catch (e) {
+      setPagoInd((p) => (p ? { ...p, grabando: false } : p));
+      Swal.fire("Error", e.response?.data?.message || "No fue posible registrar el pago.", "error");
+    }
+  };
   const calcularPagoForm = async () => {
     try {
       const { data } = await axiosClient.post(`/prestamos/${selected.id}/detalle/calcular`, { fechaPago: detalleForm.fechaPago, monto: sinComas(montoDesc) });
@@ -392,7 +432,7 @@ const PrestamosPage = ({ detailOnly = false }) => {
           <TableHead sx={{ bgcolor: "rgba(31, 78, 95, 0.08)" }}>
             <TableRow><TableCell>Codigo</TableCell><TableCell>Codigo empleado</TableCell><TableCell>Contrato</TableCell><TableCell>Aportacion</TableCell><TableCell>Monto</TableCell><TableCell>Cuota</TableCell><TableCell>Estado</TableCell><TableCell align="right">Acciones</TableCell></TableRow>
           </TableHead>
-          <TableBody>{paginados.map((item) => <TableRow key={item.id} hover><TableCell>{item.id}</TableCell><TableCell>{item.aportacionCodigo}</TableCell><TableCell>{item.noContrato}</TableCell><TableCell>{item.aportacionNombre}</TableCell><TableCell>{money(item.montoAutorizado)}</TableCell><TableCell>{money(item.cuotaNivelada)}</TableCell><TableCell><Chip label={item.estado} color={item.estado === "ACTIVO" ? "success" : "default"} size="small" /></TableCell><TableCell align="right"><Stack direction="row" spacing={0.5} justifyContent="flex-end">{!detailOnly && canEdit(user) && <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>}<Tooltip title="Detalle"><IconButton size="small" color="primary" onClick={() => openDetalle(item)}><ListAltIcon /></IconButton></Tooltip>{!detailOnly && canEdit(user) && <Tooltip title="Estado"><IconButton size="small" color="primary" onClick={() => changeStatus(item)}><PowerSettingsNewIcon /></IconButton></Tooltip>}{!detailOnly && canDelete(user) && <Tooltip title="Eliminar"><IconButton size="small" color="primary" onClick={() => deletePrestamo(item)}><DeleteIcon /></IconButton></Tooltip>}</Stack></TableCell></TableRow>)}</TableBody>
+          <TableBody>{paginados.map((item) => <TableRow key={item.id} hover><TableCell>{item.id}</TableCell><TableCell>{item.aportacionCodigo}</TableCell><TableCell>{item.noContrato}</TableCell><TableCell>{item.aportacionNombre}</TableCell><TableCell>{money(item.montoAutorizado)}</TableCell><TableCell>{money(item.cuotaNivelada)}</TableCell><TableCell><Chip label={item.estado} color={item.estado === "ACTIVO" ? "success" : "default"} size="small" /></TableCell><TableCell align="right"><Stack direction="row" spacing={0.5} justifyContent="flex-end">{!detailOnly && canEdit(user) && <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => openEdit(item)}><EditIcon /></IconButton></Tooltip>}{canCreate(user) && !ESTADOS_SIN_PAGO.includes(String(item.estado).toUpperCase()) && <Tooltip title="Registrar pago"><IconButton size="small" color="primary" onClick={() => abrirPagoInd(item)}><PaymentsIcon /></IconButton></Tooltip>}<Tooltip title="Detalle"><IconButton size="small" color="primary" onClick={() => openDetalle(item)}><ListAltIcon /></IconButton></Tooltip>{!detailOnly && canEdit(user) && <Tooltip title="Estado"><IconButton size="small" color="primary" onClick={() => changeStatus(item)}><PowerSettingsNewIcon /></IconButton></Tooltip>}{!detailOnly && canDelete(user) && <Tooltip title="Eliminar"><IconButton size="small" color="primary" onClick={() => deletePrestamo(item)}><DeleteIcon /></IconButton></Tooltip>}</Stack></TableCell></TableRow>)}</TableBody>
         </Table>
         {filtered.length > rowsPerPage && (
           <TablePagination
@@ -421,14 +461,34 @@ const PrestamosPage = ({ detailOnly = false }) => {
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth><InputLabel>Aportante</InputLabel><Select label="Aportante" value={form.idAportacion} onChange={(e) => setForm({ ...form, idAportacion: e.target.value })}>{aportacionesParaSelect.map((a) => <MenuItem key={a.id} value={a.id}>{a.nombre} {a.apellido} - {a.dpi}</MenuItem>)}</Select></FormControl>
+              {/* Buscador por código, nombre o DPI. Con el código exacto + Tab (o Enter) se elige y se ve el nombre completo. */}
+              <Autocomplete
+                options={aportacionesParaSelect}
+                value={selectedAportacion || null}
+                onChange={(_, a) => setForm({ ...form, idAportacion: a ? a.id : "" })}
+                autoHighlight
+                autoSelect
+                isOptionEqualToValue={(o, v) => Number(o.id) === Number(v.id)}
+                getOptionLabel={(a) => `${codigoApo(a)} — ${nombreApo(a)}`}
+                filterOptions={filtrarAportante}
+                renderOption={(props, a) => (
+                  <li {...props} key={a.id}>
+                    <b style={{ minWidth: 56, display: "inline-block" }}>{codigoApo(a)}</b>&nbsp;{nombreApo(a)}
+                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>{a.dpi}</Typography>
+                  </li>
+                )}
+                noOptionsText="No se encontró ese código, nombre o DPI (solo aparecen empleados EPQ activos, con préstamo autorizado y sin otro préstamo activo)"
+                renderInput={(params) => (
+                  <TextField {...params} label="Aportante (código, nombre o DPI)" placeholder="Escriba el código y presione Tab o Enter" />
+                )}
+              />
             </Grid>
             <Grid item xs={12} md={6}><TextField label="No. contrato" value={form.noContrato} onChange={(e) => setForm({ ...form, noContrato: e.target.value })} fullWidth /></Grid>
             {selectedAportacion && (
               <Grid item xs={12}>
                 <Paper variant="outlined" sx={{ p: 2, bgcolor: "rgba(31, 78, 95, 0.03)" }}>
                   <Grid container spacing={1.5}>
-                    <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Nombre</Typography><Typography>{selectedAportacion.nombre} {selectedAportacion.apellido}</Typography></Grid>
+                    <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Nombre</Typography><Typography>{codigoApo(selectedAportacion)} — {nombreApo(selectedAportacion)}</Typography></Grid>
                     <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">DPI</Typography><Typography>{selectedAportacion.dpi}</Typography></Grid>
                     <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Gerencia</Typography><Typography>{selectedAportacion.gerencia}</Typography></Grid>
                     <Grid item xs={12} md={4}><Typography variant="caption" color="text.secondary">Estado</Typography><Typography>{selectedAportacion.estado}</Typography></Grid>
@@ -449,6 +509,43 @@ const PrestamosPage = ({ detailOnly = false }) => {
           </Grid>
         </DialogContent>
         <DialogActions><Button onClick={() => setDialogOpen(false)}>Cancelar</Button><Button variant="contained" onClick={savePrestamo}>Guardar</Button></DialogActions>
+      </Dialog>
+
+      <Dialog open={!!pagoInd} onClose={() => setPagoInd(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Registrar pago</DialogTitle>
+        <DialogContent dividers>
+          {pagoInd && (
+            <Stack spacing={2}>
+              <Typography variant="body2" color="text.secondary">
+                Contrato <b>{pagoInd.prestamo.noContrato}</b> · Código empleado <b>{pagoInd.prestamo.aportacionCodigo}</b><br />
+                <b>{pagoInd.prestamo.aportacionNombre}</b> · Cuota {money(pagoInd.prestamo.cuotaNivelada)}
+              </Typography>
+              <Stack direction="row" spacing={1.5}>
+                <TextField size="small" label="Fecha pago" type="date" value={pagoInd.fechaPago} onChange={(e) => cambiarPagoInd({ fechaPago: e.target.value })} InputLabelProps={{ shrink: true }} fullWidth />
+                <CampoMonto label="Monto descontado" value={pagoInd.monto} onChange={(v) => cambiarPagoInd({ monto: v })} />
+              </Stack>
+              <Typography variant="caption" color="text.secondary">
+                Igual que la carga masiva: lo descontado (cuota + seguro), aunque sea menor o mayor que la cuota. El sistema calcula seguro, intereses, amortización, saldo y mora.
+              </Typography>
+              {pagoInd.vista && (
+                <Paper variant="outlined" sx={{ p: 1.5 }}>
+                  <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1 }}>
+                    {[["Seguro", pagoInd.vista.seguro], ["Cuota pagada", pagoInd.vista.cuotaNivelada], ["Intereses", pagoInd.vista.intereses],
+                      ["Amortización", pagoInd.vista.amortizacion], ["Saldo", pagoInd.vista.saldo], ["Mora", pagoInd.vista.mora]].map(([l, v]) => (
+                      <Box key={l}><Typography variant="caption" color="text.secondary">{l}</Typography><Typography fontWeight={700}>{money(v)}</Typography></Box>
+                    ))}
+                  </Box>
+                  {Number(pagoInd.vista.saldo) <= 0 && <Alert severity="success" sx={{ mt: 1 }}>Con este pago el préstamo queda saldado (CANCELADO).</Alert>}
+                </Paper>
+              )}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPagoInd(null)}>Cancelar</Button>
+          <Button variant="outlined" startIcon={<CalculateIcon />} onClick={verPagoInd} disabled={!pagoInd?.fechaPago || pagoInd?.monto === ""}>Calcular</Button>
+          <Button variant="contained" onClick={grabarPagoInd} disabled={!pagoInd?.vista || pagoInd?.grabando}>Grabar pago</Button>
+        </DialogActions>
       </Dialog>
 
       <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} fullWidth maxWidth="lg" PaperProps={{ sx: { height: "90vh" } }}>

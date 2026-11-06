@@ -110,7 +110,8 @@ const AppRouter = () => {
             <Route path="/reportes/aportaciones" element={<Navigate to="/reportes/aportaciones-epq?tab=reporte" replace />} />
             <Route path="/reportes/detalle-aportaciones" element={<Navigate to="/reportes/aportaciones-epq?tab=detalle" replace />} />
             <Route path="/descuentos-judiciales" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DescuentosJudicialesPage /></ProtectedRoute>} />
-            <Route path="/prestamos-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosRegimenPage /></ProtectedRoute>} />
+            <Route path="/prestamos-regimen" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosRegimenPage key="EMPLEADO" tipo="EMPLEADO" /></ProtectedRoute>} />
+            <Route path="/prestamos-jubilados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PrestamosRegimenPage key="JUBILADO" tipo="JUBILADO" /></ProtectedRoute>} />
             <Route path="/planillas-pensionados" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PlanillasPensionadosPage /></ProtectedRoute>} />
             <Route path="/planillas-pensionados/:id" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><DetallePlanillaPensionadosPage /></ProtectedRoute>} />
             <Route path="/planillas-trabajadores" element={<ProtectedRoute allowedRoles={["ADMIN", "OPERADOR"]}><PlanillasTrabajadoresPage /></ProtectedRoute>} />

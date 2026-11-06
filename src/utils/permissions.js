@@ -38,6 +38,7 @@ const PANTALLAS = [
   ["JUB_ESTADO_CUENTA", ["JUBILADOS"], ["/estado-cuenta"]],
   ["JUB_REPORTES", ["JUBILADOS"], ["/reportes-jubilados"]],
   ["JUB_PRESTACIONES", ["JUBILADOS"], ["/prestaciones-jubilados"]],
+  ["JUB_PRESTAMOS", ["JUBILADOS"], ["/prestamos-jubilados"]],
   ["NOM_EMPLEADOS", ["REGIMEN"], ["/planillas-trabajadores", "/generacion-planilla"]],
   ["NOM_JUBILADOS", ["JUBILADOS"], ["/planillas-pensionados", "/nominas-jubilados"]],
   ["NOM_TIEMPO_EXTRA", ["REGIMEN"], ["/nomina-tiempo-extra"]],

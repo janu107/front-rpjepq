@@ -83,7 +83,8 @@ const items = [
       { text: "Suspensiones", path: "/suspensiones", icon: <PaymentsIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
       { text: "Estado de Cuenta", path: "/estado-cuenta", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
       { text: "Reportes y Dashboard", path: "/reportes-jubilados", icon: <InsertChartIcon />, enabled: true, roles: ["ADMIN", "OPERADOR", "CONSULTA"] },
-      { text: "Prestaciones Jubilados", path: "/prestaciones-jubilados", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
+      { text: "Prestaciones Jubilados", path: "/prestaciones-jubilados", icon: <PaidIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] },
+      { text: "Préstamos Jubilados", path: "/prestamos-jubilados", icon: <AccountBalanceWalletIcon />, enabled: true, roles: ["ADMIN", "OPERADOR"] }
     ]
   },
   {
